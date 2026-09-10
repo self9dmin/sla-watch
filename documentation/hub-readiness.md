@@ -4,7 +4,7 @@
 
 This is a technical readiness audit of the repository and the last verified tenant deployment. It is not a claim that Dynatrace has approved the app for public Hub distribution. The public documentation describes Hub installation, app verification, code signing, manifest metadata, scopes, security, privacy, themes, dependencies, and testing. The final listing review and code-signing decision are portal-owned steps that cannot be completed by a local build.
 
-The app is suitable for continued hardening as a custom AppEngine app. It is not yet ready to represent itself as a generally available Hub listing until the release artifact, public repository, authenticated acceptance evidence, listing content, and Dynatrace submission route are complete.
+The app is suitable for continued hardening as a custom AppEngine app. The reviewed source is now published at [self9dmin/sla-watch](https://github.com/self9dmin/sla-watch), but the app is not yet ready to represent itself as a generally available Hub listing until authenticated acceptance evidence, listing content, and the Dynatrace submission route are complete.
 
 ## Authority reviewed
 
@@ -35,8 +35,8 @@ The app is suitable for continued hardening as a custom AppEngine app. It is not
 | Themes | Custom styles use theme variables and dark/light paths were manually verified in the target tenant | Verified at `0.0.18` after deployment | Add automated contrast or screenshot coverage before submission. |
 | Dependencies | Production audit is clean after the React Router upgrade; current `dt-app` is `1.17.0` | Implemented locally | Keep Renovate enabled and review App Toolkit advisories separately as development-only risk. |
 | Tests | Focused unit tests, typecheck, lint, build, and analyzer are present | Implemented locally; E2E and live permission tests are gaps | Add authenticated Playwright and tenant acceptance jobs using CI secrets. |
-| CI | Pull-request workflow is repository-local and non-deploying | Implemented locally | Push to the public repository and make the required checks branch protection rules. |
-| Public repository | Local review history is present, but no public remote is configured and nothing has been pushed | Not ready | Create or connect the public repository, review the final commit, and publish only the intended source and docs. |
+| CI | Pull-request workflow is repository-local and non-deploying | Published and awaiting first public run | Confirm the Node 24 workflow passes, then make the required checks branch-protection rules. |
+| Public repository | Reviewed source and documentation are published at [self9dmin/sla-watch](https://github.com/self9dmin/sla-watch) on `main` | Published | Review the public tree and commit history, then keep future changes gated by CI and pull request review. |
 | Hub verification | Standard verification, provider identity, integrity, and code signing are controlled by Dynatrace Hub | External dependency | Use the applicable Dynatrace community, partner, or Hub-subscription submission route. A local `dt-app deploy` cannot complete this step. |
 
 ## Release gates
@@ -44,7 +44,7 @@ The app is suitable for continued hardening as a custom AppEngine app. It is not
 The release owner should not request Hub review until all of the following are true:
 
 - The final app ID, name, description, icon, publisher, and support URL are approved.
-- The public repository has a clean history, license, security policy, contribution guidance, CI, and no tenant-specific secrets or auth state.
+- The public repository at [self9dmin/sla-watch](https://github.com/self9dmin/sla-watch) has a clean history, license, security policy, contribution guidance, CI, and no tenant-specific secrets or auth state.
 - The public repository uses `DT_APP_ENVIRONMENT_URL` or an explicit deployment flag for contributor and CI targets rather than relying on a private tenant default.
 - `npm run verify` and `npm audit --omit=dev` pass on Node 24.
 - A clean tenant install passes the browser smoke path in both themes.
