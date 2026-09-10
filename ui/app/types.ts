@@ -1,17 +1,83 @@
 export type WatchSection = "overview" | "setup" | "directory" | "incidents";
 export type SlaThemePreference = "system" | "light" | "dark";
 export type RecommendationPriority = "high" | "medium" | "low";
+export type EvidenceLookbackHours = 24 | 72 | 168 | 360 | 720 | 1440 | 2160;
 
 export type SlaPreferences = {
   theme: SlaThemePreference;
   providerSlug: string;
   providerLabelKey: string;
-  lookbackHours: 24 | 72;
+  lookbackHours: EvidenceLookbackHours;
   onboardingComplete: boolean;
   tourCompleted: boolean;
 };
 
 export type ServiceRecord = { id: string; name: string; type: string; tags: string[] };
+
+export type ContractScopeKind = "provider" | "service" | "host" | "location";
+
+export type ContractOverrideValue = {
+  overrideKey: string;
+  providerSlug: string;
+  providerServiceId: string;
+  providerServiceName: string;
+  scopeKind: ContractScopeKind;
+  scopeEntityId: string;
+  scopeEntityName: string;
+  scopeEntityIds: string[];
+  scopeEntityNames: string[];
+  location?: string | null;
+  availabilityTarget?: number | null;
+  filingDeadlineDays?: number | null;
+  deadlineBasis?: string | null;
+  businessDays: boolean;
+  maxCreditPercent?: number | null;
+  claimMethod?: string | null;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  sourceReference: string;
+  sourceUrl?: string | null;
+  notes?: string | null;
+  enabled: boolean;
+};
+
+export type ContractOverrideRecord = ContractOverrideValue & {
+  objectId: string;
+  version: string;
+  lastModifiedBy?: string;
+  lastModifiedTime?: string;
+};
+
+export type SmartscapeScopeEdge = {
+  serviceNodeId: string;
+  serviceClassicId?: string;
+  serviceName: string;
+  targetNodeId: string;
+  targetClassicId?: string;
+  targetName: string;
+  targetType: string;
+  relationship: "runs_on" | "belongs_to";
+  location?: string;
+};
+
+export type ContractContext = {
+  providerSlug: string;
+  providerServiceId: string;
+  serviceId?: string;
+  hostId?: string;
+  location?: string;
+};
+
+export type EffectiveContractTerms = {
+  availabilityTarget: number | null;
+  filingDeadlineDays: number | null;
+  deadlineBasis: string | null;
+  businessDays: boolean;
+  maxCreditPercent: number | null;
+  claimMethod: string | null;
+  source: "sla.directory" | "tenant override";
+  appliedOverrides: ContractOverrideRecord[];
+};
 
 export type SetupRecommendation = {
   id: string;
@@ -21,6 +87,7 @@ export type SetupRecommendation = {
   evidence: string;
   action: string;
   href?: string;
+  platformAction?: "ownership-settings";
 };
 
 export type ProblemRecord = {

@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { openApp } from "@dynatrace-sdk/navigation";
 import type { SetupRecommendation } from "../types";
 
 const priorityLabel: Record<SetupRecommendation["priority"], string> = {
@@ -46,6 +47,8 @@ export const SetupAdvisor = ({
             </div>
             {recommendation.href
               ? <Link className="advisor-action" to={recommendation.href}>{recommendation.action} <span aria-hidden="true">→</span></Link>
+              : recommendation.platformAction === "ownership-settings"
+                ? <button type="button" className="advisor-action advisor-action-button" onClick={() => openApp("dynatrace.settings", "settings/ownership-configure")}>{recommendation.action} <span aria-hidden="true">→</span></button>
               : <span className="advisor-action advisor-action-muted">{recommendation.action}</span>}
           </article>
         ))}

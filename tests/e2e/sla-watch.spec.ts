@@ -16,7 +16,7 @@ const openWatch = async (page: Page): Promise<FrameLocator> => {
     await skipWalkthrough.click();
   }
 
-  await expect(app.getByRole('link', { name: 'Provider directory' })).toBeVisible();
+  await expect(app.getByRole('link', { name: 'Directory' })).toBeVisible();
   return app;
 };
 
@@ -36,7 +36,8 @@ test.describe('SLA Watch deployed smoke', () => {
   test('keeps Overview, Setup, and Incidents focused and conservative', async ({ page }) => {
     const app = await openWatch(page);
 
-    await expect(app.getByText(/sla\.directory API\s*:/i)).toBeVisible();
+    await expect(app.getByRole('button', { name: 'Refresh data' })).toBeVisible();
+    await expect(app.getByRole('link', { name: 'Configure' })).toBeVisible();
     await expect(app.getByText(/Needs setup|Needs telemetry|Needs service boundary|Needs mapping|No incident in scope|Candidate|Blocked/i).first()).toBeVisible();
     await expect(app.getByText(/The provider determines fault, eligibility, and any service credit/i)).toBeVisible();
     await expectNoPageScroll(app);
@@ -52,8 +53,34 @@ test.describe('SLA Watch deployed smoke', () => {
 
     await app.getByRole('link', { name: 'Incidents' }).click();
     await expect(app.getByRole('heading', { name: 'Incidents' })).toBeVisible();
+    const lookback = app.getByRole('combobox', { name: 'Incident evidence lookback' });
+    await expect(lookback).toBeVisible();
+    await expect(lookback.locator('option')).toHaveCount(7);
     await expect(app.getByText(/The provider determines fault, eligibility, and any service credit/i)).toBeVisible();
     await expectNoPageScroll(app);
+  });
+
+  test('keeps new SLA setup in Settings and reserves the modal for edits', async ({ page }) => {
+    const app = await openWatch(page);
+
+    await app.getByRole('link', { name: 'Directory' }).click();
+    await expect(app.getByRole('heading', { name: 'Directory' })).toBeVisible();
+    await expect(app.getByRole('heading', { name: 'Vendor' })).toBeVisible();
+    await expect(app.getByRole('tab', { name: 'SLA overrides' })).toBeVisible();
+    await expectNoPageScroll(app);
+
+    await app.getByRole('button', { name: 'Add SLA override' }).first().click();
+    await expect(app.getByRole('heading', { name: 'Add a custom SLA.' })).toBeVisible();
+    await expect(app.getByRole('region', { name: 'Add SLA override' })).toBeVisible();
+    await expect(app.getByRole('dialog')).toHaveCount(0);
+    await expect(app.getByRole('link', { name: 'SLA overrides' })).toBeVisible();
+
+    const evidenceBoundary = app.getByRole('combobox', { name: /Evidence boundary/i });
+    await evidenceBoundary.selectOption('service');
+    await expect(app.getByText('No target selected')).toBeVisible();
+    const firstTarget = app.getByRole('group', { name: 'Dynatrace evidence targets' }).getByRole('checkbox').first();
+    await firstTarget.check();
+    await expect(app.getByText('1 exact target')).toBeVisible();
   });
 
   test('switches themes without losing the compact watch', async ({ page }) => {
@@ -73,7 +100,7 @@ test.describe('SLA Watch deployed smoke', () => {
       await expect(lightTheme).toBeVisible();
     }
 
-    await expect(app.getByRole('link', { name: 'Provider directory' })).toBeVisible();
+    await expect(app.getByRole('link', { name: 'Directory' })).toBeVisible();
     await expectNoPageScroll(app);
   });
 
@@ -88,7 +115,7 @@ test.describe('SLA Watch deployed smoke', () => {
     await page.mouse.move(0, 100);
 
     const tooltipCases = [
-      { action: 'Open watch settings', tooltip: 'Open watch settings' },
+      { action: 'Open monitor settings', tooltip: 'Open monitor settings' },
       { action: 'Start or replay SLA Watch walkthrough', tooltip: 'Start or replay walkthrough' },
       { action: 'Open SLA Watch guide', tooltip: 'Open SLA Watch guide' },
       { action: 'Open change log', tooltip: 'Open change log' },
@@ -120,7 +147,7 @@ test.describe('SLA Watch deployed smoke', () => {
     await expect(app.locator('[aria-disabled="true"][aria-label="Dynatrace Community, coming soon"]')).toBeVisible();
     await expect(app.getByRole('link', { name: /Dynatrace Community/i })).toHaveCount(0);
 
-    await app.getByRole('button', { name: 'Open watch settings' }).click();
+    await app.getByRole('button', { name: 'Open monitor settings' }).click();
     await expect(app.locator('[aria-disabled="true"][aria-label="Dynatrace Community, coming soon"]')).toBeVisible();
     await expect(app.getByRole('link', { name: /Dynatrace Community/i })).toHaveCount(0);
   });

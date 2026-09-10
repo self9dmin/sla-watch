@@ -23,12 +23,14 @@ The app is suitable for continued hardening as a custom AppEngine app. The revie
 
 | Area | Evidence | State | Closure action |
 | --- | --- | --- | --- |
-| Manifest identity | `app.config.json` uses `my.sla`, `SLA Watch`, version `0.0.30`, a maintained icon, and a sub-80-character description | Implemented and deployed at `0.0.30` | Confirm the permanent publisher-owned app ID and final Hub name. Do not change the ID casually after distribution. |
+| Manifest identity | `app.config.json` uses `my.sla`, `SLA Watch`, version `0.0.31`, a maintained icon, and a sub-80-character description | `0.0.31` release candidate; `0.0.30` is the last verified deployment | Confirm the permanent publisher-owned app ID and final Hub name. Do not change the ID casually after distribution. |
 | Name discoverability | `SLA Watch` is short and title case | Likely compliant, uniqueness unverified | Check Hub for collisions and ensure the final name describes the use case. |
 | Icon and listing media | A custom SVG icon is included; final Hub screenshots and listing media are not yet packaged | Partial | Review the icon and add final Hub screenshots/demo assets. |
-| Runtime scopes | Manifest declares read-only telemetry, user/app state scopes, and `environment-api:entities:write` for confirmed provider-tag changes | Deployed; write scope still needs least-privilege mutation acceptance | Test each scope with a least-privilege user and ensure the Hub Technical information page explains the tag-write purpose. |
+| Runtime scopes | Manifest declares read-only telemetry and Smartscape scopes, user/app state, App Settings read/write, and `environment-api:entities:write` for confirmed provider-tag changes | Implemented in `0.0.31`; both write paths still need least-privilege acceptance | Test each scope with a least-privilege user and ensure the Hub Technical information page explains both write purposes. |
 | Runtime authorization | UI reports access-incomplete states and preflights effective entity-write permission before enabling the tag action | Granted state verified in production without applying a tag; negative and management-zone coverage missing | Add guarded granted, denied, conditional, partial-match, and undo acceptance tests. |
 | External API | `api/slaDirectory.function.ts` validates input, bounds time, validates the response, and preserves provider credit and filing fields | Implemented and confirmed connected in the `0.0.30` deployment | Re-verify `sla.directory` allowlisting after each environment install. |
+| Tenant SLA settings | The `contract-overrides` schema stores operational values, effective dates, source references, and exact evidence target IDs separately from public terms | Implemented in the `0.0.31` release candidate | Verify schema registration, read-only access, write access, version history, and removal behavior in the target tenant. |
+| Smartscape scope | Runtime relationships are queried from Smartscape on Grail and used only to offer exact host, runtime, and location targets | Implemented in the `0.0.31` release candidate | Verify a tenant without Smartscape access receives a conservative unavailable state. |
 | CSP | No custom CSP exceptions are needed; external API is server-side | Implemented | Keep external calls in the function. Do not add broad browser CSP exceptions. |
 | Secrets | No secrets in source or bundle; no credential vault required for the public directory API | Implemented | Keep CI OAuth credentials in the CI secret store. |
 | Privacy | App-state TTL stays inside the 90-day platform limit, only provider configuration is persisted, and UI warns about local fallback | Implemented locally | Review operator guidance for PII and verify deletion/expiry behavior in a tenant. |
@@ -50,9 +52,10 @@ The release owner should not request Hub review until all of the following are t
 - A clean tenant install passes the browser smoke path in both themes.
 - The target tenant allowlist, IAM policies, app-state behavior, and external API failure behavior are verified.
 - The entity-write scope, explicit selection, confirmation, conflict handling, partial-result behavior, and undo are verified with disposable service fixtures.
+- App Settings read/write behavior, multi-entity SLA assignment, edit, disable, removal, and public-baseline fallback are verified with a non-confidential test record.
 - The Hub Technical information, getting-started, use-case, content, release-notes, and permissions text match the shipped artifact.
 - The Dynatrace owner confirms the submission route and completes standard verification/code signing.
 
 ## Known non-blocking product boundary
 
-The provider-service-to-Dynatrace-service join and automated credit eligibility calculation are intentionally outside this release. Setup can apply an explicit provider tag to operator-selected Dynatrace services, but it does not infer that mapping from a name or a directory service ID. The Incidents view exposes provider terms and planning references, but does not make a vendor decision. That limitation is disclosed in the README and UI. Implementing a defensible service join is a product milestone, not a Hub-compliance shortcut.
+The provider-service-to-Dynatrace-entity join is an explicit operator assignment in this release. One custom SLA can target several exact service, runtime, or location IDs, and Incident review can apply those terms when a Problem and Smartscape topology match the boundary. The app does not infer an assignment from a name, prove root cause, or automate credit eligibility. That limitation is disclosed in the README and UI.

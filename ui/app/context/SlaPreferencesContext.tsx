@@ -11,6 +11,7 @@ import {
   type SlaThemePreference,
 } from "../types";
 import { createStateExpiration } from "../data/stateExpiration";
+import { isEvidenceLookbackHours } from "../data/lookback";
 
 const USER_STATE_KEY = "sla.user.v1";
 const WORKSPACE_STATE_KEY = "sla.workspace.v1";
@@ -48,7 +49,7 @@ const normalizePreferences = (value: unknown): SlaPreferences => {
     theme: isTheme(item.theme) ? item.theme : DEFAULT_SLA_PREFERENCES.theme,
     providerSlug: stringOr(item.providerSlug, DEFAULT_SLA_PREFERENCES.providerSlug).toLowerCase(),
     providerLabelKey: stringOr(item.providerLabelKey, DEFAULT_SLA_PREFERENCES.providerLabelKey),
-    lookbackHours: item.lookbackHours === 72 ? 72 : 24,
+    lookbackHours: isEvidenceLookbackHours(item.lookbackHours) ? item.lookbackHours : DEFAULT_SLA_PREFERENCES.lookbackHours,
     onboardingComplete: item.onboardingComplete === true,
     tourCompleted: item.tourCompleted === true,
   };

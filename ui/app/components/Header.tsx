@@ -43,10 +43,10 @@ export const Header = ({
         <AppHeader.Navigation>
           <AppHeader.Logo as={Link} to="/" appName="SLA Watch" />
           <AppHeader.NavigationItem as={Link} to="/" isSelected={isWatch} className="sla-nav-primary" data-tour="watch">
-            Watch
+            Monitor
           </AppHeader.NavigationItem>
           <AppHeader.NavigationItem as={Link} to="/directory" isSelected={isDirectory} data-tour="provider">
-            Provider directory
+            Directory
           </AppHeader.NavigationItem>
         </AppHeader.Navigation>
         <AppHeader.ActionItems>
@@ -58,11 +58,11 @@ export const Header = ({
               <Button.Prefix>{theme === "dark" ? <LightmodeIcon /> : <DarkmodeIcon />}</Button.Prefix>
             </AppHeader.ActionButton>
           </Tooltip>
-          <Tooltip className="header-action-tooltip" text="Open watch settings" placement="bottom">
+          <Tooltip className="header-action-tooltip" text="Open monitor settings" placement="bottom">
             <AppHeader.ActionButton
               onClick={() => { void navigate("/settings/watch"); }}
               className={isSettings ? "active" : undefined}
-              aria-label="Open watch settings"
+              aria-label="Open monitor settings"
               data-tour="settings"
             >
               <Button.Prefix><SettingIcon /></Button.Prefix>
@@ -153,7 +153,7 @@ export const Header = ({
             <p>{communityLive ? "The change log documents application releases. Questions and issue discussion belong on the Dynatrace Community profile." : "The change log documents application releases. Dynatrace Community support will be enabled at public launch."}</p>
           </section>
           <div className="help-drawer-actions">
-            <button type="button" className="link-button" onClick={() => { setHelpOpen(false); void navigate("/settings/watch"); }}>Open watch settings</button>
+            <button type="button" className="link-button" onClick={() => { setHelpOpen(false); void navigate("/settings/watch"); }}>Open monitor settings</button>
             <CommunityLink className="link-button" label="Community profile" onClick={() => setHelpOpen(false)} />
             <button type="button" className="link-button" onClick={() => { setHelpOpen(false); onStartTour(); }}>Replay walkthrough</button>
           </div>

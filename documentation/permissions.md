@@ -11,7 +11,10 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | `storage:metrics:read` | Read service request time series | Show metrics as unavailable; do not claim that traffic is absent |
 | `storage:logs:read` | Count recent log records | Show log count as unavailable |
 | `storage:spans:read` | Count recent spans | Show span count as unavailable |
+| `storage:smartscape:read` | Read service-to-runtime and location relationships used for evidence-boundary selection | Hide unavailable topology choices; never infer them from entity names |
 | `environment-api:entities:write` | Add or remove the configured provider tag on explicitly selected service entities | Keep Setup read-only and explain that entity-settings permission is required |
+| `app-settings:objects:read` | Read shared tenant SLA overrides from the app's `contract-overrides` schema | Use the public directory baseline and identify tenant terms as unavailable |
+| `app-settings:objects:write` | Create, update, disable, or remove explicitly confirmed tenant SLA overrides | Keep SLA override management read-only |
 | `state:user-app-states:read` | Restore theme, onboarding, and walkthrough state | Use browser fallback |
 | `state:user-app-states:write` | Persist personal display and onboarding state | Keep the change in local browser state and show the fallback |
 | `state:app-states:read` | Restore shared provider and watch configuration | Use local browser state and show the fallback |
@@ -23,7 +26,9 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | --- | --- | --- | --- |
 | Dynatrace service entities | Current-user scope | Custom provider tag on exact confirmed IDs | Inventory may be incomplete if denied; tag action is unavailable without entity-settings permission |
 | Problems, logs, spans, metrics | Current-user scope | None | Evidence posture becomes unknown when a read fails |
+| Smartscape relationships | Current-user scope | None | Host, runtime, and location assignments are unavailable when denied; names are not substituted |
 | `sla.directory` contract | AppEngine external request allowlist | None | Provider contract becomes unavailable when the function cannot run |
+| Tenant SLA overrides | All authenticated users of the app with App Settings read access | Users with App Settings write access for `contract-overrides` | Public terms remain unchanged; unavailable or denied settings fall back conservatively to the public record |
 | User app state | User state read | User state write | Personal preferences remain local when denied |
 | Shared app state | App state read | App state write | Workspace configuration remains local when denied |
 | Dynatrace entity tags | Read through the service inventory | Add or remove one configured key/value through the custom-tag API | Existing tags remain; conflicts require review; a partial management-zone result is reported |
@@ -40,6 +45,8 @@ The provider-tag operation also requires the signed-in user to have Dynatrace en
 - Verify the target tenant's IAM policies for every declared scope with a least-privilege test user.
 - Verify a user missing each scope receives the documented conservative state.
 - Verify granted, denied, management-zone-limited, partial-match, and undo outcomes for the provider-tag workflow.
+- Verify App Settings read/write separation with a read-only user and confirm that tenant SLA records remain visible but immutable.
+- Verify missing Smartscape permission removes runtime and location choices without producing a name-based assignment.
 - Confirm the Hub Technical information and installation copy clearly disclose the entity-write scope before distribution.
 - Verify that shared watch configuration is not presented as globally saved when the write was denied.
 - Verify the Hub listing's Technical information page matches this table.
