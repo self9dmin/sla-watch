@@ -14,9 +14,9 @@ Sequence:
 2. `Dashboard` issues DQL reads for services, Problems, logs, spans, service-request telemetry, and Smartscape service-to-runtime relationships.
 3. `Dashboard` calls the `slaDirectory` AppEngine function with the active provider slug. Other monitored providers remain configured and can be selected without replacing each other.
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
-5. The app reads active tenant SLA overrides from App Settings and preserves the public directory record as the fallback baseline.
+5. The app reads active tenant SLA overrides and confirmed provider-service scope mappings from App Settings and preserves the public directory record as the fallback baseline.
 6. The UI classifies the first unresolved evidence boundary as loading, access-incomplete, telemetry-missing, service-inventory-incomplete, provider-unidentified, provider-mismatched, no-incident-in-scope, or candidate-for-human-review.
-7. Overview presents that state with one next action. Setup contains the supporting diagnostics and provider-tag workflow. Incidents contains the observed Problem queue and effective filing references. Provider notices remains a separate provider-owned event queue.
+7. Overview presents that state with one next action. Setup contains the supporting diagnostics, provider-tag workflow, and service scope map. Incidents contains the observed Problem queue and effective filing references. Provider notices remains a separate provider-owned event queue.
 8. Loading or refreshing the monitor does not change a Dynatrace entity, tag, metric, Problem, SLO, custom SLA, or external ticket.
 
 Deny or degraded behavior: a missing read scope is shown as access incomplete, not as no telemetry. A failed directory request is shown as unavailable, not as a provider breach.
@@ -39,11 +39,34 @@ Actor: administrator with App Settings write access, access to the selected Cred
 1. The administrator enables `servicehealth.googleapis.com` in the target Google Cloud project.
 2. The administrator grants a dedicated service account only `roles/servicehealth.viewer` for that project and creates a JSON key.
 3. The JSON key is stored as a Token credential with AppEngine scope and application access limited to SLA Watch. The secret is never entered in SLA Watch settings.
-4. The administrator enters the Google Cloud project ID and Credential Vault record ID under Provider connections.
+4. The administrator enters a Google Cloud project ID and Credential Vault record ID under Provider connections. More than one project connection can be saved.
 5. Test connection calls the personalized endpoint with fallback disabled. Save writes only the non-secret identifiers to `provider-connections`.
-6. Provider notices reads project-relevant events. The function exchanges a short-lived Google OAuth token at request time and returns normalized event data only.
+6. Provider notices lets the operator choose a saved project or the public source. The function exchanges a short-lived Google OAuth token at request time and returns normalized event data only.
 
 Deny or degraded behavior: a missing connection uses public Google Cloud Status and labels it non-project-specific. A failed saved connection can fall back to public status with a warning during monitoring. Test connection never hides a failure behind the fallback. No path creates a Dynatrace Problem, notification, ticket, provider mutation, or SLA claim.
+
+## Review a public provider status source
+
+Actor: signed-in Dynatrace user.
+
+1. The operator selects OCI, OpenAI, Anthropic, or ElevenLabs as the active monitored provider and opens Provider notices.
+2. `providerPublicStatus` accepts only those provider slugs and maps each one to a fixed public JSON endpoint. No credential or authorization header is accepted or sent.
+3. Statuspage incidents are filtered to the selected evidence window. OCI's public regional component endpoint is a current-state source, so the UI labels it as current coverage instead of a historical lookback.
+4. The UI labels every record public and non-customer-specific and keeps it separate from Dynatrace Problems.
+
+Deny or degraded behavior: an unsupported provider has no provider-owned incident source in this release. A failed or malformed public response is shown as unavailable, never as healthy. Public status never establishes account impact, local impact, provider fault, or SLA eligibility.
+
+## Confirm a provider-service scope mapping
+
+Actor: signed-in user with `app-settings:objects:write` for the app's `provider-scope-assignments` schema.
+
+1. The user opens Setup, then Scope map.
+2. The app lists exact Smartscape service-to-runtime relationships for the active provider. Runtime type and cloud metadata may suggest a provider service only through a fixed provider-specific mapping table.
+3. The user reviews the exact Dynatrace service, runtime, location, and candidate provider service, then confirms or changes the provider service.
+4. App Settings stores the exact service and runtime IDs, display context, provider-service ID, and a concise evidence note.
+5. Incident review can reuse this confirmed relationship for a Problem that affects the same service and runtime scope.
+
+Deny or degraded behavior: a candidate is not persisted or presented as confirmed without an explicit save. A missing Smartscape relationship is not replaced with a name-based guess. A read-only user can inspect candidates but cannot confirm, update, or remove a mapping.
 
 ## Add or edit a custom SLA
 
@@ -66,10 +89,11 @@ Actor: signed-in Dynatrace user.
 1. Incidents reads the Problem's exact affected entity IDs.
 2. It adds Smartscape runtime and location context only for relationships connected to those affected services.
 3. Active tenant overrides are evaluated by provider service, effective date, and exact target ID. Precedence is host, location, service, provider-wide fallback, then the public `sla.directory` record.
-4. If one most-specific assignment matches, Incident review selects it. If multiple equally specific assignments match, the operator chooses the applicable boundary.
-5. The UI shows the applied source and filing reference, but does not assert root cause, provider fault, credit eligibility, or claim approval.
+4. If one most-specific tenant SLA scope matches, Incident review selects it. Otherwise it checks confirmed Setup scope mappings. If there is no confirmed mapping, one unique Smartscape provider-service candidate may be preselected and clearly labeled unconfirmed.
+5. If equally specific records or multiple provider-service candidates remain, the operator chooses the applicable boundary.
+6. The UI shows the mapping source, applied terms source, and filing reference, but does not assert root cause, provider fault, credit eligibility, or claim approval.
 
-Deny or degraded behavior: missing topology, settings, or Problem access is surfaced as unavailable or incomplete. The app never substitutes a name-based guess.
+Deny or degraded behavior: missing topology, scope settings, SLA settings, or Problem access is surfaced as unavailable or incomplete. The app never substitutes a name-based guess or treats a Smartscape candidate as confirmed.
 
 ## Apply a provider tag
 
@@ -107,3 +131,5 @@ Actor: signed-in user with user app-state access.
 If `sla.directory` times out, returns a non-success status, or fails schema validation, the AppEngine function throws. The dashboard keeps the provider posture unknown and surfaces the error. It does not reuse an unverified response or infer provider responsibility from tenant symptoms.
 
 If personalized Google Cloud access fails during a normal monitor read, the provider-notice function may return the public status feed with `connectionState: fallback`. The UI identifies the source and states that it is not project evidence. During Test connection, personalized access is required and the exact setup boundary is reported as unavailable instead of falling back.
+
+If a supported public provider endpoint fails, times out, or returns an invalid payload, the public-status function throws and the UI reports the source as unavailable. It never converts that failure into an empty or healthy status.

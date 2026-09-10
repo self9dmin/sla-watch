@@ -4,6 +4,10 @@ export const PROVIDER_CATALOG = [
   { slug: "aws", name: "AWS", detail: "Amazon Web Services" },
   { slug: "azure", name: "Azure", detail: "Microsoft Azure" },
   { slug: "gcp", name: "GCP", detail: "Google Cloud" },
+  { slug: "oci", name: "OCI", detail: "Oracle Cloud Infrastructure" },
+  { slug: "openai", name: "OpenAI", detail: "AI platform and APIs" },
+  { slug: "anthropic", name: "Anthropic", detail: "Claude platform and APIs" },
+  { slug: "elevenlabs", name: "ElevenLabs", detail: "Voice AI platform and APIs" },
 ] as const;
 
 export const normalizeProviderSlug = (value: unknown): string | null => {

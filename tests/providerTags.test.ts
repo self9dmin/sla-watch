@@ -1,4 +1,4 @@
-import { buildEntityIdSelector, providerTagValue, providerTagValues } from "../ui/app/data/providerTags";
+import { buildEntityIdSelector, providerTagValue, providerTagValues, providerTagWriteIssue } from "../ui/app/data/providerTags";
 
 describe("provider tag helpers", () => {
   it.each([
@@ -32,5 +32,29 @@ describe("provider tag helpers", () => {
 
   it("rejects non-service entity IDs", () => {
     expect(() => buildEntityIdSelector(["HOST-ABC123"])).toThrow("Only Dynatrace service entity IDs");
+  });
+
+  it("turns a denied tag write into actionable permission guidance", () => {
+    expect(providerTagWriteIssue({
+      response: { status: 403 },
+      body: { error: { code: 403, message: "Forbidden" } },
+    })).toEqual({
+      title: "Tag change denied",
+      detail: "Ask a tenant administrator to grant Manage monitoring settings access and confirm that SLA Watch is authorized to write entity tags.",
+      code: 403,
+    });
+  });
+
+  it("does not claim that an unknown failed write changed nothing", () => {
+    const issue = providerTagWriteIssue(new Error("Network request failed"));
+    expect(issue.title).toBe("Tag change could not be verified");
+    expect(issue.detail).toContain("Refresh the service inventory before retrying");
+  });
+
+  it("recognizes an expired Dynatrace session", () => {
+    expect(providerTagWriteIssue({ name: "401", message: "JWT expired" })).toMatchObject({
+      title: "Dynatrace session expired",
+      code: 401,
+    });
   });
 });

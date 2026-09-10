@@ -18,6 +18,9 @@ smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
     target_name = getNodeName(target_id),
     target_type,
     cloud_provider = getNodeField(target_id, "cloud.provider"),
+    cloud_account_id = getNodeField(target_id, "cloud.account.id"),
+    cloud_region = getNodeField(target_id, "cloud.region"),
+    cloud_availability_zone = getNodeField(target_id, "cloud.availability_zone"),
     aws_account_id = getNodeField(target_id, "aws.account.id"),
     aws_region = getNodeField(target_id, "aws.region"),
     aws_availability_zone = getNodeField(target_id, "aws.availability_zone"),
@@ -26,6 +29,9 @@ smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
     gcp_project_id = getNodeField(target_id, "gcp.project.id"),
     gcp_region = getNodeField(target_id, "gcp.region"),
     gcp_location = getNodeField(target_id, "gcp.location"),
+    oci_tenancy_id = getNodeField(target_id, "oci.tenancy.id"),
+    oci_region = getNodeField(target_id, "oci.region"),
+    oci_availability_domain = getNodeField(target_id, "oci.availability_domain"),
     k8s_cluster = getNodeField(target_id, "k8s.cluster.name")
 | limit 500
 `;

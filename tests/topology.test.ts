@@ -60,6 +60,26 @@ describe("Smartscape scope parsing", () => {
     expect(edges[0]).toMatchObject({ providerSlug: "gcp", accountId: "orders-prod", providerEvidence: "Smartscape cloud.provider=gcp" });
   });
 
+  it("normalizes Oracle Cloud provider metadata for OCI setup", () => {
+    const edges = parseSmartscapeScopeEdges({ records: [{
+      service_node_id: "service-node-oci",
+      service_classic_id: "SERVICE-OCI",
+      target_node_id: "runtime-node-oci",
+      target_name: "orders-oci",
+      target_type: "OCI_COMPUTE_INSTANCE",
+      relationship: "runs_on",
+      cloud_provider: "oracle_cloud",
+      cloud_account_id: "tenancy-1",
+      cloud_region: "us-ashburn-1",
+    }] });
+    expect(edges[0]).toMatchObject({
+      providerSlug: "oci",
+      accountId: "tenancy-1",
+      location: "us-ashburn-1",
+      providerEvidence: "Smartscape cloud.provider=oracle_cloud",
+    });
+  });
+
   it("identifies exact services from provider dimensions on service metrics", () => {
     const contexts = parseServiceCloudContexts({ records: [{
       service_node_id: "SERVICE-node-4",

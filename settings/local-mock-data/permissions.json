@@ -2,5 +2,13 @@
   "contract-overrides": [
     { "permission": "app-settings:objects:read", "granted": "true" },
     { "permission": "app-settings:objects:write", "granted": "true" }
+  ],
+  "provider-connections": [
+    { "permission": "app-settings:objects:read", "granted": "true" },
+    { "permission": "app-settings:objects:write", "granted": "true" }
+  ],
+  "provider-scope-assignments": [
+    { "permission": "app-settings:objects:read", "granted": "true" },
+    { "permission": "app-settings:objects:write", "granted": "true" }
   ]
 }

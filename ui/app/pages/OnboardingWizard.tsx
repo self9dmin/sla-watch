@@ -7,6 +7,10 @@ const PROVIDER_PRESETS = [
   { slug: "aws", name: "Amazon Web Services", note: "Cloud infrastructure and managed services" },
   { slug: "azure", name: "Microsoft Azure", note: "Cloud infrastructure and managed services" },
   { slug: "gcp", name: "Google Cloud", note: "Cloud infrastructure and managed services" },
+  { slug: "oci", name: "Oracle Cloud Infrastructure", note: "Cloud infrastructure and managed services" },
+  { slug: "openai", name: "OpenAI", note: "AI platform and API services" },
+  { slug: "anthropic", name: "Anthropic", note: "Claude platform and API services" },
+  { slug: "elevenlabs", name: "ElevenLabs", note: "Voice AI platform and API services" },
   { slug: "stripe", name: "Stripe", note: "Payments and financial infrastructure" },
 ];
 

@@ -4,26 +4,19 @@ import { monitoredEntitiesCustomTagsClient } from "@dynatrace-sdk/client-classic
 import { effectivePermissionsClient } from "@dynatrace-sdk/client-platform-management-service";
 import { Button } from "@dynatrace/strato-components/buttons";
 import type { ProviderCandidate, ServiceRecord } from "../types";
-import { buildEntityIdSelector, providerTagValues } from "../data/providerTags";
+import { buildEntityIdSelector, providerTagValues, providerTagWriteIssue } from "../data/providerTags";
 
 type PermissionState = "checking" | "granted" | "conditional" | "denied" | "unavailable";
 type ReviewStep = "summary" | "select" | "confirm";
 type LastChange = { ids: string[]; count: number; key: string; value: string };
+type WriteFeedback = { tone: "positive" | "warning"; title: string; detail: string; code?: number };
 
 const permissionCopy: Record<PermissionState, string> = {
-  checking: "Checking tag permission",
-  granted: "Tag changes available",
-  conditional: "Tag access is management-zone limited",
+  checking: "Checking role access",
+  granted: "Role check passed",
+  conditional: "Role check is management-zone limited",
   denied: "Read-only for your role",
-  unavailable: "Tag permission could not be verified",
-};
-
-const friendlyWriteError = (error: unknown): string => {
-  const message = error instanceof Error ? error.message : "";
-  if (/403|forbidden|permission|unauthor/i.test(message)) {
-    return "Dynatrace denied the tag change. Ask an administrator for permission to manage entity settings.";
-  }
-  return "Dynatrace did not apply the tag. No existing tags were changed. Refresh the service inventory and try again.";
+  unavailable: "Write access is unverified",
 };
 
 export const ProviderTagSetup = ({
@@ -52,7 +45,7 @@ export const ProviderTagSetup = ({
   const [step, setStep] = useState<ReviewStep>("summary");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [writing, setWriting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<WriteFeedback | null>(null);
   const [lastChange, setLastChange] = useState<LastChange | null>(null);
 
   useEffect(() => {
@@ -72,7 +65,7 @@ export const ProviderTagSetup = ({
   useEffect(() => {
     setStep("summary");
     setSelectedIds([]);
-    setMessage(null);
+    setFeedback(null);
     setLastChange(null);
   }, [providerSlug, providerTagKey]);
 
@@ -98,35 +91,54 @@ export const ProviderTagSetup = ({
 
   const toggleService = (serviceId: string) => {
     setSelectedIds((current) => current.includes(serviceId) ? current.filter((id) => id !== serviceId) : [...current, serviceId]);
-    setMessage(null);
+    setFeedback(null);
   };
 
   const toggleAll = () => {
     const suggestedIds = suggestedRows.map((row) => row.service.id);
     setSelectedIds(suggestedIds.length > 0 && suggestedIds.every((id) => selectedIds.includes(id)) ? selectedIds.filter((id) => !suggestedIds.includes(id)) : Array.from(new Set([...selectedIds, ...suggestedIds])));
-    setMessage(null);
+    setFeedback(null);
   };
 
   const applyTag = async () => {
     if (!canWrite || selectedRows.length === 0 || writing) return;
     const ids = selectedRows.map((row) => row.service.id);
     setWriting(true);
-    setMessage(null);
+    setFeedback(null);
     try {
       const result = await monitoredEntitiesCustomTagsClient.postTags({
         entitySelector: buildEntityIdSelector(ids),
         body: { tags: [{ key: providerTagKey.trim(), value: providerSlug.trim() }] },
       });
-      const count = result.matchedEntitiesCount ?? ids.length;
+      const count = result.matchedEntitiesCount;
+      if (count === undefined) {
+        setFeedback({
+          tone: "warning",
+          title: "Tag request accepted without a confirmed result",
+          detail: "Dynatrace did not report how many services changed. Refresh the inventory and verify the selected services before trying again.",
+        });
+        await onRefresh();
+        return;
+      }
+      if (count === 0) {
+        setFeedback({
+          tone: "warning",
+          title: "No services were updated",
+          detail: "The selected service entities no longer matched the Dynatrace request. Refresh the inventory and review the selection.",
+        });
+        await onRefresh();
+        return;
+      }
       setLastChange({ ids, count, key: providerTagKey.trim(), value: providerSlug.trim() });
-      setMessage(count === ids.length
-        ? `${tagText} was added to ${count} service${count === 1 ? "" : "s"}.`
-        : `${tagText} was added to ${count} of ${ids.length} selected services. Your access may be limited.`);
+      setFeedback(count === ids.length
+        ? { tone: "positive", title: "Provider tag applied", detail: `${tagText} was added to ${count} service${count === 1 ? "" : "s"}.` }
+        : { tone: "warning", title: "Provider tag applied to part of the selection", detail: `${tagText} was added to ${count} of ${ids.length} selected services. Management-zone access may have limited the result.` });
       setSelectedIds([]);
       setStep("summary");
       await onRefresh();
     } catch (error) {
-      setMessage(friendlyWriteError(error));
+      const issue = providerTagWriteIssue(error);
+      setFeedback({ tone: "warning", ...issue });
     } finally {
       setWriting(false);
     }
@@ -135,7 +147,7 @@ export const ProviderTagSetup = ({
   const undoLastChange = async () => {
     if (!lastChange || writing) return;
     setWriting(true);
-    setMessage(null);
+    setFeedback(null);
     try {
       await monitoredEntitiesCustomTagsClient.deleteTags({
         entitySelector: buildEntityIdSelector(lastChange.ids),
@@ -143,11 +155,16 @@ export const ProviderTagSetup = ({
         value: lastChange.value,
         deleteAllWithKey: false,
       });
-      setMessage(`${lastChange.key}:${lastChange.value} was removed from the services changed in the last action.`);
+      setFeedback({
+        tone: "positive",
+        title: "Last provider tag change removed",
+        detail: `${lastChange.key}:${lastChange.value} was removed from the services changed in the last action.`,
+      });
       setLastChange(null);
       await onRefresh();
     } catch (error) {
-      setMessage(friendlyWriteError(error));
+      const issue = providerTagWriteIssue(error);
+      setFeedback({ tone: "warning", ...issue });
     } finally {
       setWriting(false);
     }
@@ -217,6 +234,7 @@ export const ProviderTagSetup = ({
           <strong>Add <code>{tagText}</code> to {selectedRows.length} selected service{selectedRows.length === 1 ? "" : "s"}?</strong>
           <p>{selectedSuggestedCount > 0 ? `${selectedSuggestedCount} selection${selectedSuggestedCount === 1 ? " has" : "s have"} supporting Smartscape runtime metadata. ` : ""}Review remains required because topology identifies hosting context, not provider fault or SLA eligibility.</p>
           <p>Existing tags remain in place. The new tag can be used by Dynatrace dashboards, alerts, maintenance windows, management zones, and workflows.</p>
+          {permission === "granted" ? <p>The role check passed. Dynatrace still validates the app scope and Manage monitoring settings permission when the change is submitted.</p> : null}
           {permission === "conditional" ? <p>Your permission is limited by management zone. Dynatrace may update fewer services than selected.</p> : null}
           {!canWrite ? <p>Your current role cannot apply this change. Ask a tenant administrator for entity-settings permission.</p> : null}
           <div className="provider-review-actions">
@@ -226,7 +244,12 @@ export const ProviderTagSetup = ({
         </div>
       ) : null}
 
-      {message ? <div className="provider-write-message" role="status"><span>{message}</span>{lastChange ? <Button size="condensed" disabled={writing} onClick={() => void undoLastChange()}>Undo last change</Button> : null}</div> : null}
+      {feedback ? (
+        <div className={`provider-write-message provider-write-message-${feedback.tone}`} role={feedback.tone === "warning" ? "alert" : "status"}>
+          <div><strong>{feedback.title}{feedback.code ? ` (${feedback.code})` : ""}</strong><span>{feedback.detail}</span></div>
+          {lastChange ? <Button size="condensed" disabled={writing} onClick={() => void undoLastChange()}>Undo last change</Button> : null}
+        </div>
+      ) : null}
     </section>
   );
 };

@@ -14,6 +14,15 @@ const firstText = (...values: unknown[]): string | undefined => {
   return undefined;
 };
 
+const normalizeCloudProvider = (value: unknown): string | undefined => {
+  const provider = optionalText(value)?.toLowerCase();
+  if (provider === "aws" || provider === "amazon_web_services") return "aws";
+  if (provider === "azure" || provider === "microsoft_azure") return "azure";
+  if (provider === "gcp" || provider === "google_cloud") return "gcp";
+  if (provider === "oci" || provider === "oracle" || provider === "oracle_cloud") return "oci";
+  return undefined;
+};
+
 const tagStrings = (value: unknown): string[] => {
   if (Array.isArray(value)) return value.flatMap(tagStrings);
   if (typeof value === "string" && value.trim()) return [value.trim()];
@@ -26,10 +35,11 @@ const tagStrings = (value: unknown): string[] => {
 };
 
 const providerFromTarget = (row: Record<string, unknown>): { slug?: string; evidence?: string; accountId?: string } => {
-  const explicitProvider = optionalText(row.cloud_provider)?.toLowerCase();
-  if (explicitProvider === "aws" || explicitProvider === "azure" || explicitProvider === "gcp") {
-    const accountId = firstText(row.aws_account_id, row.azure_subscription, row.gcp_project_id);
-    return { slug: explicitProvider, evidence: `Smartscape cloud.provider=${explicitProvider}`, accountId };
+  const rawCloudProvider = optionalText(row.cloud_provider)?.toLowerCase();
+  const explicitProvider = normalizeCloudProvider(rawCloudProvider);
+  if (explicitProvider) {
+    const accountId = firstText(row.aws_account_id, row.azure_subscription, row.gcp_project_id, row.oci_tenancy_id, row.cloud_account_id);
+    return { slug: explicitProvider, evidence: `Smartscape cloud.provider=${rawCloudProvider}`, accountId };
   }
 
   const targetType = optionalText(row.target_type)?.toUpperCase() ?? "";
@@ -57,6 +67,15 @@ const providerFromTarget = (row: Record<string, unknown>): { slug?: string; evid
       slug: "gcp",
       evidence: targetType.startsWith("GCP_") || targetType.startsWith("GOOGLE_") ? `Smartscape runtime type ${targetType}` : "Smartscape GCP runtime attributes",
       accountId: optionalText(row.gcp_project_id),
+    };
+  }
+
+  const ociEvidence = firstText(row.oci_tenancy_id, row.oci_region, row.oci_availability_domain);
+  if (ociEvidence || targetType.startsWith("OCI_") || targetType.startsWith("ORACLE_")) {
+    return {
+      slug: "oci",
+      evidence: targetType.startsWith("OCI_") || targetType.startsWith("ORACLE_") ? `Smartscape runtime type ${targetType}` : "Smartscape OCI runtime attributes",
+      accountId: firstText(row.oci_tenancy_id, row.cloud_account_id),
     };
   }
 
@@ -89,6 +108,10 @@ export const parseSmartscapeScopeEdges = (data: { records?: unknown[] } | undefi
         row.azure_location,
         row.gcp_location,
         row.gcp_region,
+        row.oci_availability_domain,
+        row.oci_region,
+        row.cloud_availability_zone,
+        row.cloud_region,
         row.k8s_cluster,
       ),
       providerSlug: provider.slug,
@@ -108,7 +131,7 @@ export const parseServiceCloudContexts = (data: { records?: unknown[] } | undefi
 
     const provider = providerFromTarget(row);
     if (!provider.slug) return [];
-    const region = firstText(row.aws_region, row.azure_location, row.gcp_region);
+    const region = firstText(row.aws_region, row.azure_location, row.gcp_region, row.oci_region, row.cloud_region);
     const contextName = firstText(provider.accountId, region) ?? `${provider.slug.toUpperCase()} service context`;
     const evidence = provider.evidence
       ?.replace("Smartscape runtime attributes", "Service metric dimensions")

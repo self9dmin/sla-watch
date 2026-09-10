@@ -1,24 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { openApp } from "@dynatrace-sdk/navigation";
-import { useDql } from "@dynatrace-sdk/react-hooks";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
-import { HostsIcon, ServicesIcon, SmartscapeIcon } from "@dynatrace/strato-icons";
 import type {
   ContractOverrideRecord,
   ContractOverrideValue,
-  EffectiveContractTerms,
   ServiceRecord,
   SlaProviderResponse,
+  SmartscapeScopeEdge,
 } from "../types";
-import { SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
-import { parseSmartscapeScopeEdges } from "../data/topology";
-import { getOverrideScopeNames, resolveEffectiveContractTerms } from "../data/contractOverrides";
+import { getOverrideScopeNames } from "../data/contractOverrides";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { ContractOverrideEditor } from "./ContractOverrideEditor";
 
-type DirectoryTab = "published" | "overrides" | "scope";
+type DirectoryTab = "published" | "overrides";
 type Tone = "neutral" | "warning" | "positive";
 
 type ProviderDirectoryWorkspaceProps = {
@@ -26,6 +21,7 @@ type ProviderDirectoryWorkspaceProps = {
   directoryLoading: boolean;
   directoryError?: Error;
   services: ServiceRecord[];
+  topology: SmartscapeScopeEdge[];
   servicesLoading: boolean;
   serviceError?: Error;
 };
@@ -33,7 +29,6 @@ type ProviderDirectoryWorkspaceProps = {
 const TABS: ReadonlyArray<{ id: DirectoryTab; label: string }> = [
   { id: "published", label: "Published terms" },
   { id: "overrides", label: "SLA overrides" },
-  { id: "scope", label: "Scope map" },
 ];
 
 const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode }) => <span className={`status-pill status-pill-${tone}`}>{children}</span>;
@@ -71,78 +66,30 @@ const overrideScopeSummary = (override: ContractOverrideRecord): string => {
   return `${kind}: ${names[0]}${names.length > 1 ? ` +${names.length - 1}` : ""}`;
 };
 
-const TermsStrip = ({ terms }: { terms: EffectiveContractTerms }) => (
-  <dl className="effective-terms-strip">
-    <div><dt>Availability</dt><dd>{formatPercent(terms.availabilityTarget)}</dd></div>
-    <div><dt>Filing window</dt><dd>{terms.filingDeadlineDays === null ? "Not published" : `${terms.filingDeadlineDays} ${terms.businessDays ? "business" : "calendar"} days`}</dd></div>
-    <div><dt>Maximum credit</dt><dd>{formatPercent(terms.maxCreditPercent)}</dd></div>
-    <div><dt>Applied source</dt><dd className={terms.source === "tenant override" ? "source-tenant" : ""}>{terms.source === "tenant override" ? "Tenant override" : "sla.directory"}</dd></div>
-  </dl>
-);
-
 export const ProviderDirectoryWorkspace = ({
   directory,
   directoryLoading,
   directoryError,
   services,
+  topology,
   servicesLoading,
   serviceError,
 }: ProviderDirectoryWorkspaceProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const requestedTab = new URLSearchParams(location.search).get("tab");
-  const [tab, setTab] = useState<DirectoryTab>(requestedTab === "overrides" || requestedTab === "scope" ? requestedTab : "published");
+  const [tab, setTab] = useState<DirectoryTab>(requestedTab === "overrides" ? requestedTab : "published");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ContractOverrideRecord | undefined>();
-  const [selectedEdgeKey, setSelectedEdgeKey] = useState<string | null>(null);
-  const [selectedProviderServiceId, setSelectedProviderServiceId] = useState<string>("*");
-  const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
-  const topology = useMemo(() => parseSmartscapeScopeEdges(topologyQuery.data), [topologyQuery.data]);
   const contractSettings = useContractOverrides();
 
   useEffect(() => {
-    if (requestedTab === "overrides" || requestedTab === "scope" || requestedTab === "published") setTab(requestedTab);
+    if (requestedTab === "overrides" || requestedTab === "published") setTab(requestedTab);
   }, [requestedTab]);
 
   const providerOverrides = useMemo(() => (directory
     ? contractSettings.overrides.filter((override) => override.providerSlug === directory.provider.slug)
     : []), [contractSettings.overrides, directory]);
-
-  const topologyRows = useMemo(() => {
-    const seen = new Set<string>();
-    return topology.filter((edge) => {
-      const key = `${edge.serviceNodeId}|${edge.targetNodeId}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).slice(0, 50);
-  }, [topology]);
-
-  useEffect(() => {
-    if (!directory) return;
-    if (selectedProviderServiceId === "*" && directory.services.length > 0) setSelectedProviderServiceId(directory.services[0].id);
-  }, [directory, selectedProviderServiceId]);
-
-  useEffect(() => {
-    if (topologyRows.length === 0) {
-      setSelectedEdgeKey(null);
-      return;
-    }
-    const exists = topologyRows.some((edge) => `${edge.serviceNodeId}|${edge.targetNodeId}` === selectedEdgeKey);
-    if (!exists) setSelectedEdgeKey(`${topologyRows[0].serviceNodeId}|${topologyRows[0].targetNodeId}`);
-  }, [selectedEdgeKey, topologyRows]);
-
-  const selectedEdge = topologyRows.find((edge) => `${edge.serviceNodeId}|${edge.targetNodeId}` === selectedEdgeKey);
-  const selectedProviderService = directory?.services.find((service) => service.id === selectedProviderServiceId);
-  const effectiveTerms = directory && selectedEdge && selectedProviderService
-    ? resolveEffectiveContractTerms(directory, providerOverrides, {
-        providerSlug: directory.provider.slug,
-        providerServiceId: selectedProviderService.id,
-        serviceId: selectedEdge.serviceClassicId ?? selectedEdge.serviceNodeId,
-        hostId: selectedEdge.targetClassicId ?? selectedEdge.targetNodeId,
-        location: selectedEdge.location,
-      })
-    : undefined;
 
   const openCreateSettings = (seed?: ContractOverrideValue) => {
     const params = new URLSearchParams();
@@ -159,7 +106,6 @@ export const ProviderDirectoryWorkspace = ({
 
   const openCreateForProviderService = (service: SlaProviderResponse["services"][number]) => {
     if (!directory) return;
-    setSelectedProviderServiceId(service.id);
     openCreateSettings({
       overrideKey: `${directory.provider.slug}|${service.id}|provider|*`,
       providerSlug: directory.provider.slug,
@@ -185,31 +131,6 @@ export const ProviderDirectoryWorkspace = ({
       enabled: true,
     });
   };
-
-  const scopeSeed = selectedEdge && selectedProviderService ? {
-    overrideKey: `${directory?.provider.slug ?? ""}|${selectedProviderService.id}|host|${selectedEdge.targetClassicId ?? selectedEdge.targetNodeId}`,
-    providerSlug: directory?.provider.slug ?? "",
-    providerServiceId: selectedProviderService.id,
-    providerServiceName: selectedProviderService.name,
-    scopeKind: "host" as const,
-    scopeEntityId: selectedEdge.targetClassicId ?? selectedEdge.targetNodeId,
-    scopeEntityName: selectedEdge.targetName,
-    scopeEntityIds: [selectedEdge.targetClassicId ?? selectedEdge.targetNodeId],
-    scopeEntityNames: [selectedEdge.targetName],
-    location: selectedEdge.location ?? null,
-    availabilityTarget: null,
-    filingDeadlineDays: null,
-    deadlineBasis: null,
-    businessDays: false,
-    maxCreditPercent: null,
-    claimMethod: null,
-    effectiveFrom: new Date().toISOString().slice(0, 10),
-    effectiveTo: null,
-    sourceReference: "",
-    sourceUrl: null,
-    notes: null,
-    enabled: true,
-  } satisfies ContractOverrideValue : undefined;
 
   if (directoryLoading && !directory) {
     return <div className="directory-loading" role="status"><strong>Loading vendor terms</strong><span>Reading the public record and tenant settings.</span></div>;
@@ -280,7 +201,6 @@ export const ProviderDirectoryWorkspace = ({
                     <span>{formatPercent(service.uptime)}</span>
                     <span>{service.eligible ? "Published SLA" : "Reference"}</span>
                     <button type="button" className="inline-action table-action" onClick={() => {
-                      setSelectedProviderServiceId(service.id);
                       if (overrideCount > 0) setTab("overrides");
                       else openCreateForProviderService(service);
                     }}>
@@ -327,49 +247,6 @@ export const ProviderDirectoryWorkspace = ({
           </div>
         ) : null}
 
-        {tab === "scope" ? (
-          <div className="scope-map-view">
-            <div className="scope-map-toolbar">
-              <div className="scope-map-title"><SmartscapeIcon /><div><strong>Smartscape-backed scope map</strong><span>Service-to-runtime relationships returned by the current tenant.</span></div></div>
-              <Button size="condensed" onClick={() => openApp("dynatrace.smartscape", "view/dynatrace.smartscape.smartscape-on-grail")}><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
-            </div>
-            <div className="scope-map-boundary"><strong>Attribution boundary</strong><span>Topology identifies where a customer scope applies. It does not prove that a provider publishes a host-level SLA or caused an incident.</span></div>
-            {topologyQuery.error ? <div className="error-box compact-error">Smartscape topology is unavailable. Check the storage:smartscape:read permission.</div> : null}
-            {topologyQuery.isLoading ? (
-              <div className="directory-loading" role="status"><strong>Loading Smartscape topology</strong><span>Reading service-to-runtime relationships.</span></div>
-            ) : topologyRows.length === 0 ? (
-              <div className="contract-empty"><strong>No service-to-runtime relationships returned</strong><span>Open Smartscape to verify that the service and host boundary is available in this tenant.</span></div>
-            ) : (
-              <div className="scope-map-layout">
-                <div className="scope-map-list" role="listbox" aria-label="Smartscape service and runtime scopes">
-                  {topologyRows.map((edge) => {
-                    const key = `${edge.serviceNodeId}|${edge.targetNodeId}`;
-                    return (
-                      <button type="button" role="option" aria-selected={selectedEdgeKey === key} className={`scope-map-row${selectedEdgeKey === key ? " selected" : ""}`} key={key} onClick={() => setSelectedEdgeKey(key)}>
-                        <span className="scope-node"><ServicesIcon /><span><small>Service</small><strong>{edge.serviceName}</strong></span></span>
-                        <span className="scope-connector"><span aria-hidden="true" /><small>{edge.relationship === "belongs_to" ? "belongs to" : "runs on"}</small></span>
-                        <span className="scope-node"><HostsIcon /><span><small>{edge.targetType.replaceAll("_", " ")}</small><strong>{edge.targetName}</strong></span></span>
-                        <span className="scope-connector"><span aria-hidden="true" /><small>observed in</small></span>
-                        <span className={`scope-node scope-location${edge.location ? "" : " missing"}`}><span><small>Location</small><strong>{edge.location ?? "Not exposed"}</strong></span></span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <aside className="scope-detail" aria-label="Effective contract terms for selected scope">
-                  <label className="field-label">Provider service<select value={selectedProviderServiceId} onChange={(event) => setSelectedProviderServiceId(event.target.value)}>{directory.services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
-                  {selectedEdge && effectiveTerms ? (
-                    <>
-                      <div className="scope-selection"><span>Selected Dynatrace scope</span><strong>{selectedEdge.serviceName} → {selectedEdge.targetName}</strong><small>{selectedEdge.location ?? "No location field returned"}</small></div>
-                      <TermsStrip terms={effectiveTerms} />
-                      <div className="scope-source-chain"><strong>{effectiveTerms.appliedOverrides.length > 0 ? `${effectiveTerms.appliedOverrides.length} tenant override${effectiveTerms.appliedOverrides.length === 1 ? "" : "s"} applied` : "Public baseline applied"}</strong><span>Precedence: host, location, service, provider, then sla.directory.</span></div>
-                      <Button size="condensed" variant="emphasized" disabled={!contractSettings.canWrite} onClick={() => openCreateSettings(scopeSeed)}>Add SLA override for this scope</Button>
-                    </>
-                  ) : null}
-                </aside>
-              </div>
-            )}
-          </div>
-        ) : null}
       </div>
 
       <ContractOverrideEditor

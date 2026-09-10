@@ -22,6 +22,28 @@ export type ProviderCandidate = {
   runtimeNames: string[];
 };
 
+export type ProviderScopeAssignmentValue = {
+  assignmentKey: string;
+  providerSlug: string;
+  providerServiceId: string;
+  providerServiceName: string;
+  serviceEntityId: string;
+  serviceEntityName: string;
+  runtimeEntityId: string;
+  runtimeEntityName: string;
+  runtimeType: string;
+  location?: string | null;
+  evidence: string;
+  enabled: boolean;
+};
+
+export type ProviderScopeAssignmentRecord = ProviderScopeAssignmentValue & {
+  objectId: string;
+  version: string;
+  lastModifiedBy?: string;
+  lastModifiedTime?: string;
+};
+
 export type ProviderConnectionValue = {
   connectionKey: string;
   providerSlug: string;
@@ -46,7 +68,7 @@ export type ProviderNoticeProduct = {
 
 export type ProviderNotice = {
   id: string;
-  source: "gcp-personalized" | "gcp-public";
+  source: "gcp-personalized" | "gcp-public" | "provider-public";
   sourceScope?: string;
   title: string;
   summary: string;
@@ -62,8 +84,10 @@ export type ProviderNotice = {
   url?: string;
 };
 
-export type GcpProviderNoticesResponse = {
-  provider: "gcp";
+export type ProviderNoticesResponse = {
+  provider: string;
+  providerName: string;
+  sourceName: string;
   fetchedAt: string;
   source: "personalized" | "public";
   connectionState: "connected" | "public" | "fallback";
@@ -71,6 +95,12 @@ export type GcpProviderNoticesResponse = {
   message: string;
   warning?: string;
   notices: ProviderNotice[];
+};
+
+export type GcpProviderNoticesResponse = ProviderNoticesResponse & { provider: "gcp" };
+export type PublicProviderNoticesResponse = ProviderNoticesResponse & {
+  source: "public";
+  connectionState: "public";
 };
 
 export type ContractScopeKind = "provider" | "service" | "host" | "location";

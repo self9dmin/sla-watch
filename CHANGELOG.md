@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.35
+
+- Added credential-free public provider notices for OCI, OpenAI, Anthropic, and ElevenLabs with explicit non-customer-specific source labels.
+- Added multiple saved Google Cloud project connections and a project selector for Personalized Service Health.
+- Moved the Smartscape service scope map into Setup and added versioned, operator-confirmed provider-service mappings in App Settings.
+- Updated Incident review to prefer exact tenant SLA scopes, then confirmed Setup mappings, then a clearly labeled unique Smartscape candidate.
+- Replaced generic provider-tag failures with distinct session, permission, entity, request, and unverified-outcome guidance.
+- Linked ownership guidance to current Dynatrace documentation.
+
 ## 0.0.34
 
 - Replaced the single global provider setting with a monitored-provider collection and a separate active provider for focused views.
@@ -125,4 +134,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.34` release candidate.
+- Reserved for changes after the `0.0.35` release candidate.
