@@ -23,7 +23,7 @@ The app is suitable for continued hardening as a custom AppEngine app. The revie
 
 | Area | Evidence | State | Closure action |
 | --- | --- | --- | --- |
-| Manifest identity | `app.config.json` uses `my.sla`, `SLA Watch`, version `0.0.20`, a maintained icon, and a sub-80-character description | Implemented locally and deploying at `0.0.20` | Confirm the permanent publisher-owned app ID and final Hub name. Do not change the ID casually after distribution. |
+| Manifest identity | `app.config.json` uses `my.sla`, `SLA Watch`, version `0.0.20`, a maintained icon, and a sub-80-character description | Implemented locally and deployed at `0.0.20` | Confirm the permanent publisher-owned app ID and final Hub name. Do not change the ID casually after distribution. |
 | Name discoverability | `SLA Watch` is short and title case | Likely compliant, uniqueness unverified | Check Hub for collisions and ensure the final name describes the use case. |
 | Icon and listing media | A custom SVG icon is included; final Hub screenshots and listing media are not yet packaged | Partial | Review the icon and add final Hub screenshots/demo assets. |
 | Runtime scopes | Manifest declares read-only telemetry plus user/app state scopes | Implemented | Test each scope with a least-privilege user and ensure the Hub Technical information page matches. |
@@ -35,7 +35,7 @@ The app is suitable for continued hardening as a custom AppEngine app. The revie
 | Themes | Custom styles use theme variables and dark/light paths were manually verified in the target tenant | Verified at `0.0.20` after deployment | Add automated contrast or screenshot coverage before submission. |
 | Dependencies | Production audit is clean after the React Router upgrade; current `dt-app` is `1.17.0` | Implemented locally | Keep Renovate enabled and review App Toolkit advisories separately as development-only risk. |
 | Tests | Focused unit tests, typecheck, lint, build, and analyzer are present | Implemented locally; E2E and live permission tests are gaps | Add authenticated Playwright and tenant acceptance jobs using CI secrets. |
-| CI | Pull-request workflow is repository-local and non-deploying | Verified in [GitHub Actions run 34486911947](https://github.com/self9dmin/sla-watch/actions/runs/34486911947) on Node 24 | Make the required checks branch-protection rules and keep deployment outside the pull-request job. |
+| CI | Pull-request workflow is repository-local and non-deploying | Verified in [GitHub Actions run 34490073508](https://github.com/self9dmin/sla-watch/actions/runs/34490073508) on Node 24 | Make the required checks branch-protection rules and keep deployment outside the pull-request job. |
 | Public repository | Reviewed source and documentation are published at [self9dmin/sla-watch](https://github.com/self9dmin/sla-watch) on `main` | Published | Review the public tree and commit history, then keep future changes gated by CI and pull request review. |
 | Hub verification | Standard verification, provider identity, integrity, and code signing are controlled by Dynatrace Hub | External dependency | Use the applicable Dynatrace community, partner, or Hub-subscription submission route. A local `dt-app deploy` cannot complete this step. |
 
