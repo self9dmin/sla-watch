@@ -1,12 +1,25 @@
 # Release acceptance record
 
-This record captures the manual target-environment smoke evidence for the `0.0.29` release. The release was deployed to the sal98008 Dynatrace environment and exercised through the installed application. This record complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record captures the manual target-environment smoke evidence for the `0.0.29` release. The release was deployed to the designated nonproduction Dynatrace environment and exercised through the installed application. This record complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
 
-## Verified scenarios
+## 0.0.30 release-candidate smoke
+
+The `0.0.30` build was served locally inside the authenticated nonproduction AppShell. It has not been installed as production by this record.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Focused navigation | Overview, Setup, and Incidents each expose one operational purpose | Authenticated local-development smoke |
+| Desktop fit | All three normal desktop states have equal body client and scroll dimensions, with no page scroll | Browser dimension check at 1659 by 769 CSS pixels |
+| Bounded collections | The seven-service assignment list stays inside Setup instead of extending the page | Authenticated local-development smoke |
+| Explicit provider-tag review | Review services requires an exact selection and a second confirmation before enabling the write; existing tag consumers are disclosed | Authenticated local-development smoke through confirmation; no tag was applied |
+| Theme support | The compact shell, status text, controls, icons, and tooltips remain readable in light and dark themes | Authenticated local-development visual smoke |
+| Production status | No `0.0.30` production claim is made | Last installed and verified production version remains `0.0.29` |
+
+## 0.0.29 verified scenarios
 
 | Scenario | Expected result | Evidence |
 | --- | --- | --- |
-| Compact Overview | The current evidence state, four supporting facts, assessment boundary, and one primary action fit in the initial desktop viewport | Installed production smoke; live sal98008 service and Problem counts |
+| Compact Overview | The current evidence state, four supporting facts, assessment boundary, and one primary action fit in the initial desktop viewport | Installed production smoke; live nonproduction service and Problem counts |
 | Evidence view | The evidence ladder, diagnostics, and setup checks are available on a dedicated route without changing tenant data | Installed production smoke at `/ui/apps/my.sla/evidence` |
 | Evidence-stage markers | Each stage number remains centered in a fixed circular marker, and positive, warning, and neutral states remain distinguishable | Installed production smoke in light and dark themes at `/ui/apps/my.sla/evidence` |
 | Provider directory connection | The AppEngine function loads a provider contract through the allowlisted `sla.directory` host | Installed production smoke; connected AWS directory status |
@@ -23,6 +36,7 @@ This record captures the manual target-environment smoke evidence for the `0.0.2
 ## Not proven by this record
 
 - A separate least-privilege user for every declared telemetry and state scope.
+- A provider-tag write or undo against a disposable service under granted, denied, or management-zone-limited permissions.
 - Automated Playwright coverage against a disposable authenticated tenant.
 - End-to-end provider-service ID correlation or automated credit eligibility.
 - Dynatrace Hub listing approval, standard verification, or code signing.

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useCurrentTheme } from "@dynatrace/strato-components/core";
 import { ProgressCircle } from "@dynatrace/strato-components/content";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
@@ -34,25 +34,31 @@ const AppShell = ({
   onToggleTheme: () => void;
   onStartTour: () => void;
   saveError: string | null;
-}) => (
-  <div className="sla-app">
-    <header className="sla-header">
-      <Header theme={theme} onToggleTheme={onToggleTheme} onStartTour={onStartTour} />
-    </header>
-    <main className="sla-main">
-      {saveError ? <div className="save-status" role="status">{saveError}</div> : null}
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/evidence" element={<Dashboard initialSection="evidence" />} />
-        <Route path="/directory" element={<Dashboard initialSection="directory" />} />
-        <Route path="/review" element={<Dashboard initialSection="review" />} />
-        <Route path="/changes" element={<ChangeLogPage />} />
-        <Route path="/settings/:page?" element={<SettingsPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </main>
-  </div>
-);
+}) => {
+  const location = useLocation();
+  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents";
+  return (
+    <div className="sla-app">
+      <header className="sla-header">
+        <Header theme={theme} onToggleTheme={onToggleTheme} onStartTour={onStartTour} />
+      </header>
+      <main className={`sla-main${compactWatch ? " sla-main-watch" : ""}`}>
+        {saveError ? <div className="save-status" role="status">{saveError}</div> : null}
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/setup" element={<Dashboard initialSection="setup" />} />
+          <Route path="/incidents" element={<Dashboard initialSection="incidents" />} />
+          <Route path="/evidence" element={<Navigate to="/setup" replace />} />
+          <Route path="/review" element={<Navigate to="/incidents" replace />} />
+          <Route path="/directory" element={<Dashboard initialSection="directory" />} />
+          <Route path="/changes" element={<ChangeLogPage />} />
+          <Route path="/settings/:page?" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
 
 const AppContent = () => {
   const navigate = useNavigate();

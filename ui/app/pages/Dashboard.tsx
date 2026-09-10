@@ -6,7 +6,9 @@ import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typography";
 import { SetupAdvisor } from "../components/SetupAdvisor";
 import { IncidentReview } from "../components/IncidentReview";
+import { ProviderTagSetup } from "../components/ProviderTagSetup";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
+import { providerTagValue } from "../data/providerTags";
 import { buildSetupRecommendations } from "../data/recommendations";
 import {
   createLogsCountQuery,
@@ -55,19 +57,6 @@ const hasMetricSeries = (data: { records?: unknown[] } | undefined): boolean => 
   return records.some((record) => hasSignalValue(asRecord(record).request_count));
 };
 
-const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const providerLabel = (tag: string, configuredKey: string): string | null => {
-  const normalized = tag.trim().toLowerCase();
-  const keys = Array.from(new Set([configuredKey.trim().toLowerCase(), "provider", "vendor", "cloud.provider"].filter(Boolean))).map(escapeRegExp);
-  const keyed = normalized.match(new RegExp(`(?:^|\\[|\\s)(?:${keys.join("|")})\\s*[:=]\\s*([a-z0-9][a-z0-9._-]*)`));
-  if (keyed?.[1]) return keyed[1];
-  const context = normalized.match(/^\[([a-z0-9][a-z0-9._-]*)\]/);
-  if (context?.[1]) return context[1];
-  const commonProvider = /^(aws|amazon|azure|microsoft|gcp|google|oci|oracle|ibm|alibaba|cloudflare|stripe|github|openai)$/;
-  return commonProvider.test(normalized) ? normalized : null;
-};
-
 const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode }) => <span className={`status-pill status-pill-${tone}`}>{children}</span>;
 
 const OverviewFact = ({ label, value, detail, tone = "neutral" }: { label: string; value: string; detail: string; tone?: Tone }) => (
@@ -80,8 +69,8 @@ const OverviewFact = ({ label, value, detail, tone = "neutral" }: { label: strin
 
 const WATCH_LINKS: ReadonlyArray<{ section: WatchRouteSection; label: string; to: string; tour: string }> = [
   { section: "overview", label: "Overview", to: "/", tour: "overview" },
-  { section: "evidence", label: "Evidence", to: "/evidence", tour: "evidence" },
-  { section: "review", label: "Incident review", to: "/review", tour: "review" },
+  { section: "setup", label: "Setup", to: "/setup", tour: "setup" },
+  { section: "incidents", label: "Incidents", to: "/incidents", tour: "incidents" },
 ];
 
 const WatchNavigation = ({ section }: { section: WatchRouteSection }) => (
@@ -98,10 +87,6 @@ const WatchNavigation = ({ section }: { section: WatchRouteSection }) => (
       </Link>
     ))}
   </nav>
-);
-
-const DiagnosticCard = ({ label, title, detail, tone, children }: { label: string; title: string; detail: string; tone: Tone; children?: React.ReactNode }) => (
-  <div className="diagnostic-card"><Text className="eyebrow">{label}</Text><div className="diagnostic-title"><StatusPill tone={tone}>{title}</StatusPill></div><p>{detail}</p>{children ? <div className="diagnostic-meta">{children}</div> : null}</div>
 );
 
 const EvidenceStep = ({ number, title, detail, state }: { number: number; title: string; detail: string; state: Tone }) => (
@@ -147,9 +132,9 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
   const activeProblems = problems.filter((problem) => problem.status === "ACTIVE").length;
   const logCount = firstCount(logsData, "log_count");
   const spanCount = firstCount(spansData, "span_count");
-  const providerLabels = useMemo(() => Array.from(new Set(services.flatMap((service) => service.tags.map((tag) => providerLabel(tag, providerLabelKey)).filter((value): value is string => Boolean(value))))), [providerLabelKey, services]);
   const selectedProviderSlug = directoryData?.provider.slug ?? providerSlug;
-  const matchedProviderServices = services.filter((service) => service.tags.some((tag) => providerLabel(tag, providerLabelKey) === selectedProviderSlug)).length;
+  const providerLabels = useMemo(() => Array.from(new Set(services.flatMap((service) => service.tags.map((tag) => providerTagValue(tag, providerLabelKey, selectedProviderSlug)).filter((value): value is string => Boolean(value))))), [providerLabelKey, selectedProviderSlug, services]);
+  const matchedProviderServices = services.filter((service) => service.tags.some((tag) => providerTagValue(tag, providerLabelKey, selectedProviderSlug) === selectedProviderSlug)).length;
 
   const telemetryLoading = servicesLoading || problemsLoading || logsLoading || spansLoading || metricsLoading;
   const telemetryError = serviceError ?? problemError ?? logsError ?? spansError ?? metricsError;
@@ -164,22 +149,22 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
           ? { tone: "positive" as Tone, title: "Telemetry detected", detail: "Dynatrace has service entities or signals that can support an evidence review." }
           : { tone: "warning" as Tone, title: "Telemetry missing", detail: `No Problems, logs, spans, or service request series were detected in the last ${lookbackHours} hours.` };
   const providerState = directoryLoading
-    ? { tone: "neutral" as Tone, title: "Checking provider identity", detail: `Loading the ${providerSlug} contract before evaluating labels.` }
+    ? { tone: "neutral" as Tone, title: "Checking provider identity", detail: `Loading the ${providerSlug} contract before evaluating tags.` }
     : !directoryData
       ? { tone: "warning" as Tone, title: "Directory unavailable", detail: directoryError?.message ?? "Load a provider contract before checking provider identity." }
       : telemetryLoading
         ? { tone: "neutral" as Tone, title: "Waiting for service inventory", detail: "Provider matching will be evaluated after the tenant service list finishes loading." }
         : telemetryError
-          ? { tone: "warning" as Tone, title: "Provider check blocked", detail: "Telemetry access is incomplete, so provider labeling cannot be judged reliably yet." }
+          ? { tone: "warning" as Tone, title: "Provider check blocked", detail: "Telemetry access is incomplete, so provider tagging cannot be judged reliably yet." }
           : services.length === 0 && telemetrySignalsPresent
-            ? { tone: "warning" as Tone, title: "Identify service first", detail: "The tenant has telemetry, but the affected service inventory is incomplete. Provider labeling cannot be evaluated yet." }
+            ? { tone: "warning" as Tone, title: "Identify service first", detail: "The tenant has telemetry, but the affected service inventory is incomplete. Provider tagging cannot be evaluated yet." }
             : services.length === 0
-              ? { tone: "warning" as Tone, title: "No service entities", detail: "There is no service inventory to label. Fix instrumentation or entity access before identifying a provider." }
+              ? { tone: "warning" as Tone, title: "No service entities", detail: "There is no service inventory to tag. Fix instrumentation or entity access before identifying a provider." }
               : providerLabels.length === 0
-                ? { tone: "warning" as Tone, title: "Labeling missing", detail: `Services exist, but no explicit provider label was found. Add a tag such as ${providerLabelKey}:${selectedProviderSlug} or confirm a mapping in this app.` }
+                ? { tone: "warning" as Tone, title: "Provider tags missing", detail: `Services exist, but no explicit provider tag was found. Review the services that depend on ${directoryData.provider.name} in Setup.` }
                 : matchedProviderServices > 0
-                  ? { tone: "positive" as Tone, title: "Provider identified", detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? "" : "s"} carry an explicit ${directoryData.provider.name} label. This still does not prove a provider outage.` }
-                  : { tone: "warning" as Tone, title: "Provider identification needed", detail: `Provider labels were found (${providerLabels.slice(0, 3).join(", ")}), but none resolve to ${directoryData.provider.name}. Select the correct provider or update the Dynatrace labels.` };
+                  ? { tone: "positive" as Tone, title: "Provider identified", detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? "" : "s"} carry an explicit ${directoryData.provider.name} tag. This still does not prove a provider outage.` }
+                  : { tone: "warning" as Tone, title: "Provider identification needed", detail: `Provider tags were found (${providerLabels.slice(0, 3).join(", ")}), but none resolve to ${directoryData.provider.name}. Select the correct provider or update the Dynatrace tags.` };
 
   const claimReadiness = telemetryLoading || directoryLoading
     ? { tone: "neutral" as Tone, value: "Checking", detail: "Waiting for the evidence path to settle." }
@@ -190,9 +175,9 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
         : services.length === 0
           ? { tone: "warning" as Tone, value: "Needs service boundary", detail: "No service entity is available for attribution." }
           : providerLabels.length === 0
-            ? { tone: "warning" as Tone, value: "Needs labeling", detail: "Add a provider label or configure a mapping." }
+            ? { tone: "warning" as Tone, value: "Needs setup", detail: "Identify which services depend on the selected provider." }
             : matchedProviderServices === 0
-              ? { tone: "warning" as Tone, value: "Needs mapping", detail: "Detected labels do not match the selected contract." }
+              ? { tone: "warning" as Tone, value: "Needs mapping", detail: "Detected provider tags do not match the selected contract." }
               : activeProblems === 0
                 ? { tone: "neutral" as Tone, value: "No incident in scope", detail: "The provider is identified, but there is no active Problem in scope." }
                 : { tone: "positive" as Tone, value: "Candidate", detail: "A human review can compare the active Problem with the provider contract." };
@@ -202,29 +187,29 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     ? {
         title: "Checking this environment",
         detail: "Dynatrace telemetry and the selected provider contract are still loading.",
-        action: "Open evidence checks",
-        href: "/evidence",
+        action: "Open setup",
+        href: "/setup",
       }
     : telemetryError
       ? {
           title: "Complete the Dynatrace evidence read",
           detail: telemetryState.detail,
           action: "Review app access",
-          href: "/settings/watch",
+          href: "/setup",
         }
       : !directoryData
         ? {
             title: "Restore the provider contract connection",
             detail: directoryError?.message ?? `The ${providerSlug} contract could not be loaded from sla.directory.`,
             action: "Review provider connection",
-            href: "/settings/watch",
+            href: "/setup",
           }
         : !telemetrySignalsPresent
           ? {
               title: "Add a recent service signal",
               detail: `No Problems, logs, spans, or service request series were detected in the last ${lookbackHours} hours.`,
               action: "Review evidence scope",
-              href: "/settings/watch",
+              href: "/setup",
             }
           : services.length === 0
             ? {
@@ -236,33 +221,33 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
             : providerLabels.length === 0
               ? {
                   title: `Identify which services depend on ${providerName}`,
-                  detail: `${services.length} service${services.length === 1 ? " is" : "s are"} visible, but no explicit provider label was found.`,
-                  action: "Configure provider identity",
-                  href: "/settings/watch",
+                  detail: `${services.length} service${services.length === 1 ? " is" : "s are"} visible, but no explicit provider tag was found.`,
+                  action: "Continue setup",
+                  href: "/setup",
                 }
               : matchedProviderServices === 0
                 ? {
-                    title: `Resolve provider labels to ${providerName}`,
-                    detail: `${providerLabels.length} provider label${providerLabels.length === 1 ? " is" : "s are"} visible, but none resolves to the selected contract.`,
+                    title: `Resolve provider tags to ${providerName}`,
+                    detail: `${providerLabels.length} provider tag${providerLabels.length === 1 ? " is" : "s are"} visible, but none resolves to the selected contract.`,
                     action: "Resolve provider mapping",
-                    href: "/settings/watch",
+                    href: "/setup",
                   }
                 : activeProblems === 0
                   ? {
                       title: "No incident requires provider review",
                       detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? " matches" : "s match"} ${providerName}. No active Problems were found in the last ${lookbackHours} hours.`,
-                      action: "Review evidence details",
-                      href: "/evidence",
+                      action: "Review provider terms",
+                      href: "/directory",
                     }
                   : {
                       title: "Review the active Problem before considering a claim",
                       detail: `${activeProblems} active Problem${activeProblems === 1 ? "" : "s"} and ${matchedProviderServices} provider-matched service${matchedProviderServices === 1 ? "" : "s"} require human review.`,
                       action: "Review incident evidence",
-                      href: "/review",
+                      href: "/incidents",
                     };
 
-  const evidenceStatus = telemetryLoading || directoryLoading
-    ? "Checking evidence"
+  const setupStatus = telemetryLoading || directoryLoading
+    ? "Checking setup"
     : telemetryError
       ? "Access incomplete"
       : !directoryData
@@ -292,8 +277,8 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     <div className="dashboard-shell">
       <section className="hero-row">
         <div className="hero-copy-block">
-          <Heading level={1}>Review provider evidence for this environment.</Heading>
-          <Paragraph className="hero-copy">Compare the selected SLA contract with service inventory, Problems, and supporting Dynatrace signals.</Paragraph>
+          <Heading level={1}>Provider SLA watch</Heading>
+          <Paragraph className="hero-copy">Monitor provider mapping, Dynatrace Problems, and filing windows for this environment.</Paragraph>
         </div>
         <div className="hero-actions">
           <div className="hero-status-line">
@@ -311,98 +296,78 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
 
       {section !== "directory" ? <WatchNavigation section={section} /> : null}
 
-      {section === "overview" ? (
-        <Surface className={`panel-card overview-status-panel overview-status-panel-${claimReadiness.tone}`} data-tour="overview-status">
-          <div className="overview-status-main">
-            <div className="overview-status-copy">
-              <StatusPill tone={claimReadiness.tone}>{claimReadiness.value}</StatusPill>
-              <Heading level={2}>{overviewAssessment.title}</Heading>
-              <Paragraph>{overviewAssessment.detail}</Paragraph>
-            </div>
-            <div className="overview-status-actions">
-              <Button className="overview-primary-action" as={Link} to={overviewAssessment.href} variant="emphasized" color="primary">
-                {overviewAssessment.action}
-              </Button>
-              {overviewAssessment.href !== "/evidence" ? (
-                <Link className="text-action" to="/evidence">
-                  {setupRecommendations.length > 0
-                    ? `View ${setupRecommendations.length} setup check${setupRecommendations.length === 1 ? "" : "s"}`
-                    : "Open evidence"}
-                </Link>
-              ) : setupRecommendations.length > 0 ? (
-                <Text className="overview-check-count">{setupRecommendations.length} setup check{setupRecommendations.length === 1 ? "" : "s"} available</Text>
-              ) : null}
-            </div>
-          </div>
-          <div className="overview-facts" aria-label="Current watch facts">
-            <OverviewFact
-              label="Provider contract"
-              value={directoryLoading ? "Checking" : directoryData ? providerName : "Unavailable"}
-              detail={directoryData ? "sla.directory record loaded" : "Contract connection"}
-              tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}
-            />
-            <OverviewFact
-              label="Service boundary"
-              value={servicesLoading ? "Checking" : String(services.length)}
-              detail={servicesLoading ? "Reading tenant inventory" : `service${services.length === 1 ? "" : "s"} returned`}
-              tone={servicesLoading ? "neutral" : services.length > 0 ? "positive" : "warning"}
-            />
-            <OverviewFact
-              label={`Problems · ${lookbackHours}h`}
-              value={problemsLoading ? "Checking" : String(problems.length)}
-              detail={problemsLoading ? "Reading Davis data" : `${activeProblems} active`}
-              tone={problemsLoading ? "neutral" : activeProblems > 0 ? "warning" : "neutral"}
-            />
-            <OverviewFact
-              label="Provider match"
-              value={telemetryLoading || directoryLoading ? "Checking" : String(matchedProviderServices)}
-              detail={matchedProviderServices === 1 ? "service matches contract" : "services match contract"}
-              tone={telemetryLoading || directoryLoading ? "neutral" : matchedProviderServices > 0 ? "positive" : "warning"}
-            />
-          </div>
-          <div className="overview-boundary-note">
-            <strong>Assessment boundary</strong>
-            <span>Dynatrace shows observed tenant evidence. The provider determines fault, eligibility, and any service credit.</span>
-          </div>
-        </Surface>
-      ) : section === "evidence" ? (
-        <div className="evidence-page">
-          <Surface className="panel-card diagnostics-panel">
-            <div className="panel-heading-row">
-              <div>
-                <Heading level={2}>Evidence required for provider attribution</Heading>
-                <Paragraph>Verify each boundary before moving an incident to provider review.</Paragraph>
+      <div className={`watch-view watch-view-${section}`}>
+        {section === "overview" ? (
+          <Surface className={`panel-card overview-status-panel overview-status-panel-${claimReadiness.tone}`} data-tour="overview-status">
+            <div className="overview-status-main">
+              <div className="overview-status-copy">
+                <StatusPill tone={claimReadiness.tone}>{claimReadiness.value}</StatusPill>
+                <Heading level={2}>{overviewAssessment.title}</Heading>
+                <Paragraph>{overviewAssessment.detail}</Paragraph>
               </div>
-              <StatusPill tone={claimReadiness.tone}>{evidenceStatus}</StatusPill>
+              <div className="overview-status-actions">
+                <Button className="overview-primary-action" as={Link} to={overviewAssessment.href} variant="emphasized" color="primary">
+                  {overviewAssessment.action}
+                </Button>
+                {overviewAssessment.href !== "/setup" && setupRecommendations.length > 0 ? (
+                  <Link className="text-action" to="/setup">View {setupRecommendations.length} setup check{setupRecommendations.length === 1 ? "" : "s"}</Link>
+                ) : setupRecommendations.length > 0 ? (
+                  <Text className="overview-check-count">{setupRecommendations.length} setup check{setupRecommendations.length === 1 ? "" : "s"} open</Text>
+                ) : null}
+              </div>
             </div>
-            <div className="evidence-ladder" role="list" aria-label="Provider attribution evidence stages">
-              <EvidenceStep number={1} title="Telemetry captured" detail="Problems, logs, spans, or service request signals are present." state={telemetryState.tone === "positive" ? "positive" : telemetryState.tone} />
-              <EvidenceStep number={2} title="Service boundary visible" detail={`${services.length} service${services.length === 1 ? "" : "s"} returned from the tenant inventory.`} state={services.length > 0 && !servicesLoading ? "positive" : telemetryLoading ? "neutral" : "warning"} />
-              <EvidenceStep number={3} title="Provider boundary identified" detail={`${matchedProviderServices} service${matchedProviderServices === 1 ? "" : "s"} match the ${providerName} contract.`} state={matchedProviderServices > 0 && !directoryLoading ? "positive" : providerState.tone} />
-              <EvidenceStep number={4} title="Contract record available" detail="The directory record supports review; it does not establish provider fault or credit eligibility." state={directoryData ? "positive" : "neutral"} />
+            <div className="overview-facts" aria-label="Current watch facts">
+              <OverviewFact
+                label="Provider"
+                value={directoryLoading ? "Checking" : directoryData ? providerName : "Unavailable"}
+                detail={directoryData ? "contract record loaded" : "sla.directory connection"}
+                tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}
+              />
+              <OverviewFact
+                label="Services mapped"
+                value={servicesLoading ? "Checking" : `${matchedProviderServices} / ${services.length}`}
+                detail="explicit provider boundary"
+                tone={servicesLoading ? "neutral" : matchedProviderServices > 0 ? "positive" : "warning"}
+              />
+              <OverviewFact
+                label="Incidents"
+                value={problemsLoading ? "Checking" : `${activeProblems} active`}
+                detail={`${problems.length} observed in ${lookbackHours}h`}
+                tone={problemsLoading ? "neutral" : activeProblems > 0 ? "warning" : "neutral"}
+              />
+              <OverviewFact
+                label="Filing window"
+                value={directoryData?.provider.claimProcess?.deadlineDays ? `${directoryData.provider.claimProcess.deadlineDays} days` : "Not published"}
+                detail={directoryData?.provider.claimProcess?.businessDays ? "provider business days" : "provider calendar days"}
+                tone={directoryData?.provider.claimProcess?.deadlineDays ? "positive" : "neutral"}
+              />
             </div>
-            <div className="diagnostic-grid">
-              <DiagnosticCard label="Telemetry coverage" title={telemetryState.title} tone={telemetryState.tone} detail={telemetryState.detail}>
-                <span>Services <strong>{services.length}</strong></span>
-                <span>Problems <strong>{problems.length}</strong></span>
-                <span>Logs <strong>{logCount === null ? "n/a" : logCount.toLocaleString()}</strong></span>
-                <span>Spans <strong>{spanCount === null ? "n/a" : spanCount.toLocaleString()}</strong></span>
-              </DiagnosticCard>
-              <DiagnosticCard label="Provider identity" title={providerState.title} tone={providerState.tone} detail={providerState.detail}>
-                <span>Selected contract <strong>{providerName}</strong></span>
-                <span>Explicit labels <strong>{providerLabels.length}</strong></span>
-                <span>Matched services <strong>{matchedProviderServices}</strong></span>
-              </DiagnosticCard>
-            </div>
-            {telemetryError ? <div className="error-box">Telemetry scan incomplete: {telemetryError.message}</div> : null}
+            <div className="overview-boundary-note"><strong>Assessment boundary</strong><span>Dynatrace provides observed tenant evidence. The provider determines fault, eligibility, and any service credit.</span></div>
           </Surface>
-          <SetupAdvisor recommendations={setupRecommendations} loading={telemetryLoading || directoryLoading} limitedContext={Boolean(telemetryError || (services.length === 0 && telemetrySignalsPresent))} />
-        </div>
-      ) : section === "directory" ? (
-        <Surface className="panel-card directory-panel"><div className="panel-heading-row"><div><Text className="eyebrow">Provider and service map</Text><Heading level={2}>Provider directory</Heading></div><StatusPill tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}>{directoryLoading ? "Checking" : directoryData ? `${directoryData.provider.name} connected` : "Directory unavailable"}</StatusPill></div><Paragraph>{directoryData ? `${directoryData.provider.name} has ${directoryData.services.length} service records. These are contractual targets, not measured tenant availability.` : directoryError ? `${directoryError.message}. Check the environment External requests allowlist.` : "Loading provider data..."}</Paragraph>{serviceError ? <div className="error-box">Dynatrace service inventory could not be loaded: {serviceError.message}</div> : null}{directoryData ? <div className="service-table" role="table" aria-label="Provider SLA services"><div className="service-row service-row-header" role="row"><span>Provider service</span><span>Target</span><span>Contract record</span><span>Verification</span></div>{directoryData.services.slice(0, 20).map((service) => <div className="service-row" role="row" key={service.id}><div><strong>{service.name}</strong><small>{service.id}</small></div><span>{service.uptime ? `${service.uptime}%` : "No target"}</span><StatusPill tone={service.eligible ? "positive" : "neutral"}>{service.eligible ? "Published SLA" : "Reference"}</StatusPill><span>{directoryData.provider.lastVerified}</span></div>)}</div> : null}<div className="directory-footer"><span>Need a different provider or label convention?</span><Link className="inline-action" to="/settings/watch">Open watch settings</Link></div>{servicesLoading || directoryLoading ? <div className="empty-state">Loading watch data...</div> : null}</Surface>
-      ) : (
-        <IncidentReview provider={directoryData} problems={problems} services={services} lookbackHours={lookbackHours} loading={problemsLoading} error={problemError ?? undefined} />
-      )}
+        ) : section === "setup" ? (
+          <Surface className="panel-card setup-panel">
+            <div className="setup-heading">
+              <div><Heading level={2}>Setup</Heading><Paragraph>Complete the provider boundary once, then use Overview and Incidents for daily review.</Paragraph></div>
+              <StatusPill tone={claimReadiness.tone}>{setupStatus}</StatusPill>
+            </div>
+            <div className="evidence-ladder" role="list" aria-label="SLA Watch setup stages">
+              <EvidenceStep number={1} title="Telemetry" detail={telemetryState.title} state={telemetryState.tone} />
+              <EvidenceStep number={2} title="Services" detail={servicesLoading ? "Checking inventory" : `${services.length} detected`} state={services.length > 0 && !servicesLoading ? "positive" : telemetryLoading ? "neutral" : "warning"} />
+              <EvidenceStep number={3} title="Provider tags" detail={directoryLoading ? "Checking mapping" : `${matchedProviderServices} mapped`} state={matchedProviderServices > 0 && !directoryLoading ? "positive" : providerState.tone} />
+              <EvidenceStep number={4} title="Contract" detail={directoryData ? `${providerName} loaded` : "Unavailable"} state={directoryData ? "positive" : "neutral"} />
+            </div>
+            {telemetryError ? <div className="error-box setup-error">Telemetry scan incomplete. Check the current user's data access.</div> : null}
+            <div className="setup-content-grid">
+              <ProviderTagSetup services={services} providerName={providerName} providerSlug={selectedProviderSlug} providerTagKey={providerLabelKey} loading={servicesLoading || directoryLoading} onRefresh={() => refetchServices()} />
+              <SetupAdvisor recommendations={setupRecommendations} loading={telemetryLoading || directoryLoading} limitedContext={Boolean(telemetryError || (services.length === 0 && telemetrySignalsPresent))} />
+            </div>
+          </Surface>
+        ) : section === "directory" ? (
+          <Surface className="panel-card directory-panel"><div className="panel-heading-row"><div><Text className="eyebrow">Provider and service map</Text><Heading level={2}>Provider directory</Heading></div><StatusPill tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}>{directoryLoading ? "Checking" : directoryData ? `${directoryData.provider.name} connected` : "Directory unavailable"}</StatusPill></div><Paragraph>{directoryData ? `${directoryData.provider.name} has ${directoryData.services.length} service records. These are contractual targets, not measured tenant availability.` : directoryError ? `${directoryError.message}. Check the environment External requests allowlist.` : "Loading provider data..."}</Paragraph>{serviceError ? <div className="error-box">Dynatrace service inventory could not be loaded: {serviceError.message}</div> : null}{directoryData ? <div className="service-table" role="table" aria-label="Provider SLA services"><div className="service-row service-row-header" role="row"><span>Provider service</span><span>Target</span><span>Contract record</span><span>Verification</span></div>{directoryData.services.slice(0, 20).map((service) => <div className="service-row" role="row" key={service.id}><div><strong>{service.name}</strong><small>{service.id}</small></div><span>{service.uptime ? `${service.uptime}%` : "No target"}</span><StatusPill tone={service.eligible ? "positive" : "neutral"}>{service.eligible ? "Published SLA" : "Reference"}</StatusPill><span>{directoryData.provider.lastVerified}</span></div>)}</div> : null}<div className="directory-footer"><span>Need a different provider or tag convention?</span><Link className="inline-action" to="/settings/watch">Open watch settings</Link></div>{servicesLoading || directoryLoading ? <div className="empty-state">Loading watch data...</div> : null}</Surface>
+        ) : (
+          <IncidentReview provider={directoryData} problems={problems} services={services} lookbackHours={lookbackHours} loading={problemsLoading} error={problemError ?? undefined} />
+        )}
+      </div>
     </div>
   );
 };

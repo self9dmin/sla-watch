@@ -26,5 +26,5 @@ No API token, OAuth secret, password, credential-vault ID, or private endpoint i
 - Confirm `.env`, token files, Playwright auth state, coverage output, and deployment artifacts are ignored.
 - Confirm the target environment allowlists only `sla.directory`, not unrestricted outbound access.
 - Confirm app-state records expire and that operators know the browser fallback is not shared.
-- Confirm app-state fields do not contain PII or secrets beyond the configured provider and label convention.
+- Confirm app-state fields do not contain PII or secrets beyond the configured provider and tag convention.
 - Confirm the Community profile and support process are ready before changing `COMMUNITY_PROFILE.availability` to `live`.

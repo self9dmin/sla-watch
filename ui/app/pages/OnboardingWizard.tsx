@@ -104,7 +104,7 @@ export const OnboardingWizard = ({ initialProvider, onComplete, onSkip }: Onboar
             <div className="evidence-ladder">
               <div className="evidence-ladder-row"><span className="evidence-state state-neutral">1</span><div><strong>Telemetry exists</strong><small>Problems, logs, spans, or service request signals are present.</small></div></div>
               <div className="evidence-ladder-row"><span className="evidence-state state-neutral">2</span><div><strong>Service is in scope</strong><small>The affected entity is visible in the tenant inventory.</small></div></div>
-              <div className="evidence-ladder-row"><span className="evidence-state state-warning">3</span><div><strong>Provider boundary is known</strong><small>Labels or an explicit mapping identify who owns the service.</small></div></div>
+              <div className="evidence-ladder-row"><span className="evidence-state state-warning">3</span><div><strong>Provider boundary is known</strong><small>An explicit Dynatrace tag identifies which provider the service depends on.</small></div></div>
               <div className="evidence-ladder-row"><span className="evidence-state state-positive">4</span><div><strong>Contract record is available</strong><small>A matching contract supports review but does not establish provider fault or credit eligibility.</small></div></div>
             </div>
             <div className="onboarding-actions"><Button onClick={() => setStep(1)}>Back</Button><Button variant="emphasized" onClick={() => setStep(3)}>I understand</Button></div>

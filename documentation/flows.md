@@ -15,8 +15,8 @@ Sequence:
 3. `Dashboard` calls the `slaDirectory` AppEngine function with the configured vendor slug.
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
 5. The UI classifies the first unresolved evidence boundary as loading, access-incomplete, telemetry-missing, service-inventory-incomplete, provider-unidentified, provider-mismatched, no-incident-in-scope, or candidate-for-human-review.
-6. Overview presents that state with one next action. The Evidence view contains the supporting diagnostics and conservative setup recommendations.
-7. No Dynatrace entity, tag, metric, Problem, SLO, or external ticket is changed.
+6. Overview presents that state with one next action. Setup contains the supporting diagnostics and provider-tag workflow. Incidents contains the observed Problem queue and provider filing references.
+7. Loading or refreshing the watch does not change a Dynatrace entity, tag, metric, Problem, SLO, or external ticket.
 
 Deny or degraded behavior: a missing read scope is shown as access incomplete, not as no telemetry. A failed directory request is shown as unavailable, not as a provider breach.
 
@@ -24,12 +24,25 @@ Deny or degraded behavior: a missing read scope is shown as access incomplete, n
 
 Actor: user with `state:app-states:write`.
 
-1. The user edits provider slug, label key, or lookback in Settings.
+1. The user edits provider slug, tag key, or lookback in Settings.
 2. Input is normalized before persistence. The provider slug is restricted to lowercase slug characters.
 3. The context optimistically updates the UI and writes the workspace state with an expiry just inside the platform's 90-day limit.
 4. If the shared write is denied, the same normalized value is kept in local storage and a status message explains the fallback.
 
-Deny behavior: the app never writes to Dynatrace entity settings or telemetry. A user without app-state write access can still inspect the app but cannot create a shared configuration.
+Deny behavior: saving watch defaults never writes to Dynatrace entity settings or telemetry. A user without app-state write access can still inspect the app but cannot create a shared configuration.
+
+## Apply a provider tag
+
+Actor: signed-in user with `environment-api:entities:write` in the app and the Dynatrace permission to manage entity settings.
+
+1. Setup resolves the user's effective entity-write permission and displays whether the action is available, management-zone limited, denied, or unverifiable.
+2. The user opens the service review. The app shows every returned service as already mapped, conflicting, or unassigned. Conflicting services cannot be selected in bulk.
+3. The user explicitly selects exact unassigned service entities. Service names are context only and never create an automatic assignment.
+4. A confirmation screen names the tag, selected service count, and common Dynatrace features that may consume tags.
+5. On confirmation, the app calls the custom-tag API with an entity selector built only from the selected entity IDs. Existing tags remain in place.
+6. The app reports the matched entity count, refreshes inventory, and retains the exact last action for an optional undo. Undo removes only that key/value pair from those exact entity IDs.
+
+Deny or degraded behavior: no selection or confirmation means no write. Denied permission keeps the action read-only. Management-zone restrictions can yield a partial result, which is reported rather than represented as complete. A conflicting provider tag requires manual review. Undo is a compensating action and cannot reverse unrelated concurrent changes.
 
 ## Review the change log or get support
 

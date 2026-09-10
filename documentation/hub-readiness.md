@@ -4,7 +4,7 @@
 
 This is a technical readiness audit of the repository and the last verified tenant deployment. It is not a claim that Dynatrace has approved the app for public Hub distribution. The public documentation describes Hub installation, app verification, code signing, manifest metadata, scopes, security, privacy, themes, dependencies, and testing. The final listing review and code-signing decision are portal-owned steps that cannot be completed by a local build.
 
-The app is suitable for continued hardening as a custom AppEngine app. The reviewed source is now published at [self9dmin/sla-watch](https://github.com/self9dmin/sla-watch), but the app is not yet ready to represent itself as a generally available Hub listing until authenticated acceptance evidence, listing content, and the Dynatrace submission route are complete.
+The app is suitable for continued hardening as a custom AppEngine app. The reviewed source is published at [self9dmin/sla-watch](https://github.com/self9dmin/sla-watch), but the app is not yet ready to represent itself as a generally available Hub listing until the new entity-write path has least-privilege acceptance evidence, listing content is complete, and the Dynatrace submission route is confirmed.
 
 ## Authority reviewed
 
@@ -23,18 +23,18 @@ The app is suitable for continued hardening as a custom AppEngine app. The revie
 
 | Area | Evidence | State | Closure action |
 | --- | --- | --- | --- |
-| Manifest identity | `app.config.json` uses `my.sla`, `SLA Watch`, version `0.0.24`, a maintained icon, and a sub-80-character description | Implemented and deployed at `0.0.24` | Confirm the permanent publisher-owned app ID and final Hub name. Do not change the ID casually after distribution. |
+| Manifest identity | `app.config.json` uses `my.sla`, `SLA Watch`, version `0.0.30`, a maintained icon, and a sub-80-character description | Implemented locally; last verified production release is `0.0.29` | Confirm the permanent publisher-owned app ID and final Hub name. Do not change the ID casually after distribution. |
 | Name discoverability | `SLA Watch` is short and title case | Likely compliant, uniqueness unverified | Check Hub for collisions and ensure the final name describes the use case. |
 | Icon and listing media | A custom SVG icon is included; final Hub screenshots and listing media are not yet packaged | Partial | Review the icon and add final Hub screenshots/demo assets. |
-| Runtime scopes | Manifest declares read-only telemetry plus user/app state scopes | Implemented | Test each scope with a least-privilege user and ensure the Hub Technical information page matches. |
-| Runtime authorization | UI reports access-incomplete states and uses the current user's permissions | Implemented, live negative coverage missing | Add guarded IAM acceptance tests and consider effective-permission affordances if the UX needs preflight. |
-| External API | `api/slaDirectory.function.ts` validates input, bounds time, validates the response, and preserves provider credit and filing fields | Implemented and confirmed connected in the `0.0.24` deployment | Re-verify `sla.directory` allowlisting after each environment install. |
+| Runtime scopes | Manifest declares read-only telemetry, user/app state scopes, and `environment-api:entities:write` for confirmed provider-tag changes | Implemented locally; write scope needs release acceptance | Test each scope with a least-privilege user and ensure the Hub Technical information page explains the tag-write purpose. |
+| Runtime authorization | UI reports access-incomplete states and preflights effective entity-write permission before enabling the tag action | Implemented locally; live negative and management-zone coverage missing | Add guarded granted, denied, conditional, partial-match, and undo acceptance tests. |
+| External API | `api/slaDirectory.function.ts` validates input, bounds time, validates the response, and preserves provider credit and filing fields | Implemented and confirmed connected in the `0.0.29` deployment and `0.0.30` local tenant smoke | Re-verify `sla.directory` allowlisting after each environment install. |
 | CSP | No custom CSP exceptions are needed; external API is server-side | Implemented | Keep external calls in the function. Do not add broad browser CSP exceptions. |
 | Secrets | No secrets in source or bundle; no credential vault required for the public directory API | Implemented | Keep CI OAuth credentials in the CI secret store. |
 | Privacy | App-state TTL stays inside the 90-day platform limit, only provider configuration is persisted, and UI warns about local fallback | Implemented locally | Review operator guidance for PII and verify deletion/expiry behavior in a tenant. |
-| Themes | Custom styles use theme variables and dark/light paths were manually verified in the target tenant | Verified at `0.0.24` after deployment, including the change log | Add automated contrast or screenshot coverage before submission. |
+| Themes | Custom styles use theme variables and dark/light paths were manually verified in the target tenant | Verified for the `0.0.30` local build; production remains `0.0.29` | Add automated contrast or screenshot coverage before submission. |
 | Dependencies | Production audit is clean after the React Router upgrade; current `dt-app` is `1.17.0` | Implemented locally | Keep Renovate enabled and review App Toolkit advisories separately as development-only risk. |
-| Tests | Focused unit tests, typecheck, lint, build, and analyzer are present | Implemented locally; E2E and live permission tests are gaps | Add authenticated Playwright and tenant acceptance jobs using CI secrets. |
+| Tests | Focused unit tests, typecheck, lint, build, analyzer, and guarded one-screen browser assertions are present | Implemented locally; live mutation and denied-permission tests are gaps | Add authenticated Playwright and disposable-service acceptance jobs using CI secrets. |
 | CI | Pull-request workflow is repository-local and non-deploying | Verified in [GitHub Actions run 34493813812](https://github.com/self9dmin/sla-watch/actions/runs/34493813812) on Node 24 for `b5e93e7` | Make the required checks branch-protection rules and keep deployment outside the pull-request job. |
 | Public repository | Reviewed source and documentation are published at [self9dmin/sla-watch](https://github.com/self9dmin/sla-watch) on `main` | Published | Review the public tree and commit history, then keep future changes gated by CI and pull request review. |
 | Hub verification | Standard verification, provider identity, integrity, and code signing are controlled by Dynatrace Hub | External dependency | Use the applicable Dynatrace community, partner, or Hub-subscription submission route. A local `dt-app deploy` cannot complete this step. |
@@ -49,9 +49,10 @@ The release owner should not request Hub review until all of the following are t
 - `npm run verify` and `npm audit --omit=dev` pass on Node 24.
 - A clean tenant install passes the browser smoke path in both themes.
 - The target tenant allowlist, IAM policies, app-state behavior, and external API failure behavior are verified.
+- The entity-write scope, explicit selection, confirmation, conflict handling, partial-result behavior, and undo are verified with disposable service fixtures.
 - The Hub Technical information, getting-started, use-case, content, release-notes, and permissions text match the shipped artifact.
 - The Dynatrace owner confirms the submission route and completes standard verification/code signing.
 
 ## Known non-blocking product boundary
 
-The provider-service-to-Dynatrace-service join and automated credit eligibility calculation are intentionally outside this release. The Incident review tab exposes provider terms and planning references, but does not make a vendor decision. That limitation is disclosed in the README and UI. Implementing a defensible service join is a product milestone, not a Hub-compliance shortcut.
+The provider-service-to-Dynatrace-service join and automated credit eligibility calculation are intentionally outside this release. Setup can apply an explicit provider tag to operator-selected Dynatrace services, but it does not infer that mapping from a name or a directory service ID. The Incidents view exposes provider terms and planning references, but does not make a vendor decision. That limitation is disclosed in the README and UI. Implementing a defensible service join is a product milestone, not a Hub-compliance shortcut.
