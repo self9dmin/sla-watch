@@ -1,19 +1,20 @@
 # Release acceptance record
 
-This record captures the manual target-environment smoke evidence for the `0.0.29` release. The release was deployed to the designated nonproduction Dynatrace environment and exercised through the installed application. This record complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record captures manual target-environment smoke evidence for the current `0.0.30` installed release and retains the prior `0.0.29` record. It complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
 
-## 0.0.30 release-candidate smoke
+## 0.0.30 verified scenarios
 
-The `0.0.30` build was served locally inside the authenticated nonproduction AppShell. It has not been installed as production by this record.
+The `0.0.30` artifact from source commit `c8d3b6f` was deployed to the designated Dynatrace target environment and exercised through the installed application.
 
 | Scenario | Result | Evidence |
 | --- | --- | --- |
-| Focused navigation | Overview, Setup, and Incidents each expose one operational purpose | Authenticated local-development smoke |
-| Desktop fit | All three normal desktop states have equal body client and scroll dimensions, with no page scroll | Browser dimension check at 1659 by 769 CSS pixels |
-| Bounded collections | The seven-service assignment list stays inside Setup instead of extending the page | Authenticated local-development smoke |
-| Explicit provider-tag review | Review services requires an exact selection and a second confirmation before enabling the write; existing tag consumers are disclosed | Authenticated local-development smoke through confirmation; no tag was applied |
-| Theme support | The compact shell, status text, controls, icons, and tooltips remain readable in light and dark themes | Authenticated local-development visual smoke |
-| Production status | No `0.0.30` production claim is made | Last installed and verified production version remains `0.0.29` |
+| Focused navigation | Overview, Setup, and Incidents each expose one operational purpose | Installed production smoke |
+| Desktop fit | All three normal desktop states have equal body client and scroll dimensions, with no page scroll | Installed browser dimension check at 1659 by 825 CSS pixels |
+| Bounded collections | The six-service assignment list stays inside Setup instead of extending the page | Installed production smoke |
+| Explicit provider-tag review | Review services requires an exact selection and a second confirmation before enabling the write; existing tag consumers are disclosed | Installed production smoke through confirmation; no tag was applied |
+| Provider directory connection | The AppEngine function loads the AWS record through the allowlisted `sla.directory` host | Installed production smoke; connected status and filing window returned |
+| Theme support | The compact shell, status text, controls, icons, and tooltips remain readable in light and dark themes | Installed production visual smoke |
+| Release artifact | The `0.0.30` manifest, function, and UI deploy successfully from the release commit | Installed change log reports `0.0.30 Current release`; source commit `c8d3b6f` is retained in GitHub `main` history |
 
 ## 0.0.29 verified scenarios
 
