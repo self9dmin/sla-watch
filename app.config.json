@@ -1,0 +1,22 @@
+{
+  "$schema": "./.dt-app/app.config.schema.json",
+  "environmentUrl": "https://your-environment.apps.dynatrace.com/",
+  "app": {
+    "name": "SLA Watch",
+    "version": "0.0.18",
+    "icon": "ui/assets/sla-watch-icon.svg",
+    "description": "Correlate provider SLAs with Dynatrace evidence and service ownership",
+    "id": "my.sla",
+    "scopes": [
+      { "name": "storage:entities:read", "comment": "Read services and managed entities for the SLA watch" },
+      { "name": "storage:events:read", "comment": "Read problem events that can affect SLA posture" },
+      { "name": "storage:metrics:read", "comment": "Read service health signals for SLA evaluation" },
+      { "name": "storage:logs:read", "comment": "Check whether correlated log telemetry exists" },
+      { "name": "storage:spans:read", "comment": "Check whether distributed tracing telemetry exists" },
+      { "name": "state:user-app-states:read", "comment": "Restore personal theme and onboarding preferences" },
+      { "name": "state:user-app-states:write", "comment": "Save personal theme and onboarding preferences" },
+      { "name": "state:app-states:read", "comment": "Read shared SLA Watch provider and workflow configuration" },
+      { "name": "state:app-states:write", "comment": "Save shared SLA Watch provider and workflow configuration" }
+    ]
+  }
+}

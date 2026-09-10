@@ -1,0 +1,57 @@
+# Local Dynatrace App Toolkit cache, auth tokens, logs, and generated schemas
+.dt-app/*
+!/.dt-app/deployment.json
+
+# Local agent operating instructions are not part of the public product source
+/AGENTS.md
+
+# Compiled output
+/dist
+/build
+/tmp
+
+# Deployment artifact
+/out
+
+# Unused template media retained only in the local workspace
+/ui/assets/community*.png
+/ui/assets/data*.png
+/ui/assets/devportal*.png
+
+# Dependencies
+/node_modules
+
+# Test and local authentication output
+/coverage
+/playwright-report
+/test-results
+/playwright/.auth
+.env
+.env.*
+!.env.example
+
+# IDEs and editors
+/.idea
+*.iml
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.history/
+
+# IDE - VSCode
+/.vscode/*
+!/.vscode/settings.json
+!/.vscode/tasks.json
+!/.vscode/launch.json
+!/.vscode/extensions.json
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# app-settings plugin local files
+/settings/local-mock-data/secrets.json
+/settings/local-mock-data/persistence/
