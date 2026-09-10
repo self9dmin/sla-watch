@@ -10,8 +10,8 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 - Provides an Incident review tab with observed Problem windows, provider-published credit terms, filing guidance, required evidence, and exclusions.
 - Separates missing telemetry, incomplete entity access, missing provider labels, and labels that do not match the selected provider.
 - Recommends setup actions for provider boundaries, ownership metadata, service naming, and native SLO follow-up.
-- Keeps personal theme and onboarding state separate from shared watch configuration and workflow records.
-- Records bug and change context without mutating Dynatrace entities or creating external tickets.
+- Keeps personal theme and onboarding state separate from shared watch configuration.
+- Provides a read-only application change log and a direct link to the Dynatrace Community profile for support and issue discussion.
 
 ## Deliberate boundaries
 
@@ -76,9 +76,9 @@ Every change to `app.config.json` requires a new app version before deployment. 
 
 ## State and privacy
 
-User theme and walkthrough state use user app state. Provider selection, label convention, lookback, bug records, and change records use shared app state when the workspace scope is available. The browser fallback is local storage and is clearly surfaced when shared state cannot be written. App-state records expire after 90 days and are capped at 100 records per workflow type.
+User theme and walkthrough state use user app state. Provider selection, label convention, and lookback use shared app state when the workspace scope is available. The browser fallback is local storage and is clearly surfaced when shared state cannot be written. App-state records expire after 90 days.
 
-Do not enter secrets, credentials, or unnecessary personal data into bug or change records. No secret is bundled in the app or stored in this repository.
+Do not enter secrets, credentials, or unnecessary personal data into app state. No secret is bundled in the app or stored in this repository.
 
 ## Repository documentation
 

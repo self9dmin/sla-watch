@@ -7,13 +7,6 @@ import {
 } from "@dynatrace-sdk/react-hooks";
 import {
   DEFAULT_SLA_PREFERENCES,
-  type BugCategory,
-  type BugSeverity,
-  type BugStatus,
-  type ChangeRisk,
-  type ChangeStatus,
-  type SlaBug,
-  type SlaChange,
   type SlaPreferences,
   type SlaThemePreference,
 } from "../types";
@@ -25,14 +18,13 @@ const USER_LOCAL_KEY = "sla.user.v1.local";
 const WORKSPACE_LOCAL_KEY = "sla.workspace.v1.local";
 const LEGACY_LOCAL_KEY = "sla.preferences.v1.local";
 const STATE_TTL_DAYS = 90;
-const MAX_WORKFLOW_RECORDS = 100;
 
 type PreferencesPatch = Partial<SlaPreferences>;
 type UserPreferencesState = Pick<SlaPreferences, "theme" | "onboardingComplete" | "tourCompleted">;
-type WorkspacePreferencesState = Pick<SlaPreferences, "providerSlug" | "providerLabelKey" | "lookbackHours" | "bugs" | "changes">;
+type WorkspacePreferencesState = Pick<SlaPreferences, "providerSlug" | "providerLabelKey" | "lookbackHours">;
 
 const USER_FIELDS: ReadonlyArray<keyof UserPreferencesState> = ["theme", "onboardingComplete", "tourCompleted"];
-const WORKSPACE_FIELDS: ReadonlyArray<keyof WorkspacePreferencesState> = ["providerSlug", "providerLabelKey", "lookbackHours", "bugs", "changes"];
+const WORKSPACE_FIELDS: ReadonlyArray<keyof WorkspacePreferencesState> = ["providerSlug", "providerLabelKey", "lookbackHours"];
 
 export interface SlaPreferencesContextValue {
   preferences: SlaPreferences;
@@ -46,65 +38,12 @@ const PreferencesContext = createContext<SlaPreferencesContextValue | null>(null
 const isTheme = (value: unknown): value is SlaThemePreference =>
   value === "system" || value === "light" || value === "dark";
 
-const isBugCategory = (value: unknown): value is BugCategory =>
-  value === "data" || value === "provider-matching" || value === "access" || value === "ux";
-
-const isBugSeverity = (value: unknown): value is BugSeverity =>
-  value === "low" || value === "medium" || value === "high";
-
-const isBugStatus = (value: unknown): value is BugStatus =>
-  value === "open" || value === "triaged" || value === "resolved";
-
-const isChangeRisk = (value: unknown): value is ChangeRisk =>
-  value === "low" || value === "medium" || value === "high";
-
-const isChangeStatus = (value: unknown): value is ChangeStatus =>
-  value === "planned" || value === "in-progress" || value === "complete" || value === "rolled-back";
-
 const stringOr = (value: unknown, fallback: string): string =>
   typeof value === "string" && value.trim().length > 0 ? value : fallback;
-
-const normalizeBug = (value: unknown): SlaBug | null => {
-  if (typeof value !== "object" || value === null) return null;
-  const item = value as Record<string, unknown>;
-  if (!stringOr(item.id, "") || !stringOr(item.title, "")) return null;
-  return {
-    id: stringOr(item.id, "BUG-UNKNOWN"),
-    title: stringOr(item.title, "Untitled bug"),
-    category: isBugCategory(item.category) ? item.category : "data",
-    severity: isBugSeverity(item.severity) ? item.severity : "medium",
-    details: stringOr(item.details, "No details provided."),
-    status: isBugStatus(item.status) ? item.status : "open",
-    createdAt: stringOr(item.createdAt, new Date().toISOString()),
-    evidence: stringOr(item.evidence, "No evidence context captured."),
-  };
-};
-
-const normalizeChange = (value: unknown): SlaChange | null => {
-  if (typeof value !== "object" || value === null) return null;
-  const item = value as Record<string, unknown>;
-  if (!stringOr(item.id, "") || !stringOr(item.title, "")) return null;
-  return {
-    id: stringOr(item.id, "CHG-UNKNOWN"),
-    title: stringOr(item.title, "Untitled change"),
-    scope: stringOr(item.scope, "No scope recorded."),
-    risk: isChangeRisk(item.risk) ? item.risk : "medium",
-    owner: stringOr(item.owner, "Unassigned"),
-    rollbackPlan: stringOr(item.rollbackPlan, "No rollback plan recorded."),
-    status: isChangeStatus(item.status) ? item.status : "planned",
-    createdAt: stringOr(item.createdAt, new Date().toISOString()),
-  };
-};
 
 const normalizePreferences = (value: unknown): SlaPreferences => {
   if (typeof value !== "object" || value === null) return DEFAULT_SLA_PREFERENCES;
   const item = value as Record<string, unknown>;
-  const bugs = Array.isArray(item.bugs)
-    ? item.bugs.map(normalizeBug).filter((bug): bug is SlaBug => Boolean(bug)).slice(0, MAX_WORKFLOW_RECORDS)
-    : DEFAULT_SLA_PREFERENCES.bugs;
-  const changes = Array.isArray(item.changes)
-    ? item.changes.map(normalizeChange).filter((change): change is SlaChange => Boolean(change)).slice(0, MAX_WORKFLOW_RECORDS)
-    : DEFAULT_SLA_PREFERENCES.changes;
   return {
     theme: isTheme(item.theme) ? item.theme : DEFAULT_SLA_PREFERENCES.theme,
     providerSlug: stringOr(item.providerSlug, DEFAULT_SLA_PREFERENCES.providerSlug).toLowerCase(),
@@ -112,8 +51,6 @@ const normalizePreferences = (value: unknown): SlaPreferences => {
     lookbackHours: item.lookbackHours === 72 ? 72 : 24,
     onboardingComplete: item.onboardingComplete === true,
     tourCompleted: item.tourCompleted === true,
-    bugs,
-    changes,
   };
 };
 
@@ -155,8 +92,6 @@ const writeLocalState = (value: SlaPreferences): void => {
       providerSlug: value.providerSlug,
       providerLabelKey: value.providerLabelKey,
       lookbackHours: value.lookbackHours,
-      bugs: value.bugs,
-      changes: value.changes,
     };
     window.localStorage.setItem(USER_LOCAL_KEY, JSON.stringify(user));
     window.localStorage.setItem(WORKSPACE_LOCAL_KEY, JSON.stringify(workspace));
@@ -238,8 +173,6 @@ export const SlaPreferencesProvider = ({ children }: { children: React.ReactNode
                   providerSlug: nextPreferences.providerSlug,
                   providerLabelKey: nextPreferences.providerLabelKey,
                   lookbackHours: nextPreferences.lookbackHours,
-                  bugs: nextPreferences.bugs,
-                  changes: nextPreferences.changes,
                 }),
                 validUntilTime: expiresAt(),
               },

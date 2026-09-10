@@ -25,14 +25,14 @@ const STEPS: TourStep[] = [
     body: "Settings controls the provider slug, label key, lookback window, theme, and walkthrough state. Watch configuration is shared, while theme and walkthrough state stay personal.",
   },
   {
-    target: '[data-tour="bugs"]',
-    title: "Capture a reproducible issue",
-    body: "When data or matching is incorrect, record the evidence context in Bug management for the next responder.",
+    target: '[data-tour="changes"]',
+    title: "Review the change log",
+    body: "The change log lists versioned application updates. It does not record tenant changes or alter your Dynatrace data.",
   },
   {
-    target: '[data-tour="changes"]',
-    title: "Record a configuration change",
-    body: "Use Change management to record provider mapping and evidence-policy changes, including scope and rollback plan.",
+    target: '[data-tour="community"]',
+    title: "Find community support",
+    body: "Open the Dynatrace Community profile for questions, support, and issue discussion outside the app.",
   },
   {
     target: '[data-tour="tour"]',

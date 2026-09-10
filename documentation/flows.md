@@ -30,16 +30,15 @@ Actor: user with `state:app-states:write`.
 
 Deny behavior: the app never writes to Dynatrace entity settings or telemetry. A user without app-state write access can still inspect the app but cannot create a shared configuration.
 
-## Record a bug or change
+## Review the change log or get support
 
-Actor: user with shared app-state write access.
+Actor: signed-in Dynatrace user.
 
-1. The user enters a bounded title and description, or a change scope and rollback plan.
-2. The app captures the selected provider and lookback as evidence context for bug reports.
-3. The record is prepended to the corresponding shared state collection and capped at 100 records.
-4. The app displays the record in the workspace workflow list.
+1. The user opens the change log from the application header or settings rail.
+2. The app renders the bundled version history as read-only release information.
+3. The user opens the Dynatrace Community profile from the application header, help guide, change log, or dashboard support action when support or issue discussion is needed.
 
-Deny behavior: no external ticket is created. When shared state is unavailable, the browser fallback is used and the app explicitly states that the record is local to that browser.
+Deny behavior: these surfaces do not write app state, Dynatrace entities, telemetry, or external tickets. The community profile opens outside the app and follows the user's existing Dynatrace Community access.
 
 ## Replay onboarding or change appearance
 

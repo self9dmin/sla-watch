@@ -6,8 +6,7 @@ import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import { Header } from "./components/Header";
 import { ProductTour } from "./components/ProductTour";
 import { SlaPreferencesProvider, useSlaPreferences } from "./context/SlaPreferencesContext";
-import { BugReportPage } from "./pages/BugReportPage";
-import { ChangeManagementPage } from "./pages/ChangeManagementPage";
+import { ChangeLogPage } from "./pages/ChangeLogPage";
 import { Dashboard } from "./pages/Dashboard";
 import { OnboardingWizard } from "./pages/OnboardingWizard";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -43,8 +42,7 @@ const AppShell = ({
         <Route path="/" element={<Dashboard />} />
         <Route path="/directory" element={<Dashboard initialSection="directory" />} />
         <Route path="/review" element={<Dashboard initialSection="review" />} />
-        <Route path="/bugs" element={<BugReportPage />} />
-        <Route path="/changes" element={<ChangeManagementPage />} />
+        <Route path="/changes" element={<ChangeLogPage />} />
         <Route path="/settings/:page?" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
