@@ -48,7 +48,11 @@ export type ProviderConnectionValue = {
   connectionKey: string;
   providerSlug: string;
   displayName: string;
+  accountId: string;
+  subscriptionId: string;
   projectId: string;
+  tenancyId: string;
+  region: string;
   credentialId: string;
   enabled: boolean;
 };
@@ -68,7 +72,7 @@ export type ProviderNoticeProduct = {
 
 export type ProviderNotice = {
   id: string;
-  source: "gcp-personalized" | "gcp-public" | "provider-public";
+  source: "aws-health" | "azure-service-health" | "gcp-personalized" | "gcp-public" | "oci-announcement" | "provider-public";
   sourceScope?: string;
   title: string;
   summary: string;
@@ -92,12 +96,16 @@ export type ProviderNoticesResponse = {
   source: "personalized" | "public";
   connectionState: "connected" | "public" | "fallback";
   projectId?: string;
+  scopeLabel?: string;
   message: string;
   warning?: string;
   notices: ProviderNotice[];
 };
 
 export type GcpProviderNoticesResponse = ProviderNoticesResponse & { provider: "gcp" };
+export type OciProviderNoticesResponse = ProviderNoticesResponse & { provider: "oci" };
+export type AwsProviderNoticesResponse = ProviderNoticesResponse & { provider: "aws" };
+export type AzureProviderNoticesResponse = ProviderNoticesResponse & { provider: "azure" };
 export type PublicProviderNoticesResponse = ProviderNoticesResponse & {
   source: "public";
   connectionState: "public";
@@ -263,7 +271,7 @@ export const slaDirectoryConnection: SlaDirectoryConnection = {
 
 export const DEFAULT_SLA_PREFERENCES: SlaPreferences = {
   theme: "system",
-  providerSlugs: ["aws"],
+  providerSlugs: ["aws", "azure", "gcp", "oci"],
   providerSlug: "aws",
   providerLabelKey: "provider",
   lookbackHours: 24,

@@ -32,6 +32,32 @@ Actor: user with `state:app-states:write`.
 
 Deny behavior: saving monitor defaults never writes to Dynatrace entity settings or telemetry. A user without app-state write access can still inspect the app but cannot create a shared configuration. Switching the active provider changes only the focused view.
 
+## Configure AWS provider notices
+
+Actor: administrator with App Settings write access, access to the selected Credential Vault record, an AWS Health API eligible support plan, and permission to configure AWS IAM.
+
+1. The administrator creates a dedicated AWS identity with only `health:DescribeEvents` and `health:DescribeEventDetails`.
+2. The administrator stores JSON containing `accessKeyId`, `secretAccessKey`, and an optional `sessionToken` as a Token credential with AppEngine scope and application access limited to SLA Watch.
+3. The administrator allowlists `sts.us-east-1.amazonaws.com` and `health.us-east-1.amazonaws.com` in Dynatrace External requests.
+4. The administrator enters a 12-digit AWS account ID and Credential Vault record ID under Provider connections. More than one account connection can be saved.
+5. Test connection signs an STS `GetCallerIdentity` request and rejects a credential whose returned account differs from the configured account.
+6. After account verification, the function signs bounded AWS Health `DescribeEvents` and `DescribeEventDetails` requests and returns only events explicitly marked `ACCOUNT_SPECIFIC`.
+
+Deny or degraded behavior: a missing support plan, inaccessible credential, invalid signature, wrong account, IAM denial, throttled endpoint, or malformed response is shown as unavailable. The app does not silently replace a selected AWS account with a public source, modify AWS, or represent an account event as proof of local impact or SLA eligibility.
+
+## Configure Azure provider notices
+
+Actor: administrator with App Settings write access, access to the selected Credential Vault record, and permission to configure a Microsoft Entra application and Azure role assignment.
+
+1. The administrator creates a dedicated Microsoft Entra application and service principal with a managed client-secret lifecycle.
+2. The administrator grants only `Microsoft.ResourceHealth/events/read` on the intended Azure subscription.
+3. The administrator stores JSON containing `tenantId`, `clientId`, and `clientSecret` as a Token credential with AppEngine scope and application access limited to SLA Watch.
+4. The administrator allowlists `login.microsoftonline.com` and `management.azure.com` in Dynatrace External requests.
+5. The administrator enters the Azure subscription ID and Credential Vault record ID under Provider connections. More than one subscription connection can be saved.
+6. The function exchanges the client credential for a short-lived token and reads bounded Resource Health events only for the configured subscription.
+
+Deny or degraded behavior: an inaccessible or expired credential, invalid tenant, missing subscription permission, throttled endpoint, or malformed response is shown as unavailable. The app does not silently replace a selected Azure subscription with a public source, modify Azure, or represent a Service Health event as proof of local impact or SLA eligibility.
+
 ## Configure Google Cloud provider notices
 
 Actor: administrator with App Settings write access, access to the selected Credential Vault record, and permission to configure Google Cloud IAM.
@@ -55,6 +81,19 @@ Actor: signed-in Dynatrace user.
 4. The UI labels every record public and non-customer-specific and keeps it separate from Dynatrace Problems.
 
 Deny or degraded behavior: an unsupported provider has no provider-owned incident source in this release. A failed or malformed public response is shown as unavailable, never as healthy. Public status never establishes account impact, local impact, provider fault, or SLA eligibility.
+
+## Configure OCI tenancy announcements
+
+Actor: administrator with App Settings write access, access to the selected Credential Vault record, and permission to configure OCI IAM and API keys.
+
+1. The administrator creates a dedicated OCI API user, uploads the public half of an RSA signing key, and records the user OCID and API-key fingerprint.
+2. The administrator places the user in a group with exactly `Allow group AnnouncementListers to inspect announcements in tenancy` for summary announcement access.
+3. The administrator stores JSON containing `userOcid`, `fingerprint`, and the unencrypted RSA `privateKey` as a Token credential with AppEngine scope and application access limited to SLA Watch.
+4. The administrator enters the tenancy OCID, one commercial OCI region, and the Credential Vault record ID under Provider connections. More than one tenancy can be saved.
+5. The administrator allowlists the exact `announcements.<region>.oraclecloud.com` host in Dynatrace External requests. Test connection signs a bounded GET request and does not fall back to the public source.
+6. Provider notices lets the operator choose a saved tenancy or the public OCI regional source. OCI service names are mapped to `sla.directory` candidates only through a reviewed table. Ambiguous products remain unresolved.
+
+Deny or degraded behavior: an inaccessible credential, invalid signature, missing `ANNOUNCEMENT_LIST` permission, invalid region, throttled endpoint, or malformed response is shown as unavailable. The app does not expose private key material, modify OCI, or represent an announcement as proof of local impact or SLA eligibility.
 
 ## Confirm a provider-service scope mapping
 
@@ -131,5 +170,9 @@ Actor: signed-in user with user app-state access.
 If `sla.directory` times out, returns a non-success status, or fails schema validation, the AppEngine function throws. The dashboard keeps the provider posture unknown and surfaces the error. It does not reuse an unverified response or infer provider responsibility from tenant symptoms.
 
 If personalized Google Cloud access fails during a normal monitor read, the provider-notice function may return the public status feed with `connectionState: fallback`. The UI identifies the source and states that it is not project evidence. During Test connection, personalized access is required and the exact setup boundary is reported as unavailable instead of falling back.
+
+If a selected AWS account or Azure subscription source fails, the corresponding function reports the failure and does not silently substitute a public source. The operator retains Dynatrace Problems, SLA terms, and scope mappings while the provider-owned source is unavailable.
+
+If a selected OCI tenancy source fails, the function reports the failure and does not silently substitute public status. The operator can deliberately select the public regional source, which remains labeled non-customer-specific.
 
 If a supported public provider endpoint fails, times out, or returns an invalid payload, the public-status function throws and the UI reports the source as unavailable. It never converts that failure into an empty or healthy status.

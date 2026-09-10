@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.36
+
+- Established AWS, Microsoft Azure, Google Cloud, and OCI as four peer core providers. Fresh workspaces include all four, with AWS used only as the initial focused view.
+- Added optional, read-only AWS Health account events and Azure Service Health subscription events alongside Google Cloud Personalized Service Health and OCI Announcements.
+- Allowed multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies without storing provider secrets in App Settings.
+- Added AWS STS account verification, AWS request signing, Azure client-credential authentication, OCI request signing, fixed outbound endpoints, bounded requests, and provider-specific least-privilege guidance.
+- Kept account-specific provider notices distinct from public status and Dynatrace-observed Problems, with no silent public fallback when a selected AWS, Azure, or OCI connection fails.
+- Mapped explicit AWS, Azure, and OCI service names to candidate `sla.directory` service IDs while leaving ambiguous services unresolved.
+
 ## 0.0.35
 
 - Added credential-free public provider notices for OCI, OpenAI, Anthropic, and ElevenLabs with explicit non-customer-specific source labels.
@@ -134,4 +143,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.35` release candidate.
+- Reserved for changes after the `0.0.36` release candidate.

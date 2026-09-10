@@ -57,6 +57,11 @@ describe("public provider status normalization", () => {
       state: "ACTIVE",
       locations: ["US East (Ashburn)"],
     });
+    expect(notices[0].products).toEqual([{
+      id: "compute",
+      name: "Compute",
+      directoryServiceIds: ["compute-multiad", "compute-single"],
+    }]);
   });
 
   it("uses an allowlisted public endpoint and never requests a customer credential", async () => {

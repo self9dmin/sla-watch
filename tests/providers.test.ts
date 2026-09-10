@@ -1,4 +1,4 @@
-import { normalizeProviderSlug, normalizeProviderSlugs, providerDisplayName } from "../ui/app/data/providers";
+import { normalizeProviderSlug, normalizeProviderSlugs, PROVIDER_CATALOG, providerDisplayName } from "../ui/app/data/providers";
 
 describe("provider configuration", () => {
   it("normalizes and deduplicates monitored providers", () => {
@@ -8,6 +8,11 @@ describe("provider configuration", () => {
   it("rejects invalid provider slugs", () => {
     expect(normalizeProviderSlug("gcp")).toBe("gcp");
     expect(normalizeProviderSlug("gcp cloud")).toBeNull();
+  });
+
+  it("starts a new workspace with four peer core cloud providers", () => {
+    expect(normalizeProviderSlugs(undefined)).toEqual(["aws", "azure", "gcp", "oci"]);
+    expect(PROVIDER_CATALOG.slice(0, 4).map(({ slug }) => slug)).toEqual(["aws", "azure", "gcp", "oci"]);
   });
 
   it("uses catalog display names and readable custom names", () => {

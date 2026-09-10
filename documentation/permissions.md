@@ -13,7 +13,7 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | `storage:spans:read` | Count recent spans | Show span count as unavailable |
 | `storage:smartscape:read` | Read service-to-runtime and location relationships used for evidence-boundary selection | Hide unavailable topology choices; never infer them from entity names |
 | `environment-api:entities:write` | Add or remove the configured provider tag on explicitly selected service entities | Keep Setup read-only and explain that entity-settings permission is required |
-| `environment-api:credentials:read` | Read the administrator-selected AppEngine Token credential inside the provider AppEngine function | Keep personalized provider notices unavailable; public status can remain available |
+| `environment-api:credentials:read` | Read the administrator-selected AppEngine Token credential inside the provider AppEngine function | Keep customer-scoped provider notices unavailable; a supported public status source can remain available |
 | `app-settings:objects:read` | Read shared tenant SLA overrides, provider connections, and confirmed provider-service scope mappings | Use public sources where possible and identify shared tenant configuration as unavailable |
 | `app-settings:objects:write` | Create, update, disable, or remove explicitly confirmed tenant SLA settings and scope mappings | Keep the corresponding Settings and Setup actions read-only |
 | `state:user-app-states:read` | Restore theme, onboarding, and walkthrough state | Use browser fallback |
@@ -29,9 +29,12 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | Problems, logs, spans, metrics | Current-user scope | None | Evidence posture becomes unknown when a read fails |
 | Smartscape relationships | Current-user scope | None | Host, runtime, and location assignments are unavailable when denied; names are not substituted |
 | `sla.directory` contract | AppEngine external request allowlist | None | Provider contract becomes unavailable when the function cannot run |
+| AWS Health account events | Current-user plus app access to a selected Credential Vault record, AWS Health API plan access, `health:DescribeEvents`, `health:DescribeEventDetails`, and the fixed STS and Health hosts | None | Verify the credential account with STS and show any account, support-plan, signing, or IAM failure explicitly |
+| Azure Service Health subscription events | Current-user plus app access to a selected Credential Vault record, `Microsoft.ResourceHealth/events/read` on the selected subscription, and the fixed Entra and Resource Manager hosts | None | Show the selected subscription source or its failure explicitly; never treat an event as proof of local impact |
 | Google Cloud provider notices | Public status, or current-user plus app access to a selected Credential Vault record and Google `roles/servicehealth.viewer` | None | Show public, project-specific, or fallback source explicitly; never claim project impact from public status |
+| OCI tenancy announcements | Current-user plus app access to a selected Credential Vault record, OCI `ANNOUNCEMENT_LIST`, and the exact regional outbound host | None | Show the selected tenancy source or its failure explicitly; never treat an announcement as proof of local impact |
 | OCI, OpenAI, Anthropic, and ElevenLabs public status | AppEngine external request allowlist | None | Label records public and non-customer-specific; a source failure is unavailable, not healthy |
-| Provider connection metadata | Authenticated app users with App Settings read access | Users with App Settings write access for `provider-connections` | The service-account JSON remains in Credential Vault; settings contain only provider, project, and credential IDs |
+| Provider connection metadata | Authenticated app users with App Settings read access | Users with App Settings write access for `provider-connections` | Provider secrets remain in Credential Vault; settings contain only provider, scope, region, and credential IDs |
 | Confirmed provider-service mappings | Authenticated app users with App Settings read access | Users with App Settings write access for `provider-scope-assignments` | Exact Smartscape service/runtime IDs are retained; candidates stay unconfirmed until saved in Setup |
 | Credential Vault | Selected AppEngine credential only | None | The app cannot create, edit, list, rotate, or delete provider credentials |
 | Tenant SLA overrides | All authenticated users of the app with App Settings read access | Users with App Settings write access for `contract-overrides` | Public terms remain unchanged; unavailable or denied settings fall back conservatively to the public record |
@@ -52,7 +55,7 @@ The provider-tag operation also requires the signed-in user to have Dynatrace en
 - Verify a user missing each scope receives the documented conservative state.
 - Verify granted, denied, management-zone-limited, partial-match, and undo outcomes for the provider-tag workflow.
 - Verify App Settings read/write separation with a read-only user and confirm that tenant SLA records and provider-service mappings remain visible but immutable.
-- Verify multiple Provider connections with least-privilege Google service accounts, an inaccessible credential, an invalid project, duplicate-project validation, an unavailable external host, and public fallback.
+- Verify multiple Provider connections with least-privilege AWS identities, Azure service principals, Google service accounts, and OCI API users. Cover inaccessible credentials, wrong account or subscription scope, invalid IAM grants, duplicate validation, unavailable external hosts, deliberate public-source selection, and Google public fallback.
 - Verify every fixed public provider endpoint with success, empty, malformed, timeout, and non-success responses.
 - Confirm the Hub Technical information discloses the Credential Vault read scope and the administrator-owned lifecycle for provider credentials.
 - Verify missing Smartscape permission removes runtime and location choices without producing a name-based assignment, and that Incident review does not present a missing mapping as confirmed.

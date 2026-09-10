@@ -10,12 +10,12 @@ import { useContractOverrides } from "../hooks/useContractOverrides";
 import { useProviderConnections } from "../hooks/useProviderConnections";
 import { createOverrideKey } from "../data/contractOverrides";
 import { mergeServiceInventory } from "../data/providerAttribution";
-import { createProviderConnectionKey, validateProviderConnection } from "../data/providerConnections";
+import { createProviderConnectionKey, providerConnectionScopeId, providerConnectionScopeLabel, validateProviderConnection } from "../data/providerConnections";
 import { EVIDENCE_LOOKBACK_OPTIONS } from "../data/lookback";
 import { createServiceMetricsQuery, SERVICES_QUERY, SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
 import { detectedProviderSlugs, parseServiceCloudContexts, parseSmartscapeScopeEdges } from "../data/topology";
 import { normalizeProviderSlug, PROVIDER_CATALOG, providerDetail, providerDisplayName } from "../data/providers";
-import type { ContractOverrideValue, ContractScopeKind, EvidenceLookbackHours, GcpProviderNoticesResponse, ProviderConnectionValue, ServiceRecord, SlaProviderResponse, SlaThemePreference } from "../types";
+import type { AwsProviderNoticesResponse, AzureProviderNoticesResponse, ContractOverrideValue, ContractScopeKind, EvidenceLookbackHours, GcpProviderNoticesResponse, OciProviderNoticesResponse, ProviderConnectionValue, ServiceRecord, SlaProviderResponse, SlaThemePreference } from "../types";
 
 const SETUP_LINKS = [
   ["watch", "Monitor configuration"],
@@ -200,48 +200,139 @@ const WatchSettings = () => {
   );
 };
 
-const emptyGcpConnection = (): ProviderConnectionValue => ({
+type ConnectedProvider = "aws" | "azure" | "gcp" | "oci";
+
+const CONNECTED_PROVIDER_OPTIONS: ReadonlyArray<{ slug: ConnectedProvider; label: string }> = [
+  { slug: "aws", label: "AWS" },
+  { slug: "azure", label: "Microsoft Azure" },
+  { slug: "gcp", label: "Google Cloud" },
+  { slug: "oci", label: "Oracle Cloud Infrastructure (OCI)" },
+];
+
+const connectionScopeNoun = (providerSlug: ConnectedProvider): string => {
+  if (providerSlug === "aws") return "account";
+  if (providerSlug === "azure") return "subscription";
+  if (providerSlug === "oci") return "tenancy";
+  return "project";
+};
+
+const connectionDefaultName = (providerSlug: ConnectedProvider): string => {
+  if (providerSlug === "aws") return "AWS account";
+  if (providerSlug === "azure") return "Azure subscription";
+  if (providerSlug === "oci") return "OCI tenancy";
+  return "Google Cloud project";
+};
+
+const connectionUseLabel = (providerSlug: ConnectedProvider): string => {
+  if (providerSlug === "aws") return "Use account Health events";
+  if (providerSlug === "azure") return "Use subscription Service Health events";
+  if (providerSlug === "oci") return "Use tenancy announcements";
+  return "Use project-specific notices";
+};
+
+const disabledConnectionDetail = (providerSlug: ConnectedProvider): string => {
+  if (providerSlug === "aws" || providerSlug === "azure") return "When disabled, account-specific provider notices are not read. Dynatrace evidence and sla.directory terms remain available.";
+  return `When disabled, Provider notices uses only the public ${providerSlug === "oci" ? "OCI regional" : "Google Cloud"} status source.`;
+};
+
+const emptyProviderConnection = (providerSlug: ConnectedProvider): ProviderConnectionValue => ({
   connectionKey: "",
-  providerSlug: "gcp",
-  displayName: "Google Cloud",
+  providerSlug,
+  displayName: connectionDefaultName(providerSlug),
+  accountId: "",
+  subscriptionId: "",
   projectId: "",
+  tenancyId: "",
+  region: providerSlug === "oci" ? "us-ashburn-1" : "",
   credentialId: "",
   enabled: true,
 });
 
+const shortConnectionScope = (value: ProviderConnectionValue): string => {
+  const scope = providerConnectionScopeLabel(value);
+  return scope.length > 54 ? `${scope.slice(0, 30)}…${scope.slice(-18)}` : scope;
+};
+
 const ProviderConnectionsSettings = () => {
   const providerConnections = useProviderConnections();
-  const gcpConnections = useMemo(() => providerConnections.connections
-    .filter((item) => item.providerSlug === "gcp")
-    .sort((left, right) => left.displayName.localeCompare(right.displayName) || left.projectId.localeCompare(right.projectId)), [providerConnections.connections]);
+  const [connectionProvider, setConnectionProvider] = useState<ConnectedProvider>("aws");
+  const connections = useMemo(() => providerConnections.connections
+    .filter((item) => item.providerSlug === connectionProvider)
+    .sort((left, right) => left.displayName.localeCompare(right.displayName) || providerConnectionScopeId(left).localeCompare(providerConnectionScopeId(right))), [connectionProvider, providerConnections.connections]);
   const [selectedConnectionKey, setSelectedConnectionKey] = useState("auto");
-  const existing = gcpConnections.find((item) => item.connectionKey === selectedConnectionKey);
-  const [draft, setDraft] = useState<ProviderConnectionValue>(emptyGcpConnection);
+  const existing = connections.find((item) => item.connectionKey === selectedConnectionKey);
+  const [draft, setDraft] = useState<ProviderConnectionValue>(() => emptyProviderConnection("aws"));
   const [saved, setSaved] = useState(false);
   const [formError, setFormError] = useState<string>();
   const [testMessage, setTestMessage] = useState<{ tone: "positive" | "warning"; text: string }>();
-  const testRequest = useMemo(() => ({
+  const gcpTestRequest = useMemo(() => ({
     projectId: draft.projectId.trim().toLowerCase(),
     credentialId: draft.credentialId.trim().toUpperCase(),
     lookbackHours: 24,
     requirePersonalized: true,
   }), [draft.credentialId, draft.projectId]);
-  const connectionTest = useAppFunction<GcpProviderNoticesResponse>(
-    { name: "gcpServiceHealth", data: testRequest, responseType: "json" },
+  const ociTestRequest = useMemo(() => ({
+    tenancyId: draft.tenancyId.trim().toLowerCase(),
+    region: draft.region.trim().toLowerCase(),
+    credentialId: draft.credentialId.trim().toUpperCase(),
+    lookbackHours: 24,
+  }), [draft.credentialId, draft.region, draft.tenancyId]);
+  const awsTestRequest = useMemo(() => ({
+    accountId: draft.accountId.trim(),
+    credentialId: draft.credentialId.trim().toUpperCase(),
+    lookbackHours: 24,
+  }), [draft.accountId, draft.credentialId]);
+  const azureTestRequest = useMemo(() => ({
+    subscriptionId: draft.subscriptionId.trim().toLowerCase(),
+    credentialId: draft.credentialId.trim().toUpperCase(),
+    lookbackHours: 24,
+  }), [draft.credentialId, draft.subscriptionId]);
+  const gcpConnectionTest = useAppFunction<GcpProviderNoticesResponse>(
+    { name: "gcpServiceHealth", data: gcpTestRequest, responseType: "json" },
     { autoFetch: false, autoFetchOnUpdate: false },
   );
+  const ociConnectionTest = useAppFunction<OciProviderNoticesResponse>(
+    { name: "ociAnnouncements", data: ociTestRequest, responseType: "json" },
+    { autoFetch: false, autoFetchOnUpdate: false },
+  );
+  const awsConnectionTest = useAppFunction<AwsProviderNoticesResponse>(
+    { name: "awsHealth", data: awsTestRequest, responseType: "json" },
+    { autoFetch: false, autoFetchOnUpdate: false },
+  );
+  const azureConnectionTest = useAppFunction<AzureProviderNoticesResponse>(
+    { name: "azureServiceHealth", data: azureTestRequest, responseType: "json" },
+    { autoFetch: false, autoFetchOnUpdate: false },
+  );
+  const connectionTest = connectionProvider === "aws"
+    ? awsConnectionTest
+    : connectionProvider === "azure"
+      ? azureConnectionTest
+      : connectionProvider === "oci"
+        ? ociConnectionTest
+        : gcpConnectionTest;
+  const scopeNoun = connectionScopeNoun(connectionProvider);
+  const outboundHost = `announcements.${draft.region || "us-ashburn-1"}.oraclecloud.com`;
 
   useEffect(() => {
     if (providerConnections.loading || selectedConnectionKey !== "auto") return;
-    const first = gcpConnections[0];
+    const first = connections[0];
     setSelectedConnectionKey(first?.connectionKey ?? "new");
-    setDraft(first ? { ...first } : emptyGcpConnection());
-  }, [gcpConnections, providerConnections.loading, selectedConnectionKey]);
+    setDraft(first ? { ...first } : emptyProviderConnection(connectionProvider));
+  }, [connectionProvider, connections, providerConnections.loading, selectedConnectionKey]);
+
+  const selectProvider = (providerSlug: ConnectedProvider) => {
+    setConnectionProvider(providerSlug);
+    setSelectedConnectionKey("auto");
+    setDraft(emptyProviderConnection(providerSlug));
+    setFormError(undefined);
+    setTestMessage(undefined);
+    setSaved(false);
+  };
 
   const selectConnection = (connectionKey: string) => {
-    const selected = gcpConnections.find((item) => item.connectionKey === connectionKey);
+    const selected = connections.find((item) => item.connectionKey === connectionKey);
     setSelectedConnectionKey(connectionKey);
-    setDraft(selected ? { ...selected } : emptyGcpConnection());
+    setDraft(selected ? { ...selected } : emptyProviderConnection(connectionProvider));
     setFormError(undefined);
     setTestMessage(undefined);
     setSaved(false);
@@ -249,10 +340,14 @@ const ProviderConnectionsSettings = () => {
 
   const normalizedDraft = (): ProviderConnectionValue => ({
     ...draft,
-    connectionKey: createProviderConnectionKey("gcp", draft.projectId),
-    providerSlug: "gcp",
-    displayName: draft.displayName.trim() || "Google Cloud",
+    connectionKey: createProviderConnectionKey(connectionProvider, providerConnectionScopeId(draft)),
+    providerSlug: connectionProvider,
+    displayName: draft.displayName.trim() || connectionDefaultName(connectionProvider),
+    accountId: draft.accountId.trim(),
+    subscriptionId: draft.subscriptionId.trim().toLowerCase(),
     projectId: draft.projectId.trim().toLowerCase(),
+    tenancyId: draft.tenancyId.trim().toLowerCase(),
+    region: draft.region.trim().toLowerCase(),
     credentialId: draft.credentialId.trim().toUpperCase(),
   });
 
@@ -264,9 +359,9 @@ const ProviderConnectionsSettings = () => {
       return;
     }
     setFormError(undefined);
-    const duplicate = gcpConnections.find((item) => item.connectionKey === value.connectionKey && item.objectId !== existing?.objectId);
+    const duplicate = providerConnections.connections.find((item) => item.connectionKey === value.connectionKey && item.objectId !== existing?.objectId);
     if (duplicate) {
-      setFormError(`A connection for project '${value.projectId}' already exists.`);
+      setFormError(`A connection for this ${scopeNoun} already exists.`);
       return;
     }
     if (existing) await providerConnections.updateConnection(existing, value);
@@ -287,16 +382,16 @@ const ProviderConnectionsSettings = () => {
     setTestMessage(undefined);
     try {
       const result = await connectionTest.refetch();
-      setTestMessage({ tone: "positive", text: `${result.message} Authentication and project access are working.` });
+      setTestMessage({ tone: "positive", text: `${result.message} Authentication and ${scopeNoun} access are working.` });
     } catch (error: unknown) {
-      setTestMessage({ tone: "warning", text: error instanceof Error ? error.message : "The personalized Google Cloud connection could not be verified." });
+      setTestMessage({ tone: "warning", text: error instanceof Error ? error.message : `The ${connectionProvider.toUpperCase()} connection could not be verified.` });
     }
   };
 
   const remove = async () => {
-    if (!existing || !window.confirm(`Remove the Google Cloud connection for ${existing.projectId}? The Credential Vault entry will not be deleted.`)) return;
+    if (!existing || !window.confirm(`Remove the ${connectionProvider.toUpperCase()} connection for ${shortConnectionScope(existing)}? The Credential Vault entry will not be deleted.`)) return;
     await providerConnections.deleteConnection(existing);
-    const next = gcpConnections.find((item) => item.objectId !== existing.objectId);
+    const next = connections.find((item) => item.objectId !== existing.objectId);
     selectConnection(next?.connectionKey ?? "new");
   };
 
@@ -304,44 +399,90 @@ const ProviderConnectionsSettings = () => {
     <section className="settings-page provider-connections-settings">
       <div className="page-intro">
         <Heading level={1}>Connect provider incident data.</Heading>
-        <Paragraph>Add one or more Google Cloud projects for project-relevant service health. Public provider status sources remain available without credentials.</Paragraph>
+        <Paragraph>Add account-specific incident sources for AWS, Azure, Google Cloud, or OCI. Each connection is optional and read-only.</Paragraph>
       </div>
 
       <div className="provider-connection-boundary">
-        <div><span className="eyebrow">Connection scope</span><strong>Google Cloud · multiple projects</strong><small>Public status for OCI, OpenAI, Anthropic, and ElevenLabs requires no credential. AWS, Azure, and OCI customer-specific connections require separate adapters.</small></div>
-        <span className="connection-state connected">{gcpConnections.length} saved</span>
+        <div><span className="eyebrow">Supported cloud sources</span><strong>AWS Health · Azure Service Health · Google Cloud Personalized Service Health · OCI Announcements</strong><small>Save multiple accounts, subscriptions, projects, or tenancies. Credentials stay in Dynatrace Credential Vault. No provider notice proves local impact or SLA eligibility.</small></div>
+        <span className="connection-state connected">{providerConnections.connections.filter((item) => CONNECTED_PROVIDER_OPTIONS.some((provider) => provider.slug === item.providerSlug)).length} saved</span>
       </div>
 
       <div className="provider-connection-switcher">
-        <label className="field-label">Google Cloud project connection
-          <select value={selectedConnectionKey === "auto" ? "new" : selectedConnectionKey} onChange={(event) => selectConnection(event.target.value)}>
-            <option value="new">Add a new project</option>
-            {gcpConnections.map((item) => <option key={item.objectId} value={item.connectionKey}>{item.displayName} · {item.projectId}</option>)}
+        <label className="field-label">Connection type
+          <select value={connectionProvider} onChange={(event) => selectProvider(event.target.value as ConnectedProvider)}>
+            {CONNECTED_PROVIDER_OPTIONS.map((provider) => <option key={provider.slug} value={provider.slug}>{provider.label}</option>)}
           </select>
         </label>
-        <Button size="condensed" disabled={selectedConnectionKey === "new"} onClick={() => selectConnection("new")}>Add project</Button>
+        <label className="field-label">Saved {scopeNoun} connection
+          <select value={selectedConnectionKey === "auto" ? "new" : selectedConnectionKey} onChange={(event) => selectConnection(event.target.value)}>
+            <option value="new">Add a new {scopeNoun}</option>
+            {connections.map((item) => <option key={item.objectId} value={item.connectionKey}>{item.displayName} · {shortConnectionScope(item)}</option>)}
+          </select>
+        </label>
+        {existing ? <Button size="condensed" onClick={() => selectConnection("new")}>Add another {scopeNoun}</Button> : null}
       </div>
 
-      <ol className="provider-connection-steps" aria-label="Google Cloud connection requirements">
-        <li><span>1</span><div><strong>Enable Service Health API</strong><small>Enable <code>servicehealth.googleapis.com</code> for the project.</small></div></li>
-        <li><span>2</span><div><strong>Grant one read role</strong><small>Use a dedicated service account with <code>roles/servicehealth.viewer</code>.</small></div></li>
-        <li><span>3</span><div><strong>Store the JSON key in Credential Vault</strong><small>Create a Token credential with AppEngine scope and restrict app access to SLA Watch.</small></div></li>
-      </ol>
+      {connectionProvider === "aws" ? (
+        <ol className="provider-connection-steps" aria-label="AWS connection requirements">
+          <li><span>1</span><div><strong>Confirm AWS Health API access</strong><small>The account needs Business Support+, Enterprise Support, or Unified Operations.</small></div></li>
+          <li><span>2</span><div><strong>Grant two read actions</strong><small>Use a dedicated identity with <code>health:DescribeEvents</code> and <code>health:DescribeEventDetails</code>.</small></div></li>
+          <li><span>3</span><div><strong>Vault the signing JSON</strong><small>Store <code>accessKeyId</code>, <code>secretAccessKey</code>, and optional <code>sessionToken</code>. Allow <code>sts.us-east-1.amazonaws.com</code> and <code>health.us-east-1.amazonaws.com</code>.</small></div></li>
+        </ol>
+      ) : connectionProvider === "azure" ? (
+        <ol className="provider-connection-steps" aria-label="Azure connection requirements">
+          <li><span>1</span><div><strong>Create a dedicated app registration</strong><small>Create a client secret for a non-interactive service principal.</small></div></li>
+          <li><span>2</span><div><strong>Grant one read action</strong><small>Assign <code>Microsoft.ResourceHealth/events/read</code> on the subscription.</small></div></li>
+          <li><span>3</span><div><strong>Vault the client credential JSON</strong><small>Store <code>tenantId</code>, <code>clientId</code>, and <code>clientSecret</code>. Allow <code>login.microsoftonline.com</code> and <code>management.azure.com</code>.</small></div></li>
+        </ol>
+      ) : connectionProvider === "oci" ? (
+        <ol className="provider-connection-steps" aria-label="OCI connection requirements">
+          <li><span>1</span><div><strong>Create a dedicated API user</strong><small>Upload an RSA API signing key. Do not use a Console password or auth token.</small></div></li>
+          <li><span>2</span><div><strong>Grant Announcements read access</strong><small><code>Allow group AnnouncementListers to inspect announcements in tenancy</code></small></div></li>
+          <li><span>3</span><div><strong>Vault the signing JSON</strong><small>Use a Token credential restricted to SLA Watch, then allow outbound host <code>{outboundHost}</code>.</small></div></li>
+        </ol>
+      ) : (
+        <ol className="provider-connection-steps" aria-label="Google Cloud connection requirements">
+          <li><span>1</span><div><strong>Enable Service Health API</strong><small>Enable <code>servicehealth.googleapis.com</code> for the project.</small></div></li>
+          <li><span>2</span><div><strong>Grant one read role</strong><small>Use a dedicated service account with <code>roles/servicehealth.viewer</code>.</small></div></li>
+          <li><span>3</span><div><strong>Store the JSON key in Credential Vault</strong><small>Create a Token credential with AppEngine scope and restrict app access to SLA Watch.</small></div></li>
+        </ol>
+      )}
 
       <div className="settings-form-grid provider-connection-form">
         <label className="field-label">Connection name
-          <input value={draft.displayName} onChange={(event) => setDraft((current) => ({ ...current, displayName: event.target.value }))} placeholder="Google Cloud" autoComplete="off" maxLength={80} required />
+          <input value={draft.displayName} onChange={(event) => setDraft((current) => ({ ...current, displayName: event.target.value }))} placeholder={connectionDefaultName(connectionProvider)} autoComplete="off" maxLength={80} required />
           <small>Operator-facing name only.</small>
         </label>
-        <label className="field-label">Google Cloud project ID
+        {connectionProvider === "aws" ? <label className="field-label">AWS account ID
+          <input value={draft.accountId} onChange={(event) => setDraft((current) => ({ ...current, accountId: event.target.value.replace(/\D/g, "") }))} placeholder="123456789012" autoComplete="off" inputMode="numeric" maxLength={12} pattern="[0-9]{12}" required />
+          <small>STS verifies that the vaulted credential belongs to this account.</small>
+        </label> : connectionProvider === "azure" ? <label className="field-label">Azure subscription ID
+          <input value={draft.subscriptionId} onChange={(event) => setDraft((current) => ({ ...current, subscriptionId: event.target.value.toLowerCase().replace(/[^a-f0-9-]/g, "") }))} placeholder="00000000-0000-0000-0000-000000000000" autoComplete="off" spellCheck={false} maxLength={36} required />
+          <small>Service Health events are scoped to this subscription.</small>
+        </label> : connectionProvider === "oci" ? <>
+          <label className="field-label">OCI tenancy OCID
+            <input value={draft.tenancyId} onChange={(event) => setDraft((current) => ({ ...current, tenancyId: event.target.value.toLowerCase().replace(/[^a-z0-9.-]/g, "") }))} placeholder="ocid1.tenancy.oc1.." autoComplete="off" spellCheck={false} maxLength={255} required />
+            <small>Announcements are returned for this tenancy.</small>
+          </label>
+          <label className="field-label">OCI commercial region
+            <input value={draft.region} onChange={(event) => setDraft((current) => ({ ...current, region: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} placeholder="us-ashburn-1" autoComplete="off" spellCheck={false} maxLength={64} required />
+            <small>Used only to select the regional Announcements endpoint.</small>
+          </label>
+        </> : <label className="field-label">Google Cloud project ID
           <input value={draft.projectId} onChange={(event) => setDraft((current) => ({ ...current, projectId: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} placeholder="example-project-123" autoComplete="off" maxLength={30} pattern="[a-z][a-z0-9-]{4,28}[a-z0-9]" required />
           <small>The API returns events relevant to this project.</small>
-        </label>
-        <label className="field-label provider-credential-field">Dynatrace Credential Vault ID
+        </label>}
+        <label className={`field-label${connectionProvider !== "oci" ? " provider-credential-field" : ""}`}>Dynatrace Credential Vault ID
           <input value={draft.credentialId} onChange={(event) => setDraft((current) => ({ ...current, credentialId: event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "") }))} placeholder="Paste the full credential ID" autoComplete="off" spellCheck={false} maxLength={34} pattern="CREDENTIALS_VAULT-[A-Fa-f0-9]{16}" required />
-          <small>Enter the credential ID, not the service-account JSON. The secret remains in Credential Vault.</small>
+          <small>{connectionProvider === "aws"
+            ? <>The Token value must be JSON with <code>accessKeyId</code>, <code>secretAccessKey</code>, and an optional <code>sessionToken</code>. Enter only its credential ID here.</>
+            : connectionProvider === "azure"
+              ? <>The Token value must be JSON with <code>tenantId</code>, <code>clientId</code>, and <code>clientSecret</code>. Enter only its credential ID here.</>
+              : connectionProvider === "oci"
+                ? <>The Token value must be JSON with <code>userOcid</code>, <code>fingerprint</code>, and an unencrypted RSA <code>privateKey</code>. Enter only its credential ID here.</>
+                : "Enter the credential ID, not the service-account JSON. The secret remains in Credential Vault."}</small>
         </label>
-        <label className="provider-enabled-field"><input type="checkbox" checked={draft.enabled} onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.checked }))} /><span><strong>Use personalized notices</strong><small>When disabled, Monitor uses only the public Google Cloud status feed.</small></span></label>
+        <label className="provider-enabled-field"><input type="checkbox" checked={draft.enabled} onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.checked }))} /><span><strong>{connectionUseLabel(connectionProvider)}</strong><small>{disabledConnectionDetail(connectionProvider)}</small></span></label>
       </div>
 
       {formError ? <div className="error-box compact-error" role="alert">{formError}</div> : null}
@@ -351,12 +492,10 @@ const ProviderConnectionsSettings = () => {
 
       <div className="settings-actions">
         <Button variant="emphasized" disabled={!providerConnections.canWrite || providerConnections.mutating || providerConnections.loading} onClick={() => void save()}>{providerConnections.mutating ? "Saving" : existing ? "Update connection" : "Save connection"}</Button>
-        <Button disabled={connectionTest.isLoading || !draft.projectId || !draft.credentialId} onClick={() => void testConnection()}>{connectionTest.isLoading ? "Testing" : "Test connection"}</Button>
+        <Button disabled={connectionTest.isLoading || !providerConnectionScopeId(draft) || (connectionProvider === "oci" && !draft.region) || !draft.credentialId} onClick={() => void testConnection()}>{connectionTest.isLoading ? "Testing" : "Test connection"}</Button>
         {existing ? <Button disabled={!providerConnections.canWrite || providerConnections.mutating} onClick={() => void remove()}>Remove connection</Button> : null}
         {saved ? <SavedNote text="Provider connection saved" /> : null}
       </div>
-
-      <div className="settings-callout provider-connection-note"><strong>What this connection does</strong><span>It reads provider-owned incident notices. It does not modify Google Cloud, create a Dynatrace Problem, send a notification, prove local impact, or determine SLA credit eligibility.</span></div>
     </section>
   );
 };
@@ -532,10 +671,10 @@ const IntroSettings = () => {
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure monitor defaults, provider data, SLA evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Monitor configuration</span><strong>Select monitored providers and the tag convention.</strong><span>Service assignments are reviewed from Setup.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect provider-owned incident data.</strong><span>Add multiple Google Cloud projects. Supported public status feeds require no credential.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">SLA overrides</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one SLA to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run onboarding or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure monitor defaults, provider data, SLA evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Monitor configuration</span><strong>Select monitored providers and the tag convention.</strong><span>Service assignments are reviewed from Setup.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect provider-owned incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">SLA overrides</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one SLA to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run onboarding or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();
   const content = page === "appearance" ? <AppearanceSettings /> : page === "intro" ? <IntroSettings /> : page === "provider-connections" ? <ProviderConnectionsSettings /> : page === "sla-overrides" ? <SlaOverrideSettings /> : page === "watch" ? <WatchSettings /> : <SettingsLanding />;
-  return <div className="settings-layout"><SettingsRail page={page} /><main className="settings-content">{content}</main></div>;
+  return <div className="settings-layout"><SettingsRail page={page} /><main className={`settings-content settings-content-${page}`}>{content}</main></div>;
 };

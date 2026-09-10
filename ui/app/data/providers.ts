@@ -16,7 +16,7 @@ export const normalizeProviderSlug = (value: unknown): string | null => {
   return PROVIDER_SLUG_PATTERN.test(normalized) ? normalized : null;
 };
 
-export const normalizeProviderSlugs = (value: unknown, fallback: string[] = ["aws"]): string[] => {
+export const normalizeProviderSlugs = (value: unknown, fallback: string[] = ["aws", "azure", "gcp", "oci"]): string[] => {
   const values = Array.isArray(value) ? value : [];
   const normalized = Array.from(new Set(values.map(normalizeProviderSlug).filter((item): item is string => Boolean(item))));
   return normalized.length > 0 ? normalized.slice(0, 12) : fallback;
