@@ -12,7 +12,7 @@ The application has no database of its own, no scheduled work, no webhook receiv
 - Dynatrace Strato components and design tokens for the UI.
 - Dynatrace DQL through `@dynatrace-sdk/react-hooks` for services, Problems, logs, spans, service-request telemetry, and Smartscape relationships.
 - Dynatrace Environment API custom-tag and effective-permission clients for the explicit service-tag workflow.
-- Three AppEngine functions: `api/slaDirectory.function.ts` for public contract data, `api/gcpServiceHealth.function.ts` for read-only Google Cloud provider notices, and `api/providerPublicStatus.function.ts` for credential-free public OCI, OpenAI, Anthropic, and ElevenLabs status.
+- Six AppEngine functions: `api/slaDirectory.function.ts` for public contract data; `api/awsHealth.function.ts`, `api/azureServiceHealth.function.ts`, `api/gcpServiceHealth.function.ts`, and `api/ociAnnouncements.function.ts` for customer-scoped provider notices; and `api/providerPublicStatus.function.ts` for credential-free public OCI, OpenAI, Anthropic, and ElevenLabs status.
 - App state services for user preferences and shared watch configuration.
 - App Settings V2 for shared, versioned tenant SLA overrides, confirmed provider-service scope mappings, and non-secret provider connection metadata.
 - `dt-app` for build, analysis, local development, and deployment.
@@ -38,7 +38,7 @@ Setup -> Smartscape service-to-runtime scope -> provider-service suggestion -> o
 Settings -> explicit SLA terms and evidence targets -> validation -> App Settings V2
          -> shared contract override using exact service, runtime, or location identifiers
 
-Settings -> provider project and Credential Vault ID -> validation -> App Settings V2
+Settings -> provider account scope and Credential Vault ID -> validation -> App Settings V2
          -> shared provider connection metadata, never the provider secret
 ```
 
@@ -47,12 +47,15 @@ Settings -> provider project and Credential Vault ID -> validation -> App Settin
 1. The Dynatrace AppShell establishes the signed-in user session.
 2. DQL, app-state, and custom-tag calls run in the current user's permission context. The effective access is the intersection of the app-declared scopes and the user's IAM permissions.
 3. The browser invokes `slaDirectory` through the AppEngine function endpoint. The function validates the vendor slug, calls only `https://sla.directory`, bounds the request to eight seconds, and validates the response shape before returning data.
-4. The browser invokes `gcpServiceHealth` with a validated project ID and Credential Vault record ID. The function retrieves only an AppEngine-scoped Token credential, validates the service-account shape and fixed Google OAuth endpoint, exchanges a short-lived token, and calls only Google Service Health. If no connection is configured, or normal monitoring cannot use it, the function can return the public Google Cloud Status feed with an explicit public or fallback state.
-5. The browser invokes `providerPublicStatus` only for a fixed provider and endpoint allowlist. The function sends no credential or authorization header, bounds response text and result counts, and labels every returned record as public and non-customer-specific.
-6. External API responses are treated as untrusted data. React renders them as text, no HTML is injected, response text is bounded, and stable public Google product IDs are mapped only through an explicit table.
-7. App state stores provider configuration and personal display preferences. App Settings stores custom SLA values, confirmed scope mappings, exact evidence target IDs, and provider connection metadata. The provider secret remains in Credential Vault and is never returned to the browser.
-8. The release history is bundled with the application. The Community destination is launch-gated and does not expose an external link before public launch.
-9. Provider tags are written only to service entity IDs selected in Setup. Existing tags are preserved. Services with a conflicting provider tag are excluded from the bulk selection and require manual review.
+4. The browser invokes `awsHealth` with a validated 12-digit account ID and Credential Vault record ID. The function verifies the credential's account with AWS STS, signs fixed AWS Health requests with Signature Version 4, filters out non-account-specific events, and calls only the fixed US East endpoints required by AWS Health.
+5. The browser invokes `azureServiceHealth` with a validated subscription ID and Credential Vault record ID. The function validates the vaulted client-credential shape, obtains a short-lived Microsoft Entra token from a fixed tenant endpoint, and reads only Resource Health events for the selected subscription through Azure Resource Manager.
+6. The browser invokes `gcpServiceHealth` with a validated project ID and Credential Vault record ID. The function retrieves only an AppEngine-scoped Token credential, validates the service-account shape and fixed Google OAuth endpoint, exchanges a short-lived token, and calls only Google Service Health. If no connection is configured, or normal monitoring cannot use it, the function can return the public Google Cloud Status feed with an explicit public or fallback state.
+7. The browser invokes `ociAnnouncements` with a validated commercial OCI region, tenancy OCID, and Credential Vault record ID. The function accepts only an AppEngine-scoped Token credential with a user OCID, API-key fingerprint, and unencrypted RSA private key. It signs a GET request to `announcements.<region>.oraclecloud.com` and never accepts an arbitrary endpoint. A selected OCI tenancy connection fails visibly rather than silently falling back to public status.
+8. The browser invokes `providerPublicStatus` only for a fixed provider and endpoint allowlist. The function sends no credential or authorization header, bounds response text and result counts, and labels every returned record as public and non-customer-specific.
+9. External API responses are treated as untrusted data. React renders them as text, no HTML is injected, response text is bounded, and provider product identifiers are mapped only through explicit tables. Ambiguous products remain unmapped.
+10. App state stores provider configuration and personal display preferences. App Settings stores custom SLA values, confirmed scope mappings, exact evidence target IDs, and non-secret provider connection metadata. Provider secrets remain in Credential Vault and are never returned to the browser.
+11. The release history is bundled with the application. The Community destination is launch-gated and does not expose an external link before public launch.
+12. Provider tags are written only to service entity IDs selected in Setup. Existing tags are preserved. Services with a conflicting provider tag are excluded from the bulk selection and require manual review.
 
 ## Canonical sources of truth
 
@@ -61,8 +64,11 @@ Settings -> provider project and Credential Vault ID -> validation -> App Settin
 - Tenant-specific operational SLA terms: the `contract-overrides` App Settings schema.
 - Confirmed provider-service mappings: the `provider-scope-assignments` App Settings schema. Smartscape supplies candidate evidence, and an operator supplies the confirmation.
 - Provider connection metadata: the `provider-connections` App Settings schema. Provider secrets: Dynatrace Credential Vault.
+- AWS provider notices: account-specific AWS Health events after STS account verification. There is no credential-free AWS source in this release.
+- Azure provider notices: subscription-specific Azure Service Health events. There is no credential-free Azure source in this release.
 - Google Cloud provider notices: Personalized Service Health for one of the configured projects, or Google Cloud Status as a non-project-specific fallback.
-- OCI, OpenAI, Anthropic, and ElevenLabs provider notices: fixed public status endpoints, always labeled non-customer-specific.
+- OCI provider notices: tenancy-specific Announcements when an administrator selects a saved connection, or the fixed public regional status endpoint as an explicitly non-customer-specific source.
+- OpenAI, Anthropic, and ElevenLabs provider notices: fixed public status endpoints, always labeled non-customer-specific.
 - Service-to-runtime and location context: Smartscape on Grail, queried at runtime.
 - Personal preferences and shared watch configuration: Dynatrace app-state services when available.
 - Offline state: browser local storage only as an explicitly surfaced fallback.
@@ -80,9 +86,9 @@ The app does not alter or copy the public provider record. A tenant override is 
 - Shared app-state writes are workspace-wide and scope-controlled. A user with write permission can change shared provider configuration (`documentation/permissions.md`).
 - SLA override writes are environment-shared App Settings and do not inherit the 90-day app-state expiry. Users with schema write access can change or remove them, and all authenticated app users can read them.
 - Applying a custom tag can affect other Dynatrace configurations that select entities by tag. Setup names those consumers before confirmation, requires exact service selection, and offers a last-action undo. Undo is a compensating action, not a transactional rollback, so concurrent edits still require operator review.
-- AppEngine external-request allowlisting is environment configuration, not repository configuration. The target environment must retain `sla.directory`, the Google hosts used by any enabled provider connection, and the four fixed public-status hosts documented in `variables.md`.
+- AppEngine external-request allowlisting is environment configuration, not repository configuration. The target environment must retain `sla.directory`, the fixed AWS and Azure hosts, the Google hosts used by any enabled provider connection, each configured OCI Announcements regional host, and the four fixed public-status hosts documented in `variables.md`.
 - Personalized Service Health is provider evidence, not tenant impact evidence. An `IMPACTED` relevance value is reported as Google's project assessment and is not converted into a Dynatrace root-cause or credit decision.
-- The current Google adapter supports multiple configured projects. AWS, Azure, and customer-specific OCI data require separate provider-specific authentication and event adapters and are not represented as implemented.
+- The current account-specific adapters support multiple AWS accounts, Azure subscriptions, Google Cloud projects, and commercial OCI tenancies. Non-commercial OCI realms and other provider account APIs require separate reviewed authentication and event adapters and are not represented as implemented.
 - The manifest's `environmentUrl` is a safe placeholder for public source, and `DT_APP_ENVIRONMENT_URL` or `--environment-url` selects a real deployment target. No tenant-specific auth state is part of the source release.
 
 ## Related documents

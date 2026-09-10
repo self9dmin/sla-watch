@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.35",
+    version: "0.0.36",
     label: "Current release",
+    summary: "Added account-specific incident sources for four core cloud providers.",
+    details: [
+      "Established AWS, Microsoft Azure, Google Cloud, and OCI as peer core providers. AWS is only the initial focused view for a fresh workspace.",
+      "Added optional read-only AWS Health account events, Azure Service Health subscription events, Google Cloud Personalized Service Health, and OCI Announcements.",
+      "Allowed multiple accounts, subscriptions, projects, and tenancies while keeping every provider secret in Dynatrace Credential Vault.",
+      "Mapped explicit AWS, Azure, and OCI service names to candidate sla.directory services without resolving ambiguous provider products automatically.",
+      "Added provider-specific scope validation, fixed outbound endpoints, bounded requests, and visible authentication or IAM failures without silent source substitution.",
+    ],
+  },
+  {
+    version: "0.0.35",
+    label: "Previous release",
     summary: "Expanded provider incident evidence and clarified setup failures.",
     details: [
       "Added credential-free public incident sources for OCI, OpenAI, Anthropic, and ElevenLabs, with an explicit non-customer-specific evidence label.",

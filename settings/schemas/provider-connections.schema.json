@@ -2,21 +2,21 @@
   "$schema": "https://developer.dynatrace.com/docs-assets/schema_strict_apps.json",
   "dynatrace": "1",
   "schemaId": "provider-connections",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "displayName": "Provider incident connections",
-  "description": "Optional provider API connections used to read project-scoped service health notices.",
-  "documentation": "Store only the provider scope and the ID of an AppEngine-scoped Dynatrace Credential Vault entry. Provider secrets must remain in Credential Vault and must never be copied into this setting.",
+  "description": "Optional provider API connections used to read customer-scoped service health notices.",
+  "documentation": "Store only non-secret provider scope fields and the ID of an AppEngine-scoped Dynatrace Credential Vault entry. Provider secrets must remain in Credential Vault and must never be copied into this setting.",
   "multiObject": true,
   "maxObjects": 20,
-  "summaryPattern": "{displayName} · {projectId}",
-  "searchPattern": "{providerSlug} {displayName} {projectId}",
+  "summaryPattern": "{displayName} · {providerSlug}",
+  "searchPattern": "{providerSlug} {displayName} {accountId} {subscriptionId} {projectId} {tenancyId} {region}",
   "ordered": false,
   "maturity": "GENERAL_AVAILABILITY",
   "ownerBasedAccessControl": false,
   "properties": {
     "connectionKey": {
       "displayName": "Connection key",
-      "description": "Stable key generated from the provider and project ID.",
+      "description": "Stable key generated from the provider and account scope identifier.",
       "type": "text",
       "default": "",
       "nullable": false,
@@ -25,27 +25,54 @@
     "providerSlug": {
       "displayName": "Provider slug",
       "type": "text",
-      "default": "gcp",
+      "default": "aws",
       "nullable": false,
       "constraints": [{ "type": "NOT_BLANK" }]
     },
     "displayName": {
       "displayName": "Connection name",
       "type": "text",
-      "default": "Google Cloud",
+      "default": "AWS account",
       "nullable": false,
       "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "accountId": {
+      "displayName": "AWS account ID",
+      "description": "Non-secret AWS account identifier verified with STS when the connection is tested.",
+      "type": "text",
+      "default": "",
+      "nullable": false
+    },
+    "subscriptionId": {
+      "displayName": "Azure subscription ID",
+      "description": "Non-secret Azure subscription identifier used to scope Service Health events.",
+      "type": "text",
+      "default": "",
+      "nullable": false
     },
     "projectId": {
       "displayName": "Google Cloud project ID",
       "type": "text",
       "default": "",
-      "nullable": false,
-      "constraints": [{ "type": "NOT_BLANK" }]
+      "nullable": false
+    },
+    "tenancyId": {
+      "displayName": "OCI tenancy OCID",
+      "description": "Non-secret tenancy identifier used to scope OCI Announcements.",
+      "type": "text",
+      "default": "",
+      "nullable": false
+    },
+    "region": {
+      "displayName": "OCI region",
+      "description": "Commercial OCI region that hosts the tenancy Announcements endpoint.",
+      "type": "text",
+      "default": "",
+      "nullable": false
     },
     "credentialId": {
       "displayName": "Credential Vault ID",
-      "description": "ID of a Token credential containing the Google Cloud service-account JSON. The secret remains in Dynatrace Credential Vault.",
+      "description": "ID of a provider-specific Token credential. The secret remains in Dynatrace Credential Vault.",
       "type": "text",
       "default": "",
       "nullable": false,

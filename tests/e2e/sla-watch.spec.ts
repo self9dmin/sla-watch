@@ -69,7 +69,7 @@ test.describe('SLA Watch deployed smoke', () => {
     await expectNoPageScroll(app);
   });
 
-  test('keeps provider credentials outside application settings', async ({ page }) => {
+  test('keeps cloud provider credentials outside application settings', async ({ page }) => {
     const app = await openWatch(page);
 
     await app.getByRole('button', { name: 'Open monitor settings' }).click();
@@ -79,10 +79,11 @@ test.describe('SLA Watch deployed smoke', () => {
     await expect(app.getByRole('combobox', { name: 'Active provider for focused views' })).toBeVisible();
     await app.getByRole('link', { name: 'Provider connections' }).click();
     await expect(app.getByRole('heading', { name: 'Connect provider incident data.' })).toBeVisible();
-    await expect(app.getByText(/Google Cloud · multiple projects/i)).toBeVisible();
-    await expect(app.getByRole('option', { name: 'Add a new project' })).toBeVisible();
-    await expect(app.getByText(/Enter the credential ID, not the service-account JSON/i)).toBeVisible();
-    await expect(app.getByText(/does not modify Google Cloud, create a Dynatrace Problem, send a notification, prove local impact, or determine SLA credit eligibility/i)).toBeVisible();
+    await expect(app.getByText(/AWS Health · Azure Service Health · Google Cloud Personalized Service Health · OCI Announcements/i)).toBeVisible();
+    await expect(app.getByRole('combobox', { name: 'Connection type' })).toHaveValue('aws');
+    await expect(app.getByRole('option', { name: 'Add a new account' })).toBeVisible();
+    await expect(app.getByText(/The Token value must be JSON with/i)).toBeVisible();
+    await expect(app.getByText(/no provider notice proves local impact or SLA eligibility/i)).toBeVisible();
   });
 
   test('keeps new SLA setup in Settings and reserves the modal for edits', async ({ page }) => {

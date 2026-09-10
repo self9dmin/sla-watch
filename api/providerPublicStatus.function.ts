@@ -1,3 +1,5 @@
+import { mapOciServiceToDirectoryIds } from "./ociNoticeMappings";
+
 type RequestPayload = {
   providerSlug?: string;
   lookbackHours?: number;
@@ -182,7 +184,7 @@ export const parseOciComponents = (payload: unknown): PublicProviderNotice[] => 
           state: "ACTIVE",
           detailedState: rawStatus,
           severity: optionalText(incident.severity) ?? rawStatus,
-          products: [{ id: serviceId, name: serviceName, directoryServiceIds: [] }],
+          products: [{ id: serviceId, name: serviceName, directoryServiceIds: mapOciServiceToDirectoryIds(serviceName) }],
           locations: [regionName],
           url: "https://ocistatus.oraclecloud.com/incidents/",
         });
