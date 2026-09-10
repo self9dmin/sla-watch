@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 20
     env:
       DT_APP_E2E_URL: ${{ inputs.target_url }}
-      DT_APP_E2E_AUTH_STATE: ${{ runner.temp }}/playwright-auth.json
+      DT_APP_E2E_AUTH_STATE: ${{ github.workspace }}/playwright/.auth/state.json
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -39,6 +39,7 @@ jobs:
           PLAYWRIGHT_AUTH_STATE_B64: ${{ secrets.DT_APP_E2E_AUTH_STATE_B64 }}
         run: |
           test -n "$PLAYWRIGHT_AUTH_STATE_B64"
+          mkdir -p "$(dirname "$DT_APP_E2E_AUTH_STATE")"
           printf '%s' "$PLAYWRIGHT_AUTH_STATE_B64" | base64 --decode > "$DT_APP_E2E_AUTH_STATE"
 
       - name: Run authenticated smoke tests
