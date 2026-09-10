@@ -72,15 +72,15 @@ const WatchSettings = () => {
     <section className="settings-page">
       <div className="page-intro">
         <Text className="eyebrow">Settings · watch</Text>
-        <Heading level={1}>Configure the evidence boundary.</Heading>
-        <Paragraph>Choose the contract to compare, the Dynatrace label convention to look for, and the time window used by the watch.</Paragraph>
+        <Heading level={1}>Configure watch defaults.</Heading>
+        <Paragraph>Choose the contract, Dynatrace tag convention, and evidence window. Review service assignments from Setup.</Paragraph>
       </div>
       <div className="settings-form-grid">
         <label className="field-label">Provider directory slug
           <input value={providerSlug} onChange={(event) => setProviderSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="aws" autoComplete="off" />
           <small>Use the slug from sla.directory, such as <code>aws</code> or <code>azure</code>.</small>
         </label>
-        <label className="field-label">Provider label key
+        <label className="field-label">Provider tag key
           <input value={providerLabelKey} onChange={(event) => setProviderLabelKey(event.target.value)} placeholder="provider" autoComplete="off" />
           <small>Examples the watch understands: <code>provider:aws</code>, <code>vendor=aws</code>, or <code>[aws]</code>.</small>
         </label>
@@ -93,9 +93,10 @@ const WatchSettings = () => {
         </label>
       </div>
       <div className="settings-preview">
-        <div className="eyebrow">Attribution preview</div>
+        <div className="eyebrow">Matching rule preview</div>
         <strong>{providerLabelKey || "provider"}:{providerSlug || "provider-slug"}</strong>
-        <span>The watch will report “Labeling missing” when services exist but no configured provider label is found.</span>
+        <span>SLA Watch will look for this tag. Saving the rule does not modify Dynatrace services.</span>
+        <NavLink className="text-action" to="/setup">Review service mapping in Setup</NavLink>
       </div>
       <div className="settings-actions"><Button variant="emphasized" disabled={!providerSlug.trim()} onClick={() => void save()}>Save watch settings</Button>{saved ? <SavedNote text="Watch settings saved" /> : null}</div>
     </section>
@@ -144,12 +145,12 @@ const IntroSettings = () => {
       <div className="page-intro"><Text className="eyebrow">Settings · onboarding</Text><Heading level={1}>Configure onboarding and walkthrough.</Heading><Paragraph>Use the setup when the provider boundary changes. Replay the walkthrough when the evidence model needs review.</Paragraph></div>
       <div className="onboarding-status-row"><div><span className="eyebrow">Setup status</span><strong>{preferences.onboardingComplete ? "Configured" : "Not configured"}</strong></div><div><span className="eyebrow">Walkthrough</span><strong>{preferences.tourCompleted ? "Completed" : "Ready to replay"}</strong></div><div><span className="eyebrow">Provider</span><strong>{preferences.providerSlug}</strong></div></div>
       <div className="settings-actions"><Button variant="emphasized" onClick={() => void restartIntro()}>Restart intro setup</Button><Button onClick={() => void resetTour()}>Start walkthrough now</Button>{saved ? <SavedNote text="Walkthrough is ready" /> : null}</div>
-      <div className="settings-callout"><strong>What the setup does not do.</strong><span>It does not create an SLA claim, change telemetry, add labels, or make a provider determination for you.</span></div>
+      <div className="settings-callout"><strong>What onboarding does not do.</strong><span>It does not create an SLA claim, change telemetry, add tags, or make a provider determination for you.</span></div>
     </section>
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure the provider boundary, evidence window, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Watch configuration</span><strong>Select the contract and label convention.</strong><span>Current provider settings are visible before each review.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run setup or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure watch defaults and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Watch configuration</span><strong>Select the contract and tag convention.</strong><span>Service assignments are reviewed from Setup.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run onboarding or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();

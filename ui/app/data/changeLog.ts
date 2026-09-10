@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.29",
+    version: "0.0.30",
     label: "Current release",
+    summary: "Reorganized Watch around setup, status, and incident work.",
+    details: [
+      "Replaced the Evidence and Incident review navigation with focused Setup and Incidents workspaces.",
+      "Added a permission-gated, per-service provider-tag review with conflict detection and rollback.",
+      "Reduced panel height and moved long service and Problem collections into bounded lists.",
+    ],
+  },
+  {
+    version: "0.0.29",
+    label: "Previous release",
     summary: "Restored header icons alongside their tooltips.",
     details: [
       "Composed each icon through the Strato button-prefix slot so tooltip wrappers cannot drop it.",

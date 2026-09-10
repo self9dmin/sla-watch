@@ -1,7 +1,5 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Surface } from "@dynatrace/strato-components/layouts";
-import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import type { SetupRecommendation } from "../types";
 
 const priorityLabel: Record<SetupRecommendation["priority"], string> = {
@@ -19,11 +17,11 @@ export const SetupAdvisor = ({
   loading: boolean;
   limitedContext: boolean;
 }) => (
-  <Surface className="panel-card advisor-panel" data-tour="advisor">
-    <div className="panel-heading-row">
-      <div className="advisor-intro">
-        <Heading level={2}>Setup checks</Heading>
-        <Paragraph>Resolve required telemetry and identity gaps before an incident review. SLA Watch does not change tags, names, or SLOs.</Paragraph>
+  <section className="setup-checks" data-tour="advisor" aria-labelledby="setup-checks-title">
+    <div className="setup-section-heading">
+      <div>
+        <h3 id="setup-checks-title">Setup checks</h3>
+        <p>Resolve telemetry and ownership gaps before reviewing an incident.</p>
       </div>
       {!loading ? <span className="advisor-count">{recommendations.length} open</span> : null}
     </div>
@@ -32,7 +30,7 @@ export const SetupAdvisor = ({
     ) : recommendations.length === 0 ? (
       <div className="advisor-empty">
         <strong>No setup gaps detected in this scan.</strong>
-        <span>Keep the provider boundary and ownership metadata stable as services change. The next review can focus on contract records and the error budget.</span>
+        <span>The current provider boundary is ready for incident review.</span>
       </div>
     ) : (
       <div className="advisor-list">
@@ -54,5 +52,5 @@ export const SetupAdvisor = ({
       </div>
     )}
     {limitedContext ? <div className="advisor-footnote">Some Dynatrace context is unavailable. Recommendations are intentionally conservative until the relevant read permission or entity scope is restored.</div> : null}
-  </Surface>
+  </section>
 );

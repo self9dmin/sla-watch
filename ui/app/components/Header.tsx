@@ -31,7 +31,7 @@ export const Header = ({
   const [helpOpen, setHelpOpen] = useState(false);
   const isSettings = location.pathname.startsWith("/settings");
   const isChanges = location.pathname.startsWith("/changes");
-  const isWatch = location.pathname === "/" || location.pathname === "/evidence" || location.pathname === "/review";
+  const isWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents" || location.pathname === "/evidence" || location.pathname === "/review";
   const isDirectory = location.pathname === "/directory";
   const communityLive = isCommunityLive();
   const themeActionLabel = `Switch to ${theme === "dark" ? "light" : "dark"} theme`;
@@ -135,18 +135,18 @@ export const Header = ({
               Close
             </button>
           </div>
-          <p>Review the live evidence first, then check service boundary, provider identity, and contract evidence. An unidentified provider remains unidentified until a label or mapping is available.</p>
+          <p>Use Setup to define the provider boundary, Overview to monitor the current state, and Incidents to review observed Problems against provider terms.</p>
           <section>
-            <h3>1. Observe</h3>
-            <p>Review service inventory, Problems, logs, and spans for the selected lookback window.</p>
+            <h3>1. Set up</h3>
+            <p>Select a provider, verify telemetry, and explicitly map the services that depend on it.</p>
           </section>
           <section>
-            <h3>2. Identify</h3>
-            <p>Provider identity requires an explicit Dynatrace label or a mapping you can explain to the next responder.</p>
+            <h3>2. Monitor</h3>
+            <p>Overview keeps the provider, mapped services, active Problems, and published filing window in one place.</p>
           </section>
           <section>
-            <h3>3. Review</h3>
-            <p>Incident review compares observed Problems with provider terms and planning dates. A matching service and active Problem do not prove provider fault or credit eligibility by themselves.</p>
+            <h3>3. Review incidents</h3>
+            <p>Select one Problem at a time and compare its observed impact with provider terms. A matching service does not prove provider fault or credit eligibility.</p>
           </section>
           <section>
             <h3>4. Get support</h3>

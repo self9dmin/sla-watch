@@ -11,6 +11,7 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | `storage:metrics:read` | Read service request time series | Show metrics as unavailable; do not claim that traffic is absent |
 | `storage:logs:read` | Count recent log records | Show log count as unavailable |
 | `storage:spans:read` | Count recent spans | Show span count as unavailable |
+| `environment-api:entities:write` | Add or remove the configured provider tag on explicitly selected service entities | Keep Setup read-only and explain that entity-settings permission is required |
 | `state:user-app-states:read` | Restore theme, onboarding, and walkthrough state | Use browser fallback |
 | `state:user-app-states:write` | Persist personal display and onboarding state | Keep the change in local browser state and show the fallback |
 | `state:app-states:read` | Restore shared provider and watch configuration | Use local browser state and show the fallback |
@@ -20,21 +21,25 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 
 | Resource | Read | Write | User-visible effect |
 | --- | --- | --- | --- |
-| Dynatrace service entities | Current-user scope | None | Inventory may be incomplete if denied |
+| Dynatrace service entities | Current-user scope | Custom provider tag on exact confirmed IDs | Inventory may be incomplete if denied; tag action is unavailable without entity-settings permission |
 | Problems, logs, spans, metrics | Current-user scope | None | Evidence posture becomes unknown when a read fails |
 | `sla.directory` contract | AppEngine external request allowlist | None | Provider contract becomes unavailable when the function cannot run |
 | User app state | User state read | User state write | Personal preferences remain local when denied |
 | Shared app state | App state read | App state write | Workspace configuration remains local when denied |
-| Dynatrace entity labels | Not accessed by this app | Not written by this app | The app recommends a labeling action but never applies it |
+| Dynatrace entity tags | Read through the service inventory | Add or remove one configured key/value through the custom-tag API | Existing tags remain; conflicts require review; a partial management-zone result is reported |
 | SLOs, tickets, credits | Not accessed | Not written | No automated eligibility or remediation is performed |
 
 ## Deployment permissions
 
 The identity used to install or deploy the app is separate from the app's runtime scopes. A local or CI deployment requires `app-engine:apps:install` and `app-engine:apps:run`; uninstalling requires `app-engine:apps:delete`. CI credentials are not stored in this repository.
 
+The provider-tag operation also requires the signed-in user to have Dynatrace entity-settings management permission (`environment:roles:manage-settings`). Declaring `environment-api:entities:write` in the app manifest does not grant that user permission.
+
 ## Authorization gaps to close before Hub submission
 
 - Verify the target tenant's IAM policies for every declared scope with a least-privilege test user.
 - Verify a user missing each scope receives the documented conservative state.
+- Verify granted, denied, management-zone-limited, partial-match, and undo outcomes for the provider-tag workflow.
+- Confirm the Hub Technical information and installation copy clearly disclose the entity-write scope before distribution.
 - Verify that shared watch configuration is not presented as globally saved when the write was denied.
 - Verify the Hub listing's Technical information page matches this table.

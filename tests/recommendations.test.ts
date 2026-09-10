@@ -31,7 +31,7 @@ const problem = (status: string): ProblemRecord => ({
 });
 
 describe("buildSetupRecommendations", () => {
-  it("distinguishes missing provider labels from a provider outage", () => {
+  it("distinguishes missing provider tags from a provider outage", () => {
     const recommendations = buildSetupRecommendations({
       services: [service(["owner:checkout"])],
       problems: [problem("ACTIVE")],

@@ -11,9 +11,9 @@ const STEPS: TourStep[] = [
     body: "Overview shows the current provider-attribution state and the next defensible action for this environment.",
   },
   {
-    target: '[data-tour="evidence"]',
-    title: "Inspect the evidence path",
-    body: "Evidence separates telemetry, service boundary, provider identity, and contract availability. Open it when you need the facts behind the Overview status.",
+    target: '[data-tour="setup"]',
+    title: "Complete provider setup",
+    body: "Setup verifies telemetry, service inventory, provider tags, and contract access. Review services here before adding a provider tag.",
   },
   {
     target: '[data-tour="provider"]',
@@ -21,14 +21,14 @@ const STEPS: TourStep[] = [
     body: "Provider directory contains contract records and targets. Select a provider in Settings, then compare those records with tenant evidence.",
   },
   {
-    target: '[data-tour="review"]',
-    title: "Review observed impact",
-    body: "Incident review compares detected Problems with provider terms, observed dates, and required evidence. It does not make a vendor eligibility or credit decision.",
+    target: '[data-tour="incidents"]',
+    title: "Review observed incidents",
+    body: "Incidents presents a Problem queue and one focused review. It compares observed dates with provider terms without making an eligibility or credit decision.",
   },
   {
     target: '[data-tour="settings"]',
     title: "Configure the evidence boundary",
-    body: "Settings controls the provider slug, label key, lookback window, theme, and walkthrough state. Watch configuration is shared, while theme and walkthrough state stay personal.",
+    body: "Settings controls the provider slug, tag key, lookback window, theme, and walkthrough state. Watch configuration is shared, while theme and walkthrough state stay personal.",
   },
   {
     target: '[data-tour="changes"]',

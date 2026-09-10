@@ -117,21 +117,21 @@ export const buildSetupRecommendations = ({
     add(recommendations, {
       id: "provider-label",
       priority: "high",
-      title: "Give services an explicit provider boundary",
+      title: "Identify services that use this provider",
       detail: `Add ${providerLabelKey}:${selectedProviderSlug} (or a documented equivalent) to the services that depend on ${directoryData.provider.name}. Names alone are not enough for a provider review.`,
-      evidence: `${services.length} service${services.length === 1 ? "" : "s"} returned, but no provider labels were found.`,
-      action: "Review the label convention",
-      href: "/settings/watch",
+      evidence: `${services.length} service${services.length === 1 ? "" : "s"} returned, but no provider tags were found.`,
+      action: "Review services",
+      href: "/setup#provider-mapping",
     });
   } else if (directoryData && providerLabels.length > 0 && matchedProviderServices === 0) {
     add(recommendations, {
       id: "provider-mapping",
       priority: "high",
-      title: "Resolve the provider label to the selected contract",
-      detail: `Dynatrace has provider labels, but none resolve to ${directoryData.provider.name}. Confirm the intended provider or update the service tags before reviewing the contract.`,
-      evidence: `Detected labels: ${providerLabels.slice(0, 3).join(", ")}. Selected contract: ${directoryData.provider.name}.`,
-      action: "Fix the provider mapping",
-      href: "/settings/watch",
+      title: "Resolve provider tags to the selected contract",
+      detail: `Dynatrace has provider tags, but none resolve to ${directoryData.provider.name}. Confirm the intended provider before reviewing the contract.`,
+      evidence: `Detected tags: ${providerLabels.slice(0, 3).join(", ")}. Selected contract: ${directoryData.provider.name}.`,
+      action: "Review services",
+      href: "/setup#provider-mapping",
     });
   }
 

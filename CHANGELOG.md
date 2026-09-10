@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.30
+
+- Reorganized Watch into Overview, Setup, and Incidents so each page has one operational purpose.
+- Added a permission-gated provider-tag review for explicitly selected services, including conflict detection and rollback.
+- Replaced expanded incident cards with a bounded Problem queue and one focused incident detail view.
+- Reduced spacing and panel height so normal desktop states fit without page scrolling.
+
 ## 0.0.29
 
 - Restored every header SVG by composing icons through the Strato button-prefix slot used by tooltip-wrapped actions.
@@ -88,4 +95,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.29` release candidate.
+- Reserved for changes after the `0.0.30` release candidate.
