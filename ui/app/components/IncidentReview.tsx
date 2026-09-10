@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useDql } from "@dynatrace-sdk/react-hooks";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
-import type { ContractContext, ContractOverrideRecord, EffectiveContractTerms, EvidenceLookbackHours, ProblemRecord, ServiceRecord, SlaClaimProcess, SlaProviderResponse } from "../types";
+import type { ContractContext, ContractOverrideRecord, EffectiveContractTerms, EvidenceLookbackHours, ProblemRecord, ServiceRecord, SlaClaimProcess, SlaProviderResponse, SmartscapeScopeEdge } from "../types";
 import { overrideMatchesContext, resolveEffectiveContractTerms } from "../data/contractOverrides";
 import { EVIDENCE_LOOKBACK_OPTIONS, formatEvidenceLookback } from "../data/lookback";
-import { SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
-import { parseSmartscapeScopeEdges } from "../data/topology";
+import { inferProviderServiceCandidate, resolveUniqueProviderServiceCandidate, runtimeEntityIdForEdge, serviceEntityIdForEdge, type IncidentProviderServiceCandidate } from "../data/providerScopeAssignments";
 import { useContractOverrides } from "../hooks/useContractOverrides";
+import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
 
 type Tone = "neutral" | "warning" | "positive";
 
@@ -16,6 +15,9 @@ type IncidentReviewProps = {
   provider?: SlaProviderResponse;
   problems: ProblemRecord[];
   services: ServiceRecord[];
+  topology: SmartscapeScopeEdge[];
+  topologyLoading: boolean;
+  topologyError?: Error;
   lookbackHours: EvidenceLookbackHours;
   onLookbackChange: (value: EvidenceLookbackHours) => void;
   loading: boolean;
@@ -40,6 +42,8 @@ type ContractAssignment = {
   scopeKey: string;
   rank: number;
 };
+
+type MappingSource = "contract" | "confirmed" | "candidate" | "manual" | "none";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -133,6 +137,8 @@ const IncidentDetail = ({
   onScopeChange,
   contractLoading,
   contractError,
+  mappingSource,
+  mappingDetail,
 }: {
   problem: ProblemRecord;
   serviceNames: string[];
@@ -145,6 +151,8 @@ const IncidentDetail = ({
   onScopeChange: (value: string) => void;
   contractLoading: boolean;
   contractError: boolean;
+  mappingSource: MappingSource;
+  mappingDetail: string;
 }) => {
   const providerRecord = provider?.provider;
   const publicClaimProcess = providerRecord?.claimProcess;
@@ -176,9 +184,16 @@ const IncidentDetail = ({
       </div>
 
       <div className="incident-contract-context">
-        <label>Provider service<select value={providerServiceId} onChange={(event) => onProviderServiceChange(event.target.value)}><option value="*">Provider default</option>{provider?.services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
+        <label>Provider service<select value={providerServiceId} onChange={(event) => onProviderServiceChange(event.target.value)}><option value="*">{mappingSource === "none" ? "Provider-level terms (no service match)" : "Provider-level terms"}</option>{provider?.services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
         <label>Dynatrace scope<select value={scopeKey} onChange={(event) => onScopeChange(event.target.value)}>{scopeChoices.map((choice) => <option key={choice.key} value={choice.key}>{choice.label}</option>)}</select></label>
         <div><span>Applied terms</span><strong className={contractTerms?.source === "tenant override" ? "source-tenant" : ""}>{contractLoading ? "Checking" : contractError ? "Public fallback" : contractTerms?.source === "tenant override" ? "Tenant override" : "sla.directory"}</strong></div>
+      </div>
+      <div className={`incident-mapping-note incident-mapping-${mappingSource}`}>
+        <StatusPill tone={mappingSource === "confirmed" || mappingSource === "contract" ? "positive" : mappingSource === "candidate" ? "warning" : "neutral"}>
+          {mappingSource === "contract" ? "SLA scope match" : mappingSource === "confirmed" ? "Confirmed mapping" : mappingSource === "candidate" ? "Smartscape candidate" : mappingSource === "manual" ? "Manual selection" : "No service match"}
+        </StatusPill>
+        <span>{mappingDetail}</span>
+        <Link to="/setup?view=scope">Review scope map</Link>
       </div>
 
       <dl className="incident-facts">
@@ -219,14 +234,14 @@ const IncidentDetail = ({
   );
 };
 
-export const IncidentReview = ({ provider, problems, services, lookbackHours, onLookbackChange, loading, error }: IncidentReviewProps) => {
+export const IncidentReview = ({ provider, problems, services, topology, topologyLoading, topologyError, lookbackHours, onLookbackChange, loading, error }: IncidentReviewProps) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [providerServiceId, setProviderServiceId] = useState("*");
   const [scopeKey, setScopeKey] = useState("provider");
+  const [mappingSource, setMappingSource] = useState<MappingSource>("none");
   const autoSelectedProblem = useRef<string | null>(null);
-  const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
-  const topology = useMemo(() => parseSmartscapeScopeEdges(topologyQuery.data), [topologyQuery.data]);
   const contractSettings = useContractOverrides();
+  const scopeSettings = useProviderScopeAssignments();
   const selectedProblem = problems.find((problem) => problem.id === selectedId) ?? problems[0];
   const serviceNamesById = useMemo(() => new Map(services.map((service) => [service.id, service.name])), [services]);
   const activeProblems = problems.filter((problem) => problem.status.toUpperCase() === "ACTIVE").length;
@@ -241,7 +256,7 @@ export const IncidentReview = ({ provider, problems, services, lookbackHours, on
     : [];
 
   const scopeChoices = useMemo<ContractScopeChoice[]>(() => {
-    const choices: ContractScopeChoice[] = [{ key: "provider", label: "Provider default", context: {} }];
+    const choices: ContractScopeChoice[] = [{ key: "provider", label: "Provider-wide scope", context: {} }];
     if (!selectedProblem) return choices;
     const affected = new Set(selectedProblem.affectedEntityIds);
     const affectedServices = services.filter((service) => affected.has(service.id));
@@ -250,14 +265,15 @@ export const IncidentReview = ({ provider, problems, services, lookbackHours, on
       label: `Service · ${service.name}`,
       context: { serviceId: service.id },
     }));
-    topology.filter((edge) => edge.serviceClassicId && affected.has(edge.serviceClassicId)).forEach((edge) => {
+    topology.filter((edge) => affected.has(serviceEntityIdForEdge(edge))).forEach((edge) => {
+      const serviceEntityId = serviceEntityIdForEdge(edge);
       const hostId = edge.targetClassicId ?? edge.targetNodeId;
-      const key = `host:${edge.serviceClassicId}:${hostId}`;
+      const key = `host:${serviceEntityId}:${hostId}`;
       if (choices.some((choice) => choice.key === key)) return;
       choices.push({
         key,
         label: `${edge.serviceName} · ${edge.targetName}${edge.location ? ` · ${edge.location}` : ""}`,
-        context: { serviceId: edge.serviceClassicId, hostId, location: edge.location },
+        context: { serviceId: serviceEntityId, hostId, location: edge.location },
       });
       if (edge.location && !choices.some((choice) => choice.key === `location:${edge.location}`)) {
         choices.push({
@@ -300,6 +316,38 @@ export const IncidentReview = ({ provider, problems, services, lookbackHours, on
     return assignments.sort((left, right) => right.rank - left.rank);
   }, [provider, providerOverrides, scopeChoices]);
 
+  const confirmedAssignments = useMemo(() => {
+    if (!provider || !selectedProblem) return [];
+    const affected = new Set(selectedProblem.affectedEntityIds);
+    return scopeSettings.assignments.filter((assignment) => (
+      assignment.enabled &&
+      assignment.providerSlug === provider.provider.slug &&
+      affected.has(assignment.serviceEntityId)
+    )).flatMap((assignment) => {
+      const candidateScopeKey = `host:${assignment.serviceEntityId}:${assignment.runtimeEntityId}`;
+      return scopeChoices.some((choice) => choice.key === candidateScopeKey)
+        ? [{ providerServiceId: assignment.providerServiceId, scopeKey: candidateScopeKey, serviceEntityId: assignment.serviceEntityId, evidence: assignment.evidence }]
+        : [];
+    });
+  }, [provider, scopeChoices, scopeSettings.assignments, selectedProblem]);
+  const confirmedDecision = useMemo(() => resolveUniqueProviderServiceCandidate(confirmedAssignments), [confirmedAssignments]);
+
+  const topologyCandidates = useMemo(() => {
+    if (!provider || !selectedProblem) return [];
+    const affected = new Set(selectedProblem.affectedEntityIds);
+    const candidates = new Map<string, IncidentProviderServiceCandidate>();
+    topology.filter((edge) => affected.has(serviceEntityIdForEdge(edge))).forEach((edge) => {
+      const candidate = inferProviderServiceCandidate(edge, provider);
+      if (!candidate) return;
+      const candidateScopeKey = `host:${serviceEntityIdForEdge(edge)}:${runtimeEntityIdForEdge(edge)}`;
+      if (!scopeChoices.some((choice) => choice.key === candidateScopeKey)) return;
+      const key = `${candidate.providerServiceId}|${candidateScopeKey}`;
+      candidates.set(key, { providerServiceId: candidate.providerServiceId, scopeKey: candidateScopeKey, serviceEntityId: serviceEntityIdForEdge(edge), evidence: candidate.evidence });
+    });
+    return Array.from(candidates.values());
+  }, [provider, scopeChoices, selectedProblem, topology]);
+  const topologyDecision = useMemo(() => resolveUniqueProviderServiceCandidate(topologyCandidates), [topologyCandidates]);
+
   useEffect(() => {
     if (!scopeChoices.some((choice) => choice.key === scopeKey)) {
       const hostChoices = scopeChoices.filter((choice) => choice.key.startsWith("host:"));
@@ -313,18 +361,40 @@ export const IncidentReview = ({ provider, problems, services, lookbackHours, on
   }, [provider, providerServiceId]);
 
   useEffect(() => {
-    if (!selectedProblem || contractSettings.loading || topologyQuery.isLoading || autoSelectedProblem.current === selectedProblem.id) return;
+    if (!selectedProblem || contractSettings.loading || scopeSettings.loading || topologyLoading) return;
+    const selectionKey = `${provider?.provider.slug ?? "none"}|${selectedProblem.id}`;
+    if (autoSelectedProblem.current === selectionKey) return;
     const highestRank = matchingAssignments[0]?.rank;
     const mostSpecific = matchingAssignments.filter((assignment) => assignment.rank === highestRank);
     if (mostSpecific.length === 1) {
       setProviderServiceId(mostSpecific[0].providerServiceId);
       setScopeKey(mostSpecific[0].scopeKey);
+      setMappingSource("contract");
+    } else if (confirmedDecision) {
+      setProviderServiceId(confirmedDecision.providerServiceId);
+      setScopeKey(confirmedDecision.scopeKey);
+      setMappingSource("confirmed");
+    } else if (topologyDecision) {
+      setProviderServiceId(topologyDecision.providerServiceId);
+      setScopeKey(topologyDecision.scopeKey);
+      setMappingSource("candidate");
     } else {
       setProviderServiceId("*");
       setScopeKey("provider");
+      setMappingSource("none");
     }
-    autoSelectedProblem.current = selectedProblem.id;
-  }, [contractSettings.loading, matchingAssignments, selectedProblem, topologyQuery.isLoading]);
+    autoSelectedProblem.current = selectionKey;
+  }, [confirmedDecision, contractSettings.loading, matchingAssignments, provider?.provider.slug, scopeSettings.loading, selectedProblem, topologyDecision, topologyLoading]);
+
+  const mappingDetail = mappingSource === "contract"
+    ? "A matching tenant SLA scope selected this provider service and Dynatrace scope."
+    : mappingSource === "confirmed"
+      ? confirmedDecision?.evidence ?? "A mapping confirmed in Setup was reused for this incident."
+      : mappingSource === "candidate"
+        ? `${topologyDecision?.evidence ?? "Smartscape runtime metadata suggests this provider service"}. Confirm it in Setup before relying on it.`
+        : mappingSource === "manual"
+          ? "This selection applies only to the current review and has not been saved as a scope mapping."
+          : "No unique confirmed mapping or Smartscape provider-service candidate was found for the affected services.";
 
   const selectedScope = scopeChoices.find((choice) => choice.key === scopeKey) ?? scopeChoices[0];
   const effectiveTerms = provider ? resolveEffectiveContractTerms(
@@ -395,10 +465,12 @@ export const IncidentReview = ({ provider, problems, services, lookbackHours, on
             providerServiceId={providerServiceId}
             scopeKey={scopeKey}
             scopeChoices={scopeChoices}
-            onProviderServiceChange={setProviderServiceId}
-            onScopeChange={setScopeKey}
-            contractLoading={contractSettings.loading || topologyQuery.isLoading}
-            contractError={Boolean(contractSettings.error)}
+            onProviderServiceChange={(value) => { setProviderServiceId(value); setMappingSource("manual"); }}
+            onScopeChange={(value) => { setScopeKey(value); setMappingSource("manual"); }}
+            contractLoading={contractSettings.loading || scopeSettings.loading || topologyLoading}
+            contractError={Boolean(contractSettings.error || scopeSettings.error || topologyError)}
+            mappingSource={mappingSource}
+            mappingDetail={mappingDetail}
           /> : null}
         </div>
       )}

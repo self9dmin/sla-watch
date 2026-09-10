@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-SLA Watch is a read-mostly Dynatrace AppEngine application with three explicit configuration write paths: confirmed provider-tag changes, tenant-owned SLA overrides, and optional provider-connection metadata. It monitors a collection of provider contracts from `sla.directory` while one active provider controls each focused review. It compares those records with custom terms, the live service inventory, Smartscape topology, recent telemetry, and separately labeled provider notices. Its output is an evidence posture for human review, not an automated credit decision.
+SLA Watch is a read-mostly Dynatrace AppEngine application with four explicit configuration write paths: confirmed provider-tag changes, operator-confirmed provider-service scope mappings, tenant-owned SLA overrides, and optional provider-connection metadata. It monitors a collection of provider contracts from `sla.directory` while one active provider controls each focused review. It compares those records with custom terms, the live service inventory, Smartscape topology, recent telemetry, and separately labeled provider notices. Its output is an evidence posture for human review, not an automated credit decision.
 
 The application has no database of its own, no scheduled work, no webhook receiver, no email sender, and no embedded agent. There is no `cron.md`, `emails.md`, `seo.md`, or `automation.md` because those capabilities do not exist in this release.
 
@@ -12,9 +12,9 @@ The application has no database of its own, no scheduled work, no webhook receiv
 - Dynatrace Strato components and design tokens for the UI.
 - Dynatrace DQL through `@dynatrace-sdk/react-hooks` for services, Problems, logs, spans, service-request telemetry, and Smartscape relationships.
 - Dynatrace Environment API custom-tag and effective-permission clients for the explicit service-tag workflow.
-- Two AppEngine functions: `api/slaDirectory.function.ts` for public contract data and `api/gcpServiceHealth.function.ts` for read-only Google Cloud provider notices.
+- Three AppEngine functions: `api/slaDirectory.function.ts` for public contract data, `api/gcpServiceHealth.function.ts` for read-only Google Cloud provider notices, and `api/providerPublicStatus.function.ts` for credential-free public OCI, OpenAI, Anthropic, and ElevenLabs status.
 - App state services for user preferences and shared watch configuration.
-- App Settings V2 for shared, versioned tenant SLA overrides and non-secret provider connection metadata.
+- App Settings V2 for shared, versioned tenant SLA overrides, confirmed provider-service scope mappings, and non-secret provider connection metadata.
 - `dt-app` for build, analysis, local development, and deployment.
 
 The browser entry point is `ui/main.tsx`. Application routing is in `ui/app/App.tsx`. The primary read path is:
@@ -32,6 +32,9 @@ Settings -> SlaPreferencesContext -> user/app state service
 Setup -> explicit service selection -> confirmation -> effective permission check
       -> Environment API custom-tag endpoint -> exact selected service entity IDs
 
+Setup -> Smartscape service-to-runtime scope -> provider-service suggestion -> operator confirmation
+      -> App Settings V2 -> exact service and runtime mapping reused by Incident review
+
 Settings -> explicit SLA terms and evidence targets -> validation -> App Settings V2
          -> shared contract override using exact service, runtime, or location identifiers
 
@@ -45,18 +48,21 @@ Settings -> provider project and Credential Vault ID -> validation -> App Settin
 2. DQL, app-state, and custom-tag calls run in the current user's permission context. The effective access is the intersection of the app-declared scopes and the user's IAM permissions.
 3. The browser invokes `slaDirectory` through the AppEngine function endpoint. The function validates the vendor slug, calls only `https://sla.directory`, bounds the request to eight seconds, and validates the response shape before returning data.
 4. The browser invokes `gcpServiceHealth` with a validated project ID and Credential Vault record ID. The function retrieves only an AppEngine-scoped Token credential, validates the service-account shape and fixed Google OAuth endpoint, exchanges a short-lived token, and calls only Google Service Health. If no connection is configured, or normal monitoring cannot use it, the function can return the public Google Cloud Status feed with an explicit public or fallback state.
-5. External API responses are treated as untrusted data. React renders them as text, no HTML is injected, response text is bounded, and stable public Google product IDs are mapped only through an explicit table.
-6. App state stores provider configuration and personal display preferences. App Settings stores custom SLA values, exact evidence target IDs, and provider connection metadata. The provider secret remains in Credential Vault and is never returned to the browser.
-7. The release history is bundled with the application. The Community destination is launch-gated and does not expose an external link before public launch.
-8. Provider tags are written only to service entity IDs selected in Setup. Existing tags are preserved. Services with a conflicting provider tag are excluded from the bulk selection and require manual review.
+5. The browser invokes `providerPublicStatus` only for a fixed provider and endpoint allowlist. The function sends no credential or authorization header, bounds response text and result counts, and labels every returned record as public and non-customer-specific.
+6. External API responses are treated as untrusted data. React renders them as text, no HTML is injected, response text is bounded, and stable public Google product IDs are mapped only through an explicit table.
+7. App state stores provider configuration and personal display preferences. App Settings stores custom SLA values, confirmed scope mappings, exact evidence target IDs, and provider connection metadata. The provider secret remains in Credential Vault and is never returned to the browser.
+8. The release history is bundled with the application. The Community destination is launch-gated and does not expose an external link before public launch.
+9. Provider tags are written only to service entity IDs selected in Setup. Existing tags are preserved. Services with a conflicting provider tag are excluded from the bulk selection and require manual review.
 
 ## Canonical sources of truth
 
 - Tenant services and telemetry: Dynatrace Grail, queried at runtime.
 - Provider contract and directory metadata: the selected `sla.directory` API response.
 - Tenant-specific operational SLA terms: the `contract-overrides` App Settings schema.
+- Confirmed provider-service mappings: the `provider-scope-assignments` App Settings schema. Smartscape supplies candidate evidence, and an operator supplies the confirmation.
 - Provider connection metadata: the `provider-connections` App Settings schema. Provider secrets: Dynatrace Credential Vault.
-- Google Cloud provider notices: Personalized Service Health for a configured project, or Google Cloud Status as a non-project-specific fallback.
+- Google Cloud provider notices: Personalized Service Health for one of the configured projects, or Google Cloud Status as a non-project-specific fallback.
+- OCI, OpenAI, Anthropic, and ElevenLabs provider notices: fixed public status endpoints, always labeled non-customer-specific.
 - Service-to-runtime and location context: Smartscape on Grail, queried at runtime.
 - Personal preferences and shared watch configuration: Dynatrace app-state services when available.
 - Offline state: browser local storage only as an explicitly surfaced fallback.
@@ -67,16 +73,16 @@ The app does not alter or copy the public provider record. A tenant override is 
 
 ## Known risks and assumptions
 
-- Provider service identifiers are joined to Dynatrace entities only through an explicit SLA assignment made by an authorized user. Provider attribution candidates require an exact service entity ID connected by Smartscape to cloud-provider metadata. Names are display context and never create the join. A candidate still requires operator confirmation and remains a review aid, not proof of fault (`README.md`, `ui/app/components/ContractOverrideEditor.tsx`, `ui/app/data/providerAttribution.ts`).
+- Provider service identifiers are joined to Dynatrace entities through either an explicit SLA assignment or a provider-service scope mapping confirmed in Setup. Candidates require an exact service entity ID connected by Smartscape to cloud-provider metadata. Names are display context and never create the join. A candidate still requires operator confirmation and remains a review aid, not proof of fault (`README.md`, `ui/app/components/ProviderScopeMap.tsx`, `ui/app/data/providerScopeAssignments.ts`).
 - Smartscape topology identifies a service-to-runtime or location relationship, but does not prove that a provider caused an incident or publishes a host-level SLA. Incident review applies the most specific matching record and leaves equally specific ambiguity to the operator.
 - Logs and spans are counted at the tenant level rather than joined to a selected service. This is intentionally described as environment signal presence and is not sufficient for provider attribution (`ui/app/data/queries.ts`).
 - `sla.directory` is an external availability dependency. The UI reports unavailable or unknown states and never converts a failed request into a healthy result (`api/slaDirectory.function.ts`, `ui/app/pages/Dashboard.tsx`).
 - Shared app-state writes are workspace-wide and scope-controlled. A user with write permission can change shared provider configuration (`documentation/permissions.md`).
 - SLA override writes are environment-shared App Settings and do not inherit the 90-day app-state expiry. Users with schema write access can change or remove them, and all authenticated app users can read them.
 - Applying a custom tag can affect other Dynatrace configurations that select entities by tag. Setup names those consumers before confirmation, requires exact service selection, and offers a last-action undo. Undo is a compensating action, not a transactional rollback, so concurrent edits still require operator review.
-- AppEngine external-request allowlisting is environment configuration, not repository configuration. The target environment must retain `sla.directory` and explicitly allow the Google hosts used by any enabled provider connection.
+- AppEngine external-request allowlisting is environment configuration, not repository configuration. The target environment must retain `sla.directory`, the Google hosts used by any enabled provider connection, and the four fixed public-status hosts documented in `variables.md`.
 - Personalized Service Health is provider evidence, not tenant impact evidence. An `IMPACTED` relevance value is reported as Google's project assessment and is not converted into a Dynatrace root-cause or credit decision.
-- The current Google adapter supports one configured project. AWS and Azure require separate provider-specific authentication and event adapters and are not represented as implemented.
+- The current Google adapter supports multiple configured projects. AWS, Azure, and customer-specific OCI data require separate provider-specific authentication and event adapters and are not represented as implemented.
 - The manifest's `environmentUrl` is a safe placeholder for public source, and `DT_APP_ENVIRONMENT_URL` or `--environment-url` selects a real deployment target. No tenant-specific auth state is part of the source release.
 
 ## Related documents

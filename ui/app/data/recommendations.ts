@@ -148,7 +148,7 @@ export const buildSetupRecommendations = ({
       title: "Add ownership metadata",
       detail: "Add team, owner, application, or service metadata so the next responder can route a provider finding without decoding a name or guessing the owning group.",
       evidence: "No owner, team, application, or app tags were found on the returned service records.",
-      action: "Add ownership metadata in Dynatrace",
+      action: "Read ownership setup guidance",
       platformAction: "ownership-settings",
     });
   }

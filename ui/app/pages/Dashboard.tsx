@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAppFunction, useDql } from "@dynatrace-sdk/react-hooks";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Surface } from "@dynatrace/strato-components/layouts";
@@ -7,6 +7,7 @@ import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typograph
 import { SetupAdvisor } from "../components/SetupAdvisor";
 import { IncidentReview } from "../components/IncidentReview";
 import { ProviderTagSetup } from "../components/ProviderTagSetup";
+import { ProviderScopeMap } from "../components/ProviderScopeMap";
 import { ProviderDirectoryWorkspace } from "../components/ProviderDirectoryWorkspace";
 import { ProviderNotices } from "../components/ProviderNotices";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
@@ -105,6 +106,8 @@ const EvidenceStep = ({ number, title, detail, state }: { number: number; title:
 
 export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
   const section = initialSection;
+  const location = useLocation();
+  const setupView = new URLSearchParams(location.search).get("view") === "scope" ? "scope" : "boundary";
   const { preferences, updatePreferences } = useSlaPreferences();
   const { providerSlugs, providerSlug, providerLabelKey, lookbackHours } = preferences;
   const [providerNoticeRefresh, setProviderNoticeRefresh] = useState(0);
@@ -393,11 +396,19 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
               <EvidenceStep number={3} title="Provider identity" detail={directoryLoading || topologyQuery.isLoading ? "Checking mapping" : matchedProviderServices > 0 ? `${matchedProviderServices} confirmed` : suggestedServiceCount > 0 ? `${suggestedServiceCount} candidate${suggestedServiceCount === 1 ? "" : "s"}` : "0 confirmed"} state={matchedProviderServices > 0 && !directoryLoading ? "positive" : providerState.tone} />
               <EvidenceStep number={4} title="Contract" detail={directoryData ? `${providerName} loaded` : "Unavailable"} state={directoryData ? "positive" : "neutral"} />
             </div>
+            <nav className="setup-view-tabs" aria-label="Setup views">
+              <Link className={setupView === "boundary" ? "setup-view-tab active" : "setup-view-tab"} to="/setup">Provider boundary</Link>
+              <Link className={setupView === "scope" ? "setup-view-tab active" : "setup-view-tab"} to="/setup?view=scope">Scope map</Link>
+            </nav>
             {telemetryError ? <div className="error-box setup-error">Telemetry scan incomplete. Check the current user's data access.</div> : null}
-            <div className="setup-content-grid">
-              <ProviderTagSetup services={services} providerName={providerName} providerSlug={selectedProviderSlug} providerTagKey={providerLabelKey} providerCandidates={activeProviderCandidates} topologyLoading={topologyQuery.isLoading || metricsLoading} topologyError={topologyQuery.error ?? metricsError ?? undefined} loading={servicesLoading || directoryLoading} onRefresh={() => refetchServices()} />
-              <SetupAdvisor recommendations={setupRecommendations} loading={telemetryLoading || directoryLoading} limitedContext={Boolean(telemetryError || (services.length === 0 && telemetrySignalsPresent))} />
-            </div>
+            {setupView === "boundary" ? (
+              <div className="setup-content-grid">
+                <ProviderTagSetup services={services} providerName={providerName} providerSlug={selectedProviderSlug} providerTagKey={providerLabelKey} providerCandidates={activeProviderCandidates} topologyLoading={topologyQuery.isLoading || metricsLoading} topologyError={topologyQuery.error ?? metricsError ?? undefined} loading={servicesLoading || directoryLoading} onRefresh={() => refetchServices()} />
+                <SetupAdvisor recommendations={setupRecommendations} loading={telemetryLoading || directoryLoading} limitedContext={Boolean(telemetryError || (services.length === 0 && telemetrySignalsPresent))} />
+              </div>
+            ) : (
+              <ProviderScopeMap provider={directoryData} topology={topology} loading={topologyQuery.isLoading || directoryLoading} error={topologyQuery.error ?? directoryError ?? undefined} />
+            )}
           </Surface>
         ) : section === "directory" ? (
           <Surface className="panel-card directory-panel">
@@ -406,6 +417,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
               directoryLoading={directoryLoading}
               directoryError={directoryError ?? undefined}
               services={services}
+              topology={topology}
               servicesLoading={servicesLoading}
               serviceError={serviceError ?? undefined}
             />
@@ -415,6 +427,9 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
             provider={directoryData}
             problems={problems}
             services={services}
+            topology={topology}
+            topologyLoading={topologyQuery.isLoading}
+            topologyError={topologyQuery.error ?? undefined}
             lookbackHours={lookbackHours}
             onLookbackChange={(value) => void updatePreferences({ lookbackHours: value })}
             loading={problemsLoading}

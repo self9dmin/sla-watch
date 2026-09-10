@@ -5,8 +5,9 @@ import { Button } from "@dynatrace/strato-components/buttons";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import { useProviderConnections } from "../hooks/useProviderConnections";
-import type { EvidenceLookbackHours, GcpProviderNoticesResponse, ProviderNotice } from "../types";
+import type { EvidenceLookbackHours, GcpProviderNoticesResponse, ProviderNotice, ProviderNoticesResponse, PublicProviderNoticesResponse } from "../types";
 import { formatEvidenceLookback } from "../data/lookback";
+import { providerDisplayName } from "../data/providers";
 
 type ProviderNoticesProps = {
   providerSlug: string;
@@ -14,6 +15,8 @@ type ProviderNoticesProps = {
 };
 
 type Tone = "neutral" | "warning" | "positive";
+
+const PUBLIC_STATUS_PROVIDERS = new Set(["oci", "openai", "anthropic", "elevenlabs"]);
 
 const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode }) => <span className={`status-pill status-pill-${tone}`}>{children}</span>;
 
@@ -27,30 +30,30 @@ const formatEnum = (value?: string): string => value
   ? value.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase())
   : "Not provided";
 
-const SourceLabel = ({ response }: { response: GcpProviderNoticesResponse }) => {
+const SourceLabel = ({ response }: { response: ProviderNoticesResponse }) => {
   if (response.connectionState === "connected") return <StatusPill tone="positive">Project-specific</StatusPill>;
   if (response.connectionState === "fallback") return <StatusPill tone="warning">Public fallback</StatusPill>;
   return <StatusPill tone="neutral">Public status</StatusPill>;
 };
 
-const NoticeDetail = ({ notice }: { notice: ProviderNotice }) => (
+const NoticeDetail = ({ notice, providerName }: { notice: ProviderNotice; providerName: string }) => (
   <article className="provider-notice-detail" aria-label={`Provider notice ${notice.title}`}>
     <div className="provider-notice-detail-heading">
       <div>
-        <span className="provider-notice-id">Google Cloud notice · {notice.id}</span>
+        <span className="provider-notice-id">{providerName} notice · {notice.id}</span>
         <Heading level={3}>{notice.title}</Heading>
       </div>
       <StatusPill tone={notice.state === "ACTIVE" ? "warning" : "neutral"}>{formatEnum(notice.state)}</StatusPill>
     </div>
     <Paragraph>{notice.summary}</Paragraph>
     <dl className="provider-notice-facts">
-      <div><dt>Relevance</dt><dd>{notice.source === "gcp-personalized" ? formatEnum(notice.relevance) : "Not project-specific"}</dd></div>
+      <div><dt>Relevance</dt><dd>{notice.source === "gcp-personalized" ? formatEnum(notice.relevance) : "Not customer-specific"}</dd></div>
       <div><dt>Started</dt><dd>{formatDateTime(notice.startTime)}</dd></div>
       <div><dt>Last update</dt><dd>{formatDateTime(notice.updateTime)}</dd></div>
       <div><dt>Locations</dt><dd>{notice.locations.length > 0 ? notice.locations.join(", ") : "Not specified"}</dd></div>
     </dl>
     <div className="provider-notice-products">
-      <span className="eyebrow">Affected Google products</span>
+      <span className="eyebrow">Affected provider components</span>
       <div>
         {notice.products.length > 0 ? notice.products.map((product) => (
           <span className="provider-product" key={product.id} title={product.directoryServiceIds.length > 0 ? `Directory IDs: ${product.directoryServiceIds.join(", ")}` : "No explicit sla.directory mapping"}>
@@ -59,39 +62,60 @@ const NoticeDetail = ({ notice }: { notice: ProviderNotice }) => (
         )) : <span className="muted-inline">No product list was provided.</span>}
       </div>
     </div>
-    {notice.url ? <a className="inline-action" href={notice.url} target="_blank" rel="noreferrer">Open Google Cloud status record</a> : null}
+    {notice.url ? <a className="inline-action" href={notice.url} target="_blank" rel="noreferrer">Open provider status record</a> : null}
   </article>
 );
 
 export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNoticesProps) => {
   const connectionSettings = useProviderConnections();
-  const connection = connectionSettings.connections.find((item) => item.providerSlug === "gcp" && item.enabled);
-  const supported = providerSlug === "gcp";
-  const request = useMemo(() => ({
+  const gcpConnections = useMemo(() => connectionSettings.connections
+    .filter((item) => item.providerSlug === "gcp" && item.enabled)
+    .sort((left, right) => left.displayName.localeCompare(right.displayName) || left.projectId.localeCompare(right.projectId)), [connectionSettings.connections]);
+  const [gcpConnectionKey, setGcpConnectionKey] = useState("auto");
+  const effectiveGcpConnectionKey = gcpConnectionKey === "auto"
+    ? gcpConnections[0]?.connectionKey ?? "public"
+    : gcpConnectionKey === "public" || gcpConnections.some((item) => item.connectionKey === gcpConnectionKey)
+      ? gcpConnectionKey
+      : gcpConnections[0]?.connectionKey ?? "public";
+  const connection = gcpConnections.find((item) => item.connectionKey === effectiveGcpConnectionKey);
+  const gcpSupported = providerSlug === "gcp";
+  const publicSupported = PUBLIC_STATUS_PROVIDERS.has(providerSlug);
+  const supported = gcpSupported || publicSupported;
+  const providerName = providerDisplayName(providerSlug);
+  const gcpRequest = useMemo(() => ({
     projectId: connection?.projectId,
     credentialId: connection?.credentialId,
     lookbackHours,
   }), [connection?.credentialId, connection?.projectId, lookbackHours]);
-  const query = useAppFunction<GcpProviderNoticesResponse>(
-    { name: "gcpServiceHealth", data: request, responseType: "json" },
+  const publicRequest = useMemo(() => ({ providerSlug, lookbackHours }), [lookbackHours, providerSlug]);
+  const gcpQuery = useAppFunction<GcpProviderNoticesResponse>(
+    { name: "gcpServiceHealth", data: gcpRequest, responseType: "json" },
     { autoFetch: false, autoFetchOnUpdate: false },
   );
-  const requestKey = JSON.stringify(request);
+  const publicQuery = useAppFunction<PublicProviderNoticesResponse>(
+    { name: "providerPublicStatus", data: publicRequest, responseType: "json" },
+    { autoFetch: false, autoFetchOnUpdate: false },
+  );
+  const query = gcpSupported ? gcpQuery : publicQuery;
+  const requestKey = `${providerSlug}:${JSON.stringify(gcpSupported ? gcpRequest : publicRequest)}`;
   const requestedKey = useRef<string>();
   const [selectedId, setSelectedId] = useState<string>();
-  const selected = query.data?.notices.find((notice) => notice.id === selectedId) ?? query.data?.notices[0];
+  const response = query.data?.provider === providerSlug ? query.data : undefined;
+  const selected = response?.notices.find((notice) => notice.id === selectedId) ?? response?.notices[0];
 
   useEffect(() => {
-    if (!supported || connectionSettings.loading || requestedKey.current === requestKey) return;
+    if (!supported || (gcpSupported && connectionSettings.loading) || requestedKey.current === requestKey) return;
     requestedKey.current = requestKey;
-    void query.refetch();
-  }, [connectionSettings.loading, query, requestKey, supported]);
+    if (gcpSupported) void gcpQuery.refetch();
+    else void publicQuery.refetch();
+  }, [connectionSettings.loading, gcpQuery, gcpSupported, publicQuery, requestKey, supported]);
 
   useEffect(() => {
-    if (query.data?.notices.length && !query.data.notices.some((notice) => notice.id === selectedId)) setSelectedId(query.data.notices[0].id);
-  }, [query.data?.notices, selectedId]);
+    if (response?.notices.length && !response.notices.some((notice) => notice.id === selectedId)) setSelectedId(response.notices[0].id);
+  }, [response?.notices, selectedId]);
 
-  const activeCount = query.data?.notices.filter((notice) => notice.state === "ACTIVE").length ?? 0;
+  const activeCount = response?.notices.filter((notice) => notice.state === "ACTIVE").length ?? 0;
+  const currentStateOnly = providerSlug === "oci";
 
   return (
     <Surface className="panel-card provider-notices-panel">
@@ -101,8 +125,14 @@ export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNotices
           <Paragraph>Review provider-owned service health separately from Dynatrace-observed Problems.</Paragraph>
         </div>
         <div className="provider-notices-actions">
-          {query.data ? <SourceLabel response={query.data} /> : null}
-          <Button as={Link} to="/settings/provider-connections" size="condensed">Configure source</Button>
+          {response ? <SourceLabel response={response} /> : null}
+          {gcpSupported && gcpConnections.length > 0 ? (
+            <select className="provider-notice-source-select" value={effectiveGcpConnectionKey} onChange={(event) => setGcpConnectionKey(event.target.value)} aria-label="Google Cloud notice scope">
+              {gcpConnections.map((item) => <option key={item.objectId} value={item.connectionKey}>{item.displayName} · {item.projectId}</option>)}
+              <option value="public">Public Google Cloud status</option>
+            </select>
+          ) : null}
+          <Button as={Link} to="/settings/provider-connections" size="condensed">{gcpSupported ? "Configure source" : "Source details"}</Button>
         </div>
       </div>
 
@@ -112,27 +142,27 @@ export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNotices
           <span>{providerSlug.toUpperCase()} remains available for SLA terms, service attribution, and Dynatrace incident review. Optional provider connections are separate from monitored-provider setup.</span>
           <Button as={Link} to="/settings/provider-connections" size="condensed">Review provider connections</Button>
         </div>
-      ) : connectionSettings.loading || query.isLoading || query.status === "not-requested" ? (
-        <div className="provider-notices-empty" role="status"><strong>Reading provider notices</strong><span>Checking the configured project or the public Google Cloud status feed.</span></div>
-      ) : query.error ? (
+      ) : !(gcpSupported && connectionSettings.loading) && query.error ? (
         <div className="error-box provider-notice-error"><strong>Provider notices are unavailable.</strong><span>{query.error.message}</span><Button size="condensed" onClick={() => void query.refetch()}>Try again</Button></div>
-      ) : query.data ? (
+      ) : (gcpSupported && connectionSettings.loading) || query.isLoading || !response ? (
+        <div className="provider-notices-empty" role="status"><strong>Reading provider notices</strong><span>{gcpSupported ? "Checking the configured project or the public Google Cloud status feed." : `Checking the public ${providerName} status feed.`}</span></div>
+      ) : response ? (
         <>
           <dl className="provider-notices-summary">
-            <div><dt>Source</dt><dd>{query.data.connectionState === "connected" ? "Personalized Service Health" : "Google Cloud Status"}</dd></div>
-            <div><dt>Scope</dt><dd>{query.data.projectId ?? "Public"}</dd></div>
+            <div><dt>Source</dt><dd>{response.sourceName}</dd></div>
+            <div><dt>Scope</dt><dd>{response.projectId ?? "Public provider status"}</dd></div>
             <div><dt>Active</dt><dd>{activeCount}</dd></div>
-            <div><dt>Lookback</dt><dd>{formatEvidenceLookback(lookbackHours)}</dd></div>
+            <div><dt>{currentStateOnly ? "Coverage" : "Lookback"}</dt><dd>{currentStateOnly ? "Current status" : formatEvidenceLookback(lookbackHours)}</dd></div>
           </dl>
-          {query.data.warning ? <div className="provider-notice-warning" role="status"><strong>Source boundary</strong><span>{query.data.warning}</span></div> : null}
-          {query.data.notices.length === 0 ? (
-            <div className="provider-notices-empty"><strong>No Google Cloud notices were returned in the selected window.</strong><span>This means the provider source returned no matching event. It does not establish that the monitored services were healthy.</span></div>
+          {response.warning ? <div className="provider-notice-warning" role="status"><strong>Source boundary</strong><span>{response.warning}</span></div> : null}
+          {response.notices.length === 0 ? (
+            <div className="provider-notices-empty"><strong>{currentStateOnly ? "No current public OCI disruptions were returned." : `No ${providerName} notices were returned in the selected window.`}</strong><span>This means the provider source returned no matching event. It does not establish that the monitored services were healthy.</span></div>
           ) : (
             <div className="provider-notices-layout">
-              <aside className="provider-notice-queue" aria-label="Google Cloud provider notices">
-                <div className="provider-notice-queue-title"><strong>Notice queue</strong><span>{query.data.notices.length} returned</span></div>
+              <aside className="provider-notice-queue" aria-label={`${providerName} provider notices`}>
+                <div className="provider-notice-queue-title"><strong>Notice queue</strong><span>{response.notices.length} returned</span></div>
                 <div className="provider-notice-queue-list">
-                  {query.data.notices.slice(0, 20).map((notice) => (
+                  {response.notices.slice(0, 20).map((notice) => (
                     <button type="button" key={notice.id} className={`provider-notice-item${selected?.id === notice.id ? " selected" : ""}`} onClick={() => setSelectedId(notice.id)} aria-pressed={selected?.id === notice.id}>
                       <span><strong>{notice.title}</strong><small>{notice.products.slice(0, 2).map((product) => product.name).join(", ") || notice.id}</small></span>
                       <StatusPill tone={notice.state === "ACTIVE" ? "warning" : "neutral"}>{notice.state === "ACTIVE" ? "Active" : "Closed"}</StatusPill>
@@ -140,7 +170,7 @@ export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNotices
                   ))}
                 </div>
               </aside>
-              {selected ? <NoticeDetail notice={selected} /> : null}
+              {selected ? <NoticeDetail notice={selected} providerName={response.providerName} /> : null}
             </div>
           )}
         </>

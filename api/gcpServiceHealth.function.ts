@@ -351,6 +351,8 @@ export default async function (payload: RequestPayload = {}) {
       const notices = await fetchPersonalized(request.projectId, request.credentialId, since);
       return {
         provider: "gcp" as const,
+        providerName: "Google Cloud",
+        sourceName: "Personalized Service Health",
         fetchedAt: new Date().toISOString(),
         source: "personalized" as const,
         connectionState: "connected" as const,
@@ -363,6 +365,8 @@ export default async function (payload: RequestPayload = {}) {
       const notices = await fetchPublic(since);
       return {
         provider: "gcp" as const,
+        providerName: "Google Cloud",
+        sourceName: "Google Cloud Status",
         fetchedAt: new Date().toISOString(),
         source: "public" as const,
         connectionState: "fallback" as const,
@@ -377,6 +381,8 @@ export default async function (payload: RequestPayload = {}) {
   const notices = await fetchPublic(since);
   return {
     provider: "gcp" as const,
+    providerName: "Google Cloud",
+    sourceName: "Google Cloud Status",
     fetchedAt: new Date().toISOString(),
     source: "public" as const,
     connectionState: "public" as const,

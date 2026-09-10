@@ -1,6 +1,6 @@
 # Release acceptance record
 
-This record captures manual target-environment smoke evidence for the current `0.0.31` installed release and retains the prior release records. It complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.31`, plus prior release records. The `0.0.35` source remains a local release candidate until a separate deployment and acceptance entry is recorded. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
 
 ## 0.0.31 verified scenarios
 

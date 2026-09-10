@@ -211,7 +211,11 @@ const emptyGcpConnection = (): ProviderConnectionValue => ({
 
 const ProviderConnectionsSettings = () => {
   const providerConnections = useProviderConnections();
-  const existing = providerConnections.connections.find((item) => item.providerSlug === "gcp");
+  const gcpConnections = useMemo(() => providerConnections.connections
+    .filter((item) => item.providerSlug === "gcp")
+    .sort((left, right) => left.displayName.localeCompare(right.displayName) || left.projectId.localeCompare(right.projectId)), [providerConnections.connections]);
+  const [selectedConnectionKey, setSelectedConnectionKey] = useState("auto");
+  const existing = gcpConnections.find((item) => item.connectionKey === selectedConnectionKey);
   const [draft, setDraft] = useState<ProviderConnectionValue>(emptyGcpConnection);
   const [saved, setSaved] = useState(false);
   const [formError, setFormError] = useState<string>();
@@ -228,8 +232,20 @@ const ProviderConnectionsSettings = () => {
   );
 
   useEffect(() => {
-    if (!providerConnections.loading) setDraft(existing ? { ...existing } : emptyGcpConnection());
-  }, [existing, providerConnections.loading]);
+    if (providerConnections.loading || selectedConnectionKey !== "auto") return;
+    const first = gcpConnections[0];
+    setSelectedConnectionKey(first?.connectionKey ?? "new");
+    setDraft(first ? { ...first } : emptyGcpConnection());
+  }, [gcpConnections, providerConnections.loading, selectedConnectionKey]);
+
+  const selectConnection = (connectionKey: string) => {
+    const selected = gcpConnections.find((item) => item.connectionKey === connectionKey);
+    setSelectedConnectionKey(connectionKey);
+    setDraft(selected ? { ...selected } : emptyGcpConnection());
+    setFormError(undefined);
+    setTestMessage(undefined);
+    setSaved(false);
+  };
 
   const normalizedDraft = (): ProviderConnectionValue => ({
     ...draft,
@@ -248,8 +264,14 @@ const ProviderConnectionsSettings = () => {
       return;
     }
     setFormError(undefined);
+    const duplicate = gcpConnections.find((item) => item.connectionKey === value.connectionKey && item.objectId !== existing?.objectId);
+    if (duplicate) {
+      setFormError(`A connection for project '${value.projectId}' already exists.`);
+      return;
+    }
     if (existing) await providerConnections.updateConnection(existing, value);
     else await providerConnections.createConnection(value);
+    setSelectedConnectionKey(value.connectionKey);
     setSaved(true);
     window.setTimeout(() => setSaved(false), 2600);
   };
@@ -274,20 +296,30 @@ const ProviderConnectionsSettings = () => {
   const remove = async () => {
     if (!existing || !window.confirm(`Remove the Google Cloud connection for ${existing.projectId}? The Credential Vault entry will not be deleted.`)) return;
     await providerConnections.deleteConnection(existing);
-    setDraft(emptyGcpConnection());
-    setTestMessage(undefined);
+    const next = gcpConnections.find((item) => item.objectId !== existing.objectId);
+    selectConnection(next?.connectionKey ?? "new");
   };
 
   return (
     <section className="settings-page provider-connections-settings">
       <div className="page-intro">
         <Heading level={1}>Connect provider incident data.</Heading>
-        <Paragraph>Optionally read project-relevant Google Cloud service health events. Public status remains available when no project connection is configured.</Paragraph>
+        <Paragraph>Add one or more Google Cloud projects for project-relevant service health. Public provider status sources remain available without credentials.</Paragraph>
       </div>
 
       <div className="provider-connection-boundary">
-        <div><span className="eyebrow">Release scope</span><strong>Google Cloud · one project</strong><small>Other providers require separate authentication and incident adapters.</small></div>
-        <span className="connection-state connected">Read-only</span>
+        <div><span className="eyebrow">Connection scope</span><strong>Google Cloud · multiple projects</strong><small>Public status for OCI, OpenAI, Anthropic, and ElevenLabs requires no credential. AWS, Azure, and OCI customer-specific connections require separate adapters.</small></div>
+        <span className="connection-state connected">{gcpConnections.length} saved</span>
+      </div>
+
+      <div className="provider-connection-switcher">
+        <label className="field-label">Google Cloud project connection
+          <select value={selectedConnectionKey === "auto" ? "new" : selectedConnectionKey} onChange={(event) => selectConnection(event.target.value)}>
+            <option value="new">Add a new project</option>
+            {gcpConnections.map((item) => <option key={item.objectId} value={item.connectionKey}>{item.displayName} · {item.projectId}</option>)}
+          </select>
+        </label>
+        <Button size="condensed" disabled={selectedConnectionKey === "new"} onClick={() => selectConnection("new")}>Add project</Button>
       </div>
 
       <ol className="provider-connection-steps" aria-label="Google Cloud connection requirements">
@@ -318,7 +350,7 @@ const ProviderConnectionsSettings = () => {
       {testMessage ? <div className={`provider-connection-test provider-connection-test-${testMessage.tone}`} role="status"><strong>{testMessage.tone === "positive" ? "Connection verified" : "Connection not verified"}</strong><span>{testMessage.text}</span></div> : null}
 
       <div className="settings-actions">
-        <Button variant="emphasized" disabled={!providerConnections.canWrite || providerConnections.mutating || providerConnections.loading} onClick={() => void save()}>{providerConnections.mutating ? "Saving" : "Save connection"}</Button>
+        <Button variant="emphasized" disabled={!providerConnections.canWrite || providerConnections.mutating || providerConnections.loading} onClick={() => void save()}>{providerConnections.mutating ? "Saving" : existing ? "Update connection" : "Save connection"}</Button>
         <Button disabled={connectionTest.isLoading || !draft.projectId || !draft.credentialId} onClick={() => void testConnection()}>{connectionTest.isLoading ? "Testing" : "Test connection"}</Button>
         {existing ? <Button disabled={!providerConnections.canWrite || providerConnections.mutating} onClick={() => void remove()}>Remove connection</Button> : null}
         {saved ? <SavedNote text="Provider connection saved" /> : null}
@@ -500,7 +532,7 @@ const IntroSettings = () => {
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure monitor defaults, provider data, SLA evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Monitor configuration</span><strong>Select monitored providers and the tag convention.</strong><span>Service assignments are reviewed from Setup.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect project-relevant incident data.</strong><span>Google Cloud is read-only and optional in this release.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">SLA overrides</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one SLA to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run onboarding or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure monitor defaults, provider data, SLA evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Monitor configuration</span><strong>Select monitored providers and the tag convention.</strong><span>Service assignments are reviewed from Setup.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect provider-owned incident data.</strong><span>Add multiple Google Cloud projects. Supported public status feeds require no credential.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">SLA overrides</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one SLA to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run onboarding or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();

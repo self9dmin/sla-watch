@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { openApp } from "@dynatrace-sdk/navigation";
 import type { SetupRecommendation } from "../types";
+
+const OWNERSHIP_GUIDANCE_URL = "https://docs.dynatrace.com/docs/deliver/ownership/assign-team-ownership";
 
 const priorityLabel: Record<SetupRecommendation["priority"], string> = {
   high: "Required",
@@ -48,7 +49,7 @@ export const SetupAdvisor = ({
             {recommendation.href
               ? <Link className="advisor-action" to={recommendation.href}>{recommendation.action} <span aria-hidden="true">→</span></Link>
               : recommendation.platformAction === "ownership-settings"
-                ? <button type="button" className="advisor-action advisor-action-button" onClick={() => openApp("dynatrace.settings", "settings/ownership-configure")}>{recommendation.action} <span aria-hidden="true">→</span></button>
+                ? <a className="advisor-action" href={OWNERSHIP_GUIDANCE_URL} target="_blank" rel="noreferrer">{recommendation.action} <span aria-hidden="true">↗</span></a>
               : <span className="advisor-action advisor-action-muted">{recommendation.action}</span>}
           </article>
         ))}

@@ -7,8 +7,21 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.34",
+    version: "0.0.35",
     label: "Current release",
+    summary: "Expanded provider incident evidence and clarified setup failures.",
+    details: [
+      "Added credential-free public incident sources for OCI, OpenAI, Anthropic, and ElevenLabs, with an explicit non-customer-specific evidence label.",
+      "Allowed multiple Google Cloud project connections and a project-specific source selector in Provider notices.",
+      "Moved the Smartscape service scope map into Setup and stored operator-confirmed provider-service mappings for reuse in Incident review.",
+      "Incident review now selects exact tenant SLA scopes first, then confirmed scope mappings, and labels any remaining Smartscape result as an unconfirmed candidate.",
+      "Replaced the generic provider-tag failure with distinct session, permission, entity, request, and unverified-outcome guidance.",
+      "Changed the ownership recommendation to current Dynatrace Smartscape ownership documentation instead of an unreliable settings route.",
+    ],
+  },
+  {
+    version: "0.0.34",
+    label: "Previous release",
     summary: "Added multi-provider monitoring with evidence-backed service candidates.",
     details: [
       "Multiple providers can now be monitored while one active provider controls the focused Monitor and Directory views.",

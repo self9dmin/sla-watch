@@ -49,7 +49,10 @@ test.describe('SLA Watch deployed smoke', () => {
     await expect(setupStages).toBeVisible();
     await expect(setupStages.getByRole('listitem')).toHaveCount(4);
     await expect(app.getByText(/Service names are not used as proof/i)).toBeVisible();
-    await expect(app.getByText(/Saving the rule does not modify services/i)).toBeVisible();
+    await expect(app.getByText(/No tag is added until you select exact services and confirm the change/i)).toBeVisible();
+    await app.getByRole('link', { name: 'Scope map' }).click();
+    await expect(app.getByText('Service scope map')).toBeVisible();
+    await expect(app.getByText(/A confirmed mapping is reused in Incidents/i)).toBeVisible();
     await expectNoPageScroll(app);
 
     await app.getByRole('link', { name: 'Incidents' }).click();
@@ -76,6 +79,8 @@ test.describe('SLA Watch deployed smoke', () => {
     await expect(app.getByRole('combobox', { name: 'Active provider for focused views' })).toBeVisible();
     await app.getByRole('link', { name: 'Provider connections' }).click();
     await expect(app.getByRole('heading', { name: 'Connect provider incident data.' })).toBeVisible();
+    await expect(app.getByText(/Google Cloud · multiple projects/i)).toBeVisible();
+    await expect(app.getByRole('option', { name: 'Add a new project' })).toBeVisible();
     await expect(app.getByText(/Enter the credential ID, not the service-account JSON/i)).toBeVisible();
     await expect(app.getByText(/does not modify Google Cloud, create a Dynatrace Problem, send a notification, prove local impact, or determine SLA credit eligibility/i)).toBeVisible();
   });
@@ -87,6 +92,7 @@ test.describe('SLA Watch deployed smoke', () => {
     await expect(app.getByRole('heading', { name: 'Directory' })).toBeVisible();
     await expect(app.getByRole('heading', { name: 'Vendor' })).toBeVisible();
     await expect(app.getByRole('tab', { name: 'SLA overrides' })).toBeVisible();
+    await expect(app.getByRole('tab', { name: 'Scope map' })).toHaveCount(0);
     await expectNoPageScroll(app);
 
     await app.getByRole('button', { name: 'Add SLA override' }).first().click();
