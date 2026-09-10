@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.20
+
+- Fixed light and dark emphasized-button tokens so refresh, save, and setup actions keep readable contrast in either theme.
+
+## 0.0.19
+
+- Tightened the visual system for light and dark themes with a denser dashboard, smaller type scale, and clearer status contrast.
+- Matched the Telemetry Grand Prix shell pattern with a compact app breadcrumb and visible icon actions for theme, settings, guide, changes, and bugs.
+
 ## 0.0.18
 
 - Clarified that service eligibility is supplied by the provider directory and is not an app-issued credit decision.
@@ -24,4 +33,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.18` release candidate.
+- Reserved for changes after the `0.0.20` release candidate.

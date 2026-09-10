@@ -1,6 +1,6 @@
 {
   "name": "sla-watch",
-  "version": "0.0.18",
+  "version": "0.0.20",
   "description": "Evidence-first provider SLA attribution for Dynatrace",
   "scripts": {
     "build": "dt-app build",

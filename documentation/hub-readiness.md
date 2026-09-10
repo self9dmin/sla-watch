@@ -23,16 +23,16 @@ The app is suitable for continued hardening as a custom AppEngine app. The revie
 
 | Area | Evidence | State | Closure action |
 | --- | --- | --- | --- |
-| Manifest identity | `app.config.json` uses `my.sla`, `SLA Watch`, version `0.0.18`, a maintained icon, and a sub-80-character description | Implemented locally and deployed at `0.0.18` | Confirm the permanent publisher-owned app ID and final Hub name. Do not change the ID casually after distribution. |
+| Manifest identity | `app.config.json` uses `my.sla`, `SLA Watch`, version `0.0.20`, a maintained icon, and a sub-80-character description | Implemented locally and deploying at `0.0.20` | Confirm the permanent publisher-owned app ID and final Hub name. Do not change the ID casually after distribution. |
 | Name discoverability | `SLA Watch` is short and title case | Likely compliant, uniqueness unverified | Check Hub for collisions and ensure the final name describes the use case. |
 | Icon and listing media | A custom SVG icon is included; final Hub screenshots and listing media are not yet packaged | Partial | Review the icon and add final Hub screenshots/demo assets. |
 | Runtime scopes | Manifest declares read-only telemetry plus user/app state scopes | Implemented | Test each scope with a least-privilege user and ensure the Hub Technical information page matches. |
 | Runtime authorization | UI reports access-incomplete states and uses the current user's permissions | Implemented, live negative coverage missing | Add guarded IAM acceptance tests and consider effective-permission affordances if the UX needs preflight. |
-| External API | `api/slaDirectory.function.ts` validates input, bounds time, and validates the response | Implemented and confirmed connected in the `0.0.18` deployment | Re-verify `sla.directory` allowlisting after each environment install. |
+| External API | `api/slaDirectory.function.ts` validates input, bounds time, and validates the response | Implemented and confirmed connected in the `0.0.20` deployment | Re-verify `sla.directory` allowlisting after each environment install. |
 | CSP | No custom CSP exceptions are needed; external API is server-side | Implemented | Keep external calls in the function. Do not add broad browser CSP exceptions. |
 | Secrets | No secrets in source or bundle; no credential vault required for the public directory API | Implemented | Keep CI OAuth credentials in the CI secret store. |
 | Privacy | App-state TTL is 90 days, workflow arrays are capped, and UI warns about local fallback | Implemented locally | Review operator guidance for PII and verify deletion/expiry behavior in a tenant. |
-| Themes | Custom styles use theme variables and dark/light paths were manually verified in the target tenant | Verified at `0.0.18` after deployment | Add automated contrast or screenshot coverage before submission. |
+| Themes | Custom styles use theme variables and dark/light paths were manually verified in the target tenant | Verified at `0.0.20` after deployment | Add automated contrast or screenshot coverage before submission. |
 | Dependencies | Production audit is clean after the React Router upgrade; current `dt-app` is `1.17.0` | Implemented locally | Keep Renovate enabled and review App Toolkit advisories separately as development-only risk. |
 | Tests | Focused unit tests, typecheck, lint, build, and analyzer are present | Implemented locally; E2E and live permission tests are gaps | Add authenticated Playwright and tenant acceptance jobs using CI secrets. |
 | CI | Pull-request workflow is repository-local and non-deploying | Verified in [GitHub Actions run 34486911947](https://github.com/self9dmin/sla-watch/actions/runs/34486911947) on Node 24 | Make the required checks branch-protection rules and keep deployment outside the pull-request job. |
