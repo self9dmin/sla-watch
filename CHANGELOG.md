@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.23
+
+- Guarded incident-window calculations so billing-cycle or otherwise provider-anchored terms are shown as planning references rather than converted into a tenant-derived deadline.
+- Added the directory's stated credit-application text to the filing review details.
+
 ## 0.0.22
 
 - Added an Incident review tab for comparing observed Dynatrace Problems with the selected provider record.
@@ -45,4 +50,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.22` release candidate.
+- Reserved for changes after the `0.0.23` release candidate.
