@@ -105,7 +105,10 @@ const DiagnosticCard = ({ label, title, detail, tone, children }: { label: strin
 );
 
 const EvidenceStep = ({ number, title, detail, state }: { number: number; title: string; detail: string; state: Tone }) => (
-  <div className="evidence-step"><span className={`evidence-step-marker evidence-step-${state}`}>{number}</span><div><strong>{title}</strong><span>{detail}</span></div></div>
+  <div className="evidence-step" role="listitem">
+    <span className={`evidence-step-marker evidence-step-${state}`} aria-hidden="true">{number}</span>
+    <div className="evidence-step-copy"><strong>{title}</strong><span>{detail}</span></div>
+  </div>
 );
 
 export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
@@ -372,7 +375,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
               </div>
               <StatusPill tone={claimReadiness.tone}>{evidenceStatus}</StatusPill>
             </div>
-            <div className="evidence-ladder">
+            <div className="evidence-ladder" role="list" aria-label="Provider attribution evidence stages">
               <EvidenceStep number={1} title="Telemetry captured" detail="Problems, logs, spans, or service request signals are present." state={telemetryState.tone === "positive" ? "positive" : telemetryState.tone} />
               <EvidenceStep number={2} title="Service boundary visible" detail={`${services.length} service${services.length === 1 ? "" : "s"} returned from the tenant inventory.`} state={services.length > 0 && !servicesLoading ? "positive" : telemetryLoading ? "neutral" : "warning"} />
               <EvidenceStep number={3} title="Provider boundary identified" detail={`${matchedProviderServices} service${matchedProviderServices === 1 ? "" : "s"} match the ${providerName} contract.`} state={matchedProviderServices > 0 && !directoryLoading ? "positive" : providerState.tone} />
