@@ -7,8 +7,40 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.31",
+    version: "0.0.34",
     label: "Current release",
+    summary: "Added multi-provider monitoring with evidence-backed service candidates.",
+    details: [
+      "Multiple providers can now be monitored while one active provider controls the focused Monitor and Directory views.",
+      "Smartscape cloud-runtime relationships produce exact-service provider candidates without treating service names as evidence or changing tags automatically.",
+      "Setup includes topology-backed services and requires an explicit operator confirmation before applying a provider tag.",
+      "Directory responses are isolated by provider so a previous selection cannot appear under the active provider.",
+    ],
+  },
+  {
+    version: "0.0.33",
+    label: "Previous release",
+    summary: "Hardened provider-notice loading and release-scope copy.",
+    details: [
+      "Provider notices now load after shared connection settings finish initializing.",
+      "A stable loading state replaces the previously empty provider-notice workspace.",
+      "The interface states only the provider adapters available in the current release.",
+    ],
+  },
+  {
+    version: "0.0.32",
+    label: "Previous release",
+    summary: "Added an optional read-only Google Cloud provider-notice connection.",
+    details: [
+      "Added Google Cloud Personalized Service Health as an optional project-scoped provider source, with public Google Cloud Status as a clearly labeled fallback.",
+      "Kept service-account JSON in Dynatrace Credential Vault and stored only the project and credential identifiers in App Settings.",
+      "Added a separate Provider notices workspace so provider reports remain distinct from Dynatrace-observed Problems.",
+      "Mapped stable Google product IDs to explicit sla.directory service IDs without inferring provider ownership or SLA eligibility.",
+    ],
+  },
+  {
+    version: "0.0.31",
+    label: "Previous release",
     summary: "Added tenant SLA terms with explicit Dynatrace evidence boundaries.",
     details: [
       "Added shared SLA overrides while retaining sla.directory as the read-only public baseline.",

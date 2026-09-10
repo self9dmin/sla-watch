@@ -31,7 +31,7 @@ export const Header = ({
   const [helpOpen, setHelpOpen] = useState(false);
   const isSettings = location.pathname.startsWith("/settings");
   const isChanges = location.pathname.startsWith("/changes");
-  const isWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents" || location.pathname === "/evidence" || location.pathname === "/review";
+  const isWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents" || location.pathname === "/provider-notices" || location.pathname === "/evidence" || location.pathname === "/review";
   const isDirectory = location.pathname === "/directory";
   const communityLive = isCommunityLive();
   const themeActionLabel = `Switch to ${theme === "dark" ? "light" : "dark"} theme`;
@@ -135,7 +135,7 @@ export const Header = ({
               Close
             </button>
           </div>
-          <p>Use Setup to define the provider boundary, Overview to monitor the current state, and Incidents to review observed Problems against provider terms.</p>
+          <p>Use Setup to define the provider boundary, Overview to monitor the current state, Incidents to review Dynatrace Problems, and Provider notices to inspect provider-reported events separately.</p>
           <section>
             <h3>1. Set up</h3>
             <p>Select a provider, verify telemetry, and explicitly map the services that depend on it.</p>
@@ -149,7 +149,11 @@ export const Header = ({
             <p>Select one Problem at a time and compare its observed impact with provider terms. A matching service does not prove provider fault or credit eligibility.</p>
           </section>
           <section>
-            <h3>4. Get support</h3>
+            <h3>4. Review provider notices</h3>
+            <p>Use project-specific provider events when configured. Public status is broader and is never treated as evidence that this tenant was affected.</p>
+          </section>
+          <section>
+            <h3>5. Get support</h3>
             <p>{communityLive ? "The change log documents application releases. Questions and issue discussion belong on the Dynatrace Community profile." : "The change log documents application releases. Dynatrace Community support will be enabled at public launch."}</p>
           </section>
           <div className="help-drawer-actions">

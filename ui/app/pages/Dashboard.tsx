@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppFunction, useDql } from "@dynatrace-sdk/react-hooks";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -8,16 +8,21 @@ import { SetupAdvisor } from "../components/SetupAdvisor";
 import { IncidentReview } from "../components/IncidentReview";
 import { ProviderTagSetup } from "../components/ProviderTagSetup";
 import { ProviderDirectoryWorkspace } from "../components/ProviderDirectoryWorkspace";
+import { ProviderNotices } from "../components/ProviderNotices";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
 import { providerTagValue } from "../data/providerTags";
 import { buildSetupRecommendations } from "../data/recommendations";
 import { formatEvidenceLookback } from "../data/lookback";
+import { buildProviderCandidates, mergeServiceInventory } from "../data/providerAttribution";
+import { providerDisplayName } from "../data/providers";
+import { parseServiceCloudContexts, parseSmartscapeScopeEdges } from "../data/topology";
 import {
   createLogsCountQuery,
   createProblemsQuery,
   createServiceMetricsQuery,
   createSpansCountQuery,
   SERVICES_QUERY,
+  SMARTSCAPE_SERVICE_RUNTIME_QUERY,
 } from "../data/queries";
 import {
   type ProblemRecord,
@@ -72,6 +77,7 @@ const WATCH_LINKS: ReadonlyArray<{ section: WatchRouteSection; label: string; to
   { section: "overview", label: "Overview", to: "/", tour: "overview" },
   { section: "setup", label: "Setup", to: "/setup", tour: "setup" },
   { section: "incidents", label: "Incidents", to: "/incidents", tour: "incidents" },
+  { section: "provider-notices", label: "Provider notices", to: "/provider-notices", tour: "provider-notices" },
 ];
 
 const WatchNavigation = ({ section }: { section: WatchRouteSection }) => (
@@ -100,7 +106,8 @@ const EvidenceStep = ({ number, title, detail, state }: { number: number; title:
 export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
   const section = initialSection;
   const { preferences, updatePreferences } = useSlaPreferences();
-  const { providerSlug, providerLabelKey, lookbackHours } = preferences;
+  const { providerSlugs, providerSlug, providerLabelKey, lookbackHours } = preferences;
+  const [providerNoticeRefresh, setProviderNoticeRefresh] = useState(0);
   const problemsQuery = useMemo(() => createProblemsQuery(lookbackHours), [lookbackHours]);
   const logsQuery = useMemo(() => createLogsCountQuery(lookbackHours), [lookbackHours]);
   const spansQuery = useMemo(() => createSpansCountQuery(lookbackHours), [lookbackHours]);
@@ -112,9 +119,14 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
   const { data: logsData, error: logsError, isLoading: logsLoading, refetch: refetchLogs } = useDql({ query: logsQuery });
   const { data: spansData, error: spansError, isLoading: spansLoading, refetch: refetchSpans } = useDql({ query: spansQuery });
   const { data: metricsData, error: metricsError, isLoading: metricsLoading, refetch: refetchMetrics } = useDql({ query: metricsQuery });
-  const { data: directoryData, error: directoryError, isLoading: directoryLoading, refetch: refetchDirectory } = useAppFunction<SlaProviderResponse>({ name: "slaDirectory", data: directoryRequest, responseType: "json" });
+  const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
+  const directoryQuery = useAppFunction<SlaProviderResponse>({ name: "slaDirectory", data: directoryRequest, responseType: "json" });
+  const directoryData = directoryQuery.data?.provider.slug === providerSlug ? directoryQuery.data : undefined;
+  const directoryError = directoryQuery.error;
+  const directoryLoading = directoryQuery.isLoading || Boolean(!directoryQuery.error && directoryQuery.data && !directoryData);
+  const refetchDirectory = directoryQuery.refetch;
 
-  const services = useMemo<ServiceRecord[]>(() => {
+  const entityServices = useMemo<ServiceRecord[]>(() => {
     const records = Array.isArray(serviceData?.records) ? serviceData.records : [];
     return records.map((record: unknown, index: number) => {
       const row = asRecord(record);
@@ -130,12 +142,22 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     });
   }, [problemData?.records]);
 
+  const topology = useMemo(() => parseSmartscapeScopeEdges(topologyQuery.data), [topologyQuery.data]);
+  const serviceCloudContexts = useMemo(() => parseServiceCloudContexts(metricsData), [metricsData]);
+  const providerEvidence = useMemo(() => [...topology, ...serviceCloudContexts], [serviceCloudContexts, topology]);
+  const services = useMemo(() => mergeServiceInventory(entityServices, providerEvidence), [entityServices, providerEvidence]);
+  const providerCandidates = useMemo(() => buildProviderCandidates(services, providerEvidence), [providerEvidence, services]);
+
   const activeProblems = problems.filter((problem) => problem.status === "ACTIVE").length;
   const logCount = firstCount(logsData, "log_count");
   const spanCount = firstCount(spansData, "span_count");
   const selectedProviderSlug = directoryData?.provider.slug ?? providerSlug;
   const providerLabels = useMemo(() => Array.from(new Set(services.flatMap((service) => service.tags.map((tag) => providerTagValue(tag, providerLabelKey, selectedProviderSlug)).filter((value): value is string => Boolean(value))))), [providerLabelKey, selectedProviderSlug, services]);
   const matchedProviderServices = services.filter((service) => service.tags.some((tag) => providerTagValue(tag, providerLabelKey, selectedProviderSlug) === selectedProviderSlug)).length;
+  const activeProviderCandidates = providerCandidates.filter((candidate) => candidate.providerSlug === selectedProviderSlug);
+  const suggestedServiceCount = new Set(activeProviderCandidates
+    .filter((candidate) => services.some((service) => service.id === candidate.serviceId && !service.tags.some((tag) => providerTagValue(tag, providerLabelKey, selectedProviderSlug) === selectedProviderSlug)))
+    .map((candidate) => candidate.serviceId)).size;
 
   const telemetryLoading = servicesLoading || problemsLoading || logsLoading || spansLoading || metricsLoading;
   const telemetryError = serviceError ?? problemError ?? logsError ?? spansError ?? metricsError;
@@ -159,10 +181,10 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
           ? { tone: "warning" as Tone, title: "Provider check blocked", detail: "Telemetry access is incomplete, so provider tagging cannot be judged reliably yet." }
           : services.length === 0 && telemetrySignalsPresent
             ? { tone: "warning" as Tone, title: "Identify service first", detail: "The tenant has telemetry, but the affected service inventory is incomplete. Provider tagging cannot be evaluated yet." }
-            : services.length === 0
+              : services.length === 0
               ? { tone: "warning" as Tone, title: "No service entities", detail: "There is no service inventory to tag. Fix instrumentation or entity access before identifying a provider." }
               : providerLabels.length === 0
-                ? { tone: "warning" as Tone, title: "Provider tags missing", detail: `Services exist, but no explicit provider tag was found. Review the services that depend on ${directoryData.provider.name} in Setup.` }
+                ? { tone: "warning" as Tone, title: "Provider tags missing", detail: suggestedServiceCount > 0 ? `Smartscape found ${suggestedServiceCount} ${directoryData.provider.name} service candidate${suggestedServiceCount === 1 ? "" : "s"}. Confirm each assignment in Setup.` : `Services exist, but no explicit provider tag was found. Review the services that depend on ${directoryData.provider.name} in Setup.` }
                 : matchedProviderServices > 0
                   ? { tone: "positive" as Tone, title: "Provider identified", detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? "" : "s"} carry an explicit ${directoryData.provider.name} tag. This still does not prove a provider outage.` }
                   : { tone: "warning" as Tone, title: "Provider identification needed", detail: `Provider tags were found (${providerLabels.slice(0, 3).join(", ")}), but none resolve to ${directoryData.provider.name}. Select the correct provider or update the Dynatrace tags.` };
@@ -219,7 +241,14 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
                 action: "Review service access",
                 href: "/settings/watch",
               }
-            : providerLabels.length === 0
+            : providerLabels.length === 0 && suggestedServiceCount > 0
+              ? {
+                  title: `Confirm ${suggestedServiceCount} ${providerName} service candidate${suggestedServiceCount === 1 ? "" : "s"}`,
+                  detail: `Smartscape links ${suggestedServiceCount === 1 ? "this service" : "these services"} to ${providerName} runtime metadata. Review the evidence before adding an explicit provider tag.`,
+                  action: "Review candidates",
+                  href: "/setup",
+                }
+              : providerLabels.length === 0
               ? {
                   title: `Identify which services depend on ${providerName}`,
                   detail: `${services.length} service${services.length === 1 ? " is" : "s are"} visible, but no explicit provider tag was found.`,
@@ -247,7 +276,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
                       href: "/incidents",
                     };
 
-  const setupStatus = telemetryLoading || directoryLoading
+  const setupStatus = telemetryLoading || directoryLoading || topologyQuery.isLoading
     ? "Checking setup"
     : telemetryError
       ? "Access incomplete"
@@ -268,10 +297,15 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     selectedProviderSlug,
     providerLabelKey,
     matchedProviderServices,
-  }), [directoryData, directoryError, matchedProviderServices, problems, providerLabelKey, providerLabels, selectedProviderSlug, services, telemetryError, telemetrySignalsPresent]);
+    providerCandidateServices: suggestedServiceCount,
+  }), [directoryData, directoryError, matchedProviderServices, problems, providerLabelKey, providerLabels, selectedProviderSlug, services, suggestedServiceCount, telemetryError, telemetrySignalsPresent]);
 
   const handleRefresh = () => {
-    void Promise.all([refetchServices(), refetchProblems(), refetchLogs(), refetchSpans(), refetchMetrics(), refetchDirectory()]);
+    if (section === "provider-notices") {
+      setProviderNoticeRefresh((current) => current + 1);
+      return;
+    }
+    void Promise.all([refetchServices(), refetchProblems(), refetchLogs(), refetchSpans(), refetchMetrics(), topologyQuery.refetch(), refetchDirectory()]);
   };
 
   return (
@@ -282,10 +316,12 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
           <Paragraph className="hero-copy">{section === "directory" ? "Review public and tenant-specific SLA terms for the selected provider." : "Monitor provider mapping, Dynatrace Problems, and filing windows for this environment."}</Paragraph>
         </div>
         <div className="hero-actions">
-          <div className="hero-provider">
-            <span>Provider</span>
-            <strong>{providerName}</strong>
-          </div>
+          <label className="hero-provider">
+            <span>Active provider</span>
+            <select value={providerSlug} onChange={(event) => void updatePreferences({ providerSlug: event.target.value })} aria-label="Active provider">
+              {providerSlugs.map((slug) => <option key={slug} value={slug}>{providerDisplayName(slug)}</option>)}
+            </select>
+          </label>
           <div className="hero-action-buttons">
             <Button className="hero-action-secondary" onClick={handleRefresh} disabled={telemetryLoading || directoryLoading} size="condensed">
               {telemetryLoading || directoryLoading ? "Refreshing" : "Refresh data"}
@@ -319,9 +355,9 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
             </div>
             <div className="overview-facts" aria-label="Current monitor facts">
               <OverviewFact
-                label="Provider"
-                value={directoryLoading ? "Checking" : directoryData ? providerName : "Unavailable"}
-                detail={directoryData ? "contract record loaded" : "sla.directory connection"}
+                label="Providers monitored"
+                value={`${providerSlugs.length}`}
+                detail={directoryLoading ? `checking ${providerDisplayName(providerSlug)}` : directoryData ? `${providerName} active` : `${providerDisplayName(providerSlug)} unavailable`}
                 tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}
               />
               <OverviewFact
@@ -354,12 +390,12 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
             <div className="evidence-ladder" role="list" aria-label="SLA Watch setup stages">
               <EvidenceStep number={1} title="Telemetry" detail={telemetryState.title} state={telemetryState.tone} />
               <EvidenceStep number={2} title="Services" detail={servicesLoading ? "Checking inventory" : `${services.length} detected`} state={services.length > 0 && !servicesLoading ? "positive" : telemetryLoading ? "neutral" : "warning"} />
-              <EvidenceStep number={3} title="Provider tags" detail={directoryLoading ? "Checking mapping" : `${matchedProviderServices} mapped`} state={matchedProviderServices > 0 && !directoryLoading ? "positive" : providerState.tone} />
+              <EvidenceStep number={3} title="Provider identity" detail={directoryLoading || topologyQuery.isLoading ? "Checking mapping" : matchedProviderServices > 0 ? `${matchedProviderServices} confirmed` : suggestedServiceCount > 0 ? `${suggestedServiceCount} candidate${suggestedServiceCount === 1 ? "" : "s"}` : "0 confirmed"} state={matchedProviderServices > 0 && !directoryLoading ? "positive" : providerState.tone} />
               <EvidenceStep number={4} title="Contract" detail={directoryData ? `${providerName} loaded` : "Unavailable"} state={directoryData ? "positive" : "neutral"} />
             </div>
             {telemetryError ? <div className="error-box setup-error">Telemetry scan incomplete. Check the current user's data access.</div> : null}
             <div className="setup-content-grid">
-              <ProviderTagSetup services={services} providerName={providerName} providerSlug={selectedProviderSlug} providerTagKey={providerLabelKey} loading={servicesLoading || directoryLoading} onRefresh={() => refetchServices()} />
+              <ProviderTagSetup services={services} providerName={providerName} providerSlug={selectedProviderSlug} providerTagKey={providerLabelKey} providerCandidates={activeProviderCandidates} topologyLoading={topologyQuery.isLoading || metricsLoading} topologyError={topologyQuery.error ?? metricsError ?? undefined} loading={servicesLoading || directoryLoading} onRefresh={() => refetchServices()} />
               <SetupAdvisor recommendations={setupRecommendations} loading={telemetryLoading || directoryLoading} limitedContext={Boolean(telemetryError || (services.length === 0 && telemetrySignalsPresent))} />
             </div>
           </Surface>
@@ -374,7 +410,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
               serviceError={serviceError ?? undefined}
             />
           </Surface>
-        ) : (
+        ) : section === "incidents" ? (
           <IncidentReview
             provider={directoryData}
             problems={problems}
@@ -384,6 +420,8 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
             loading={problemsLoading}
             error={problemError ?? undefined}
           />
+        ) : (
+          <ProviderNotices key={providerNoticeRefresh} providerSlug={selectedProviderSlug} lookbackHours={lookbackHours} />
         )}
       </div>
     </div>

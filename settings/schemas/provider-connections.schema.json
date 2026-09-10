@@ -1,0 +1,61 @@
+{
+  "$schema": "https://developer.dynatrace.com/docs-assets/schema_strict_apps.json",
+  "dynatrace": "1",
+  "schemaId": "provider-connections",
+  "version": "1.0.0",
+  "displayName": "Provider incident connections",
+  "description": "Optional provider API connections used to read project-scoped service health notices.",
+  "documentation": "Store only the provider scope and the ID of an AppEngine-scoped Dynatrace Credential Vault entry. Provider secrets must remain in Credential Vault and must never be copied into this setting.",
+  "multiObject": true,
+  "maxObjects": 20,
+  "summaryPattern": "{displayName} · {projectId}",
+  "searchPattern": "{providerSlug} {displayName} {projectId}",
+  "ordered": false,
+  "maturity": "GENERAL_AVAILABILITY",
+  "ownerBasedAccessControl": false,
+  "properties": {
+    "connectionKey": {
+      "displayName": "Connection key",
+      "description": "Stable key generated from the provider and project ID.",
+      "type": "text",
+      "default": "",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "providerSlug": {
+      "displayName": "Provider slug",
+      "type": "text",
+      "default": "gcp",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "displayName": {
+      "displayName": "Connection name",
+      "type": "text",
+      "default": "Google Cloud",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "projectId": {
+      "displayName": "Google Cloud project ID",
+      "type": "text",
+      "default": "",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "credentialId": {
+      "displayName": "Credential Vault ID",
+      "description": "ID of a Token credential containing the Google Cloud service-account JSON. The secret remains in Dynatrace Credential Vault.",
+      "type": "text",
+      "default": "",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "enabled": {
+      "displayName": "Enabled",
+      "type": "boolean",
+      "default": true,
+      "nullable": false
+    }
+  }
+}

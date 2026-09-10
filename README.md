@@ -7,10 +7,14 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 - Reads the tenant service inventory with DQL.
 - Reads Davis Problems, logs, spans, and service-request telemetry for a selectable 24-hour to 90-day window.
 - Retrieves provider and service contract data from the versioned `sla.directory` JSON API through an AppEngine function.
+- Monitors more than one provider at a time and keeps the active provider as a focused view rather than a tenant-wide replacement.
+- Reads Google Cloud public status incidents and, when an administrator configures it, project-relevant Personalized Service Health events through a separate read-only AppEngine function.
 - Presents a compact Overview with the current state, supporting facts, and one recommended next action.
 - Provides a focused Setup view for telemetry checks, provider-tag review, and service assignment.
+- Uses exact service-to-cloud-runtime relationships from Smartscape to suggest provider candidates. Suggestions are never created from service names and require operator confirmation before a tag is written.
 - Lets an authorized user add the configured provider tag to explicitly selected service entities after a confirmation step. Existing tags remain in place, conflicts are held for review, and the last app action can be undone.
 - Provides an Incidents view with an observed Problem queue, provider-published credit terms, filing guidance, required evidence, and exclusions.
+- Provides a separate Provider notices view so provider-reported events are never presented as Dynatrace Problems or proof of local impact.
 - Stores tenant-owned custom SLA terms in Dynatrace App Settings while retaining the public `sla.directory` record as the comparison baseline.
 - Assigns one custom SLA to one or more exact Dynatrace services, hosts, runtimes, or observed locations. Smartscape relationships supply service-to-runtime context, and entity IDs establish the boundary.
 - Applies custom terms in the order host, location, service, provider-wide fallback, then public directory baseline.
@@ -21,7 +25,9 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 
 ## Deliberate boundaries
 
-SLA Watch does not issue credits, prove provider fault, create SLOs, or silently infer ownership from a service name. It changes a provider tag only after an authorized user reviews and confirms exact service entities in Setup. A matching tag, Smartscape relationship, SLA assignment, and active Problem are only inputs to a human review. Provider terms and filing dates are planning references, not an automated eligibility or approval decision.
+SLA Watch does not issue credits, prove provider fault, create SLOs, or silently infer ownership from a service name. It changes a provider tag only after an authorized user reviews and confirms exact service entities in Setup. A matching tag, Smartscape relationship, SLA assignment, provider notice, and active Problem are only inputs to a human review. Provider terms and filing dates are planning references, not an automated eligibility or approval decision.
+
+Google Cloud integration is intentionally optional and read-only. Without a configured project connection, the app can show the public Google Cloud Status feed and labels it as non-project-specific. With a connection, it uses Google Personalized Service Health relevance as provider evidence, but still requires Dynatrace telemetry and an explicit service boundary before an SRE can assess local impact. This release does not create notifications, tickets, Problems, or SLA claims.
 
 Custom SLA assignments are explicit. An SRE selects the provider service and exact Dynatrace entity IDs that the private terms cover. When a Problem includes an assigned service, or Smartscape links it to an assigned runtime or location, the app can apply the matching terms. If more than one equally specific assignment matches, the operator chooses the boundary. The app never uses a similar service name to create that relationship.
 
@@ -32,11 +38,13 @@ The runtime data path does not require an MCP server or a user-supplied `sla.dir
 - Dynatrace AppEngine enabled in the target environment.
 - A user or deployment identity with the app's declared scopes in `app.config.json`.
 - `sla.directory` added as an allowed external host for AppEngine functions. The host entry is `sla.directory`, without a protocol or path.
+- For Google Cloud provider notices, add `status.cloud.google.com`, `oauth2.googleapis.com`, and `servicehealth.googleapis.com` under Settings > General > External requests. Do not disable external-request enforcement.
+- For personalized Google Cloud notices, enable the Service Health API, grant a dedicated service account `roles/servicehealth.viewer` on the selected project, and store its JSON key as a Token credential with AppEngine scope. Restrict application access to SLA Watch and grant only the intended users access.
 - Users who apply or undo provider tags need the Dynatrace permission to manage entity settings. Users without it keep a read-only Setup experience.
 - Users who create or edit custom SLAs need App Settings write access for the `contract-overrides` schema. All authenticated app users can read these settings, so records must contain operational values and a concise source reference, not private contract text or credentials.
 - Node.js 24 for the supported local and CI toolchain.
 
-The app requests read access to Dynatrace telemetry and Smartscape, read/write access to user state, shared app state, and tenant SLA settings, plus `environment-api:entities:write` for the confirmed provider-tag action. It does not request credential-vault, ticketing, SLO-write, or Problem-write permissions. See [`documentation/permissions.md`](documentation/permissions.md) for the complete boundary.
+The app requests read access to Dynatrace telemetry, Smartscape, and an administrator-selected Credential Vault record, read/write access to user state, shared app state, and tenant configuration, plus `environment-api:entities:write` for the confirmed provider-tag action. It does not request credential-vault write, ticketing, SLO-write, or Problem-write permissions. See [`documentation/permissions.md`](documentation/permissions.md) for the complete boundary.
 
 ## Development
 
@@ -89,6 +97,8 @@ Every change to `app.config.json` requires a new app version before deployment. 
 User theme and walkthrough state use user app state. Provider selection, tag convention, and lookback use shared app state when the workspace scope is available. The browser fallback is local storage and is clearly surfaced when shared state cannot be written. App-state records expire within the platform's 90-day limit.
 
 Custom SLA terms use the `contract-overrides` App Settings schema so they are shared and auditable in the Dynatrace environment. The app stores exact target IDs, display names, operational SLA values, effective dates, and a source reference. App Settings are readable by all authenticated users of the app and persist until changed or removed.
+
+Provider connection metadata uses the `provider-connections` App Settings schema. It stores the provider, project ID, and Credential Vault record ID, but never the service-account JSON or access token. The AppEngine function reads the secret at request time, exchanges a short-lived Google OAuth token, and returns only normalized service-health records to the browser.
 
 Do not enter secrets, credentials, or unnecessary personal data into app state. No secret is bundled in the app or stored in this repository.
 

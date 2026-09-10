@@ -12,13 +12,18 @@ smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
     service_node_id = source_id,
     service_classic_id = getNodeField(source_id, "id_classic"),
     service_name = getNodeName(source_id),
+    service_tags = getNodeField(source_id, "tags"),
     target_node_id = target_id,
     target_classic_id = getNodeField(target_id, "id_classic"),
     target_name = getNodeName(target_id),
     target_type,
+    cloud_provider = getNodeField(target_id, "cloud.provider"),
+    aws_account_id = getNodeField(target_id, "aws.account.id"),
     aws_region = getNodeField(target_id, "aws.region"),
     aws_availability_zone = getNodeField(target_id, "aws.availability_zone"),
+    azure_subscription = getNodeField(target_id, "azure.subscription"),
     azure_location = getNodeField(target_id, "azure.location"),
+    gcp_project_id = getNodeField(target_id, "gcp.project.id"),
     gcp_region = getNodeField(target_id, "gcp.region"),
     gcp_location = getNodeField(target_id, "gcp.location"),
     k8s_cluster = getNodeField(target_id, "k8s.cluster.name")
@@ -44,8 +49,21 @@ fetch spans, from:-${lookbackHours}h, to:now()
 `;
 
 export const createServiceMetricsQuery = (lookbackHours: number): string => `
-timeseries request_count = sum(dt.service.request.count), from:-${lookbackHours}h, to:now()
-| limit 1
+timeseries request_count = sum(dt.service.request.count, scalar: true),
+  by:{dt.smartscape.service, dt.service.name, aws.account.id, aws.region, azure.location, azure.subscription, gcp.project.id, gcp.region},
+  from:-${lookbackHours}h, to:now(), nonempty:true
+| fields request_count,
+    service_node_id = dt.smartscape.service,
+    service_classic_id = getNodeField(dt.smartscape.service, "id_classic"),
+    service_name = dt.service.name,
+    service_tags = getNodeField(dt.smartscape.service, "tags"),
+    aws_account_id = aws.account.id,
+    aws_region = aws.region,
+    azure_subscription = azure.subscription,
+    azure_location = azure.location,
+    gcp_project_id = gcp.project.id,
+    gcp_region = gcp.region
+| limit 500
 `;
 
 export const PROBLEMS_QUERY = createProblemsQuery(24);

@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { monitoredEntitiesCustomTagsClient } from "@dynatrace-sdk/client-classic-environment-v2";
 import { effectivePermissionsClient } from "@dynatrace-sdk/client-platform-management-service";
 import { Button } from "@dynatrace/strato-components/buttons";
-import type { ServiceRecord } from "../types";
+import type { ProviderCandidate, ServiceRecord } from "../types";
 import { buildEntityIdSelector, providerTagValues } from "../data/providerTags";
 
 type PermissionState = "checking" | "granted" | "conditional" | "denied" | "unavailable";
@@ -31,6 +31,9 @@ export const ProviderTagSetup = ({
   providerName,
   providerSlug,
   providerTagKey,
+  providerCandidates,
+  topologyLoading,
+  topologyError,
   loading,
   onRefresh,
 }: {
@@ -38,6 +41,9 @@ export const ProviderTagSetup = ({
   providerName: string;
   providerSlug: string;
   providerTagKey: string;
+  providerCandidates: ProviderCandidate[];
+  topologyLoading: boolean;
+  topologyError?: Error;
   loading: boolean;
   onRefresh: () => void | Promise<unknown>;
 }) => {
@@ -79,12 +85,14 @@ export const ProviderTagSetup = ({
     const values = providerTagValues(service.tags, providerTagKey, providerSlug);
     const matched = values.includes(providerSlug.toLowerCase());
     const conflicting = values.length > 0 && !matched;
-    return { service, values, matched, conflicting, selectable: !matched && !conflicting };
-  }), [providerSlug, providerTagKey, services]);
+    const candidate = providerCandidates.find((item) => item.serviceId === service.id);
+    return { service, values, matched, conflicting, candidate, selectable: !matched && !conflicting };
+  }), [providerCandidates, providerSlug, providerTagKey, services]);
 
   const matchedCount = rows.filter((row) => row.matched).length;
-  const selectableRows = rows.filter((row) => row.selectable);
+  const suggestedRows = rows.filter((row) => row.selectable && row.candidate);
   const selectedRows = rows.filter((row) => selectedIds.includes(row.service.id));
+  const selectedSuggestedCount = selectedRows.filter((row) => row.candidate).length;
   const canWrite = permission === "granted" || permission === "conditional";
   const tagText = `${providerTagKey}:${providerSlug}`;
 
@@ -94,8 +102,8 @@ export const ProviderTagSetup = ({
   };
 
   const toggleAll = () => {
-    const selectableIds = selectableRows.map((row) => row.service.id);
-    setSelectedIds(selectedIds.length === selectableIds.length ? [] : selectableIds);
+    const suggestedIds = suggestedRows.map((row) => row.service.id);
+    setSelectedIds(suggestedIds.length > 0 && suggestedIds.every((id) => selectedIds.includes(id)) ? selectedIds.filter((id) => !suggestedIds.includes(id)) : Array.from(new Set([...selectedIds, ...suggestedIds])));
     setMessage(null);
   };
 
@@ -150,7 +158,7 @@ export const ProviderTagSetup = ({
       <div className="setup-section-heading">
         <div>
           <h3 id="provider-mapping-title">Provider mapping</h3>
-          <p>Identify only the services that depend on {providerName}. Service names are not used as proof.</p>
+          <p>Confirm only services that depend on {providerName}. Smartscape runtime metadata can suggest a provider; service names are not used as proof.</p>
         </div>
         <span className={`status-pill ${matchedCount > 0 ? "status-pill-positive" : "status-pill-warning"}`}>
           {loading ? "Checking" : `${matchedCount} of ${services.length} mapped`}
@@ -159,14 +167,15 @@ export const ProviderTagSetup = ({
 
       <dl className="provider-rule-summary">
         <div><dt>Dynatrace tag</dt><dd><code>{tagText}</code></dd></div>
+        <div><dt>Smartscape candidates</dt><dd>{topologyLoading ? "Checking" : `${suggestedRows.length} found`}</dd></div>
         <div><dt>Write access</dt><dd>{permissionCopy[permission]}</dd></div>
       </dl>
 
       {step === "summary" ? (
         <div className="provider-setup-actions">
-          <Button size="condensed" variant="emphasized" disabled={loading || services.length === 0} onClick={() => setStep("select")}>Review services</Button>
+          <Button size="condensed" variant="emphasized" disabled={loading || services.length === 0} onClick={() => setStep("select")}>{suggestedRows.length > 0 ? `Review ${suggestedRows.length} candidate${suggestedRows.length === 1 ? "" : "s"}` : "Review services"}</Button>
           <Link className="text-action" to="/settings/watch">Change matching rule</Link>
-          <span>Saving the rule does not modify services.</span>
+          <span>{topologyError ? "Smartscape suggestions are unavailable. Manual assignment remains available." : "No tag is added until you select exact services and confirm the change."}</span>
         </div>
       ) : null}
 
@@ -176,21 +185,22 @@ export const ProviderTagSetup = ({
             <label>
               <input
                 type="checkbox"
-                checked={selectableRows.length > 0 && selectedIds.length === selectableRows.length}
+                checked={suggestedRows.length > 0 && suggestedRows.every((row) => selectedIds.includes(row.service.id))}
                 onChange={toggleAll}
-                disabled={selectableRows.length === 0}
+                disabled={suggestedRows.length === 0}
               />
-              Select all unassigned
+              {suggestedRows.length > 0 ? `Select ${suggestedRows.length} Smartscape candidate${suggestedRows.length === 1 ? "" : "s"}` : "No Smartscape candidates"}
             </label>
             <span>{selectedIds.length} selected</span>
           </div>
           <div className="provider-service-list" role="list" aria-label={`Services available for ${providerName} mapping`}>
-            {rows.map(({ service, values, matched, conflicting, selectable }) => (
+            {rows.map(({ service, values, matched, conflicting, candidate, selectable }) => (
               <label className={`provider-service-row${selectable ? "" : " provider-service-row-disabled"}`} key={service.id}>
                 <input type="checkbox" checked={selectedIds.includes(service.id)} disabled={!selectable} onChange={() => toggleService(service.id)} />
                 <span className="provider-service-name"><strong>{service.name}</strong><small>{service.id}</small></span>
-                <span className={`provider-service-state ${matched ? "positive" : conflicting ? "warning" : "neutral"}`}>
-                  {matched ? `Mapped to ${providerName}` : conflicting ? `Review existing: ${values.join(", ")}` : "Unassigned"}
+                <span className={`provider-service-state ${matched ? "positive" : conflicting ? "warning" : candidate ? "candidate" : "neutral"}`}>
+                  <strong>{matched ? `Confirmed ${providerName}` : conflicting ? `Review ${values.join(", ")}` : candidate ? `${providerName} candidate` : "Unassigned"}</strong>
+                  {candidate ? <small title={candidate.evidence.join("; ")}>{candidate.runtimeNames.slice(0, 2).join(", ")}</small> : null}
                 </span>
               </label>
             ))}
@@ -205,6 +215,7 @@ export const ProviderTagSetup = ({
       {step === "confirm" ? (
         <div className="provider-confirmation" role="region" aria-label="Confirm provider tag change">
           <strong>Add <code>{tagText}</code> to {selectedRows.length} selected service{selectedRows.length === 1 ? "" : "s"}?</strong>
+          <p>{selectedSuggestedCount > 0 ? `${selectedSuggestedCount} selection${selectedSuggestedCount === 1 ? " has" : "s have"} supporting Smartscape runtime metadata. ` : ""}Review remains required because topology identifies hosting context, not provider fault or SLA eligibility.</p>
           <p>Existing tags remain in place. The new tag can be used by Dynatrace dashboards, alerts, maintenance windows, management zones, and workflows.</p>
           {permission === "conditional" ? <p>Your permission is limited by management zone. Dynatrace may update fewer services than selected.</p> : null}
           {!canWrite ? <p>Your current role cannot apply this change. Ask a tenant administrator for entity-settings permission.</p> : null}

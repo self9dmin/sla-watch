@@ -7,14 +7,19 @@ import { CommunityLink } from "../components/CommunityLink";
 import { ContractOverrideEditor } from "../components/ContractOverrideEditor";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
 import { useContractOverrides } from "../hooks/useContractOverrides";
+import { useProviderConnections } from "../hooks/useProviderConnections";
 import { createOverrideKey } from "../data/contractOverrides";
+import { mergeServiceInventory } from "../data/providerAttribution";
+import { createProviderConnectionKey, validateProviderConnection } from "../data/providerConnections";
 import { EVIDENCE_LOOKBACK_OPTIONS } from "../data/lookback";
-import { SERVICES_QUERY, SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
-import { parseSmartscapeScopeEdges } from "../data/topology";
-import type { ContractOverrideValue, ContractScopeKind, EvidenceLookbackHours, ServiceRecord, SlaProviderResponse, SlaThemePreference } from "../types";
+import { createServiceMetricsQuery, SERVICES_QUERY, SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
+import { detectedProviderSlugs, parseServiceCloudContexts, parseSmartscapeScopeEdges } from "../data/topology";
+import { normalizeProviderSlug, PROVIDER_CATALOG, providerDetail, providerDisplayName } from "../data/providers";
+import type { ContractOverrideValue, ContractScopeKind, EvidenceLookbackHours, GcpProviderNoticesResponse, ProviderConnectionValue, ServiceRecord, SlaProviderResponse, SlaThemePreference } from "../types";
 
 const SETUP_LINKS = [
   ["watch", "Monitor configuration"],
+  ["provider-connections", "Provider connections"],
   ["sla-overrides", "SLA overrides"],
   ["appearance", "Appearance"],
   ["intro", "Intro & walkthrough"],
@@ -39,7 +44,7 @@ const SettingsRail = ({ page }: { page: string }) => {
         <div className="settings-rail-label">SUPPORT</div>
         <CommunityLink className="settings-rail-link" />
       </div>
-      <div className="settings-rail-note">Monitor configuration and SLA overrides are shared with the workspace. Theme and walkthrough state stay personal to you. The change log is read-only.</div>
+      <div className="settings-rail-note">Monitor configuration, provider connections, and SLA overrides are shared with the workspace. Theme and walkthrough state stay personal to you. The change log is read-only.</div>
     </aside>
   );
 };
@@ -58,21 +63,60 @@ const recordText = (value: unknown, fallback: string): string => typeof value ==
 
 const WatchSettings = () => {
   const { preferences, updatePreferences } = useSlaPreferences();
+  const [providerSlugs, setProviderSlugs] = useState(preferences.providerSlugs);
   const [providerSlug, setProviderSlug] = useState(preferences.providerSlug);
   const [providerLabelKey, setProviderLabelKey] = useState(preferences.providerLabelKey);
   const [lookbackHours, setLookbackHours] = useState<EvidenceLookbackHours>(preferences.lookbackHours);
+  const [customProvider, setCustomProvider] = useState("");
   const [saved, setSaved] = useState(false);
-  const directoryRequest = useMemo(() => ({ vendor: preferences.providerSlug }), [preferences.providerSlug]);
+  const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
+  const serviceCloudQueryText = useMemo(() => createServiceMetricsQuery(lookbackHours), [lookbackHours]);
+  const serviceCloudQuery = useDql({ query: serviceCloudQueryText });
+  const topology = useMemo(() => parseSmartscapeScopeEdges(topologyQuery.data), [topologyQuery.data]);
+  const serviceCloudContexts = useMemo(() => parseServiceCloudContexts(serviceCloudQuery.data), [serviceCloudQuery.data]);
+  const detectedProviders = useMemo(() => detectedProviderSlugs([...topology, ...serviceCloudContexts]), [serviceCloudContexts, topology]);
+  const providerOptions = useMemo(() => Array.from(new Set([
+    ...PROVIDER_CATALOG.map((provider) => provider.slug),
+    ...providerSlugs,
+    ...detectedProviders,
+  ])), [detectedProviders, providerSlugs]);
+  const directoryRequest = useMemo(() => ({ vendor: providerSlug }), [providerSlug]);
   const directoryConnection = useAppFunction<SlaProviderResponse>({ name: "slaDirectory", data: directoryRequest, responseType: "json" });
+  const activeDirectory = directoryConnection.data?.provider.slug === providerSlug ? directoryConnection.data : undefined;
+  const directoryChecking = directoryConnection.isLoading || Boolean(!directoryConnection.error && directoryConnection.data && !activeDirectory);
 
   useEffect(() => {
+    setProviderSlugs(preferences.providerSlugs);
     setProviderSlug(preferences.providerSlug);
     setProviderLabelKey(preferences.providerLabelKey);
     setLookbackHours(preferences.lookbackHours);
-  }, [preferences.providerLabelKey, preferences.providerSlug, preferences.lookbackHours]);
+  }, [preferences.providerLabelKey, preferences.providerSlug, preferences.providerSlugs, preferences.lookbackHours]);
+
+  const toggleProvider = (slug: string) => {
+    setProviderSlugs((current) => {
+      if (current.includes(slug)) {
+        if (current.length === 1) return current;
+        const next = current.filter((item) => item !== slug);
+        if (providerSlug === slug) setProviderSlug(next[0]);
+        return next;
+      }
+      return [...current, slug].slice(0, 12);
+    });
+    setSaved(false);
+  };
+
+  const addCustomProvider = () => {
+    const normalized = normalizeProviderSlug(customProvider);
+    if (!normalized) return;
+    setProviderSlugs((current) => Array.from(new Set([...current, normalized])).slice(0, 12));
+    setProviderSlug(normalized);
+    setCustomProvider("");
+    setSaved(false);
+  };
 
   const save = async () => {
     await updatePreferences({
+      providerSlugs,
       providerSlug: providerSlug.trim().toLowerCase(),
       providerLabelKey: providerLabelKey.trim() || "provider",
       lookbackHours,
@@ -86,12 +130,38 @@ const WatchSettings = () => {
       <div className="page-intro">
         <Text className="eyebrow">Settings · monitor</Text>
         <Heading level={1}>Configure monitor defaults.</Heading>
-        <Paragraph>Choose the contract, Dynatrace tag convention, and evidence window. Review service assignments from Setup.</Paragraph>
+        <Paragraph>Choose the providers to monitor, the active provider for focused views, and the evidence window. Review service assignments from Setup.</Paragraph>
       </div>
+      <fieldset className="provider-monitor-fieldset">
+        <legend>Monitored providers</legend>
+        <p>Keep more than one provider in scope. Smartscape detections are suggestions until a service mapping is confirmed.</p>
+        <div className="provider-monitor-grid">
+          {providerOptions.map((slug) => {
+            const monitored = providerSlugs.includes(slug);
+            const detected = detectedProviders.includes(slug);
+            return (
+              <label className={`provider-monitor-option${monitored ? " selected" : ""}`} key={slug}>
+                <input type="checkbox" checked={monitored} onChange={() => toggleProvider(slug)} aria-label={`Monitor ${providerDisplayName(slug)}`} />
+                <span><strong>{providerDisplayName(slug)}</strong><small>{providerDetail(slug)}</small></span>
+                <span className={`provider-monitor-signal${detected ? " detected" : ""}`}>{detected ? "Detected in Smartscape" : monitored ? "Monitored" : "Available"}</span>
+              </label>
+            );
+          })}
+        </div>
+        <div className="provider-custom-row">
+          <label className="field-label">Add another sla.directory provider
+            <input value={customProvider} onChange={(event) => setCustomProvider(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="provider slug" autoComplete="off" />
+          </label>
+          <Button size="condensed" disabled={!normalizeProviderSlug(customProvider)} onClick={addCustomProvider}>Add provider</Button>
+        </div>
+        {!topologyQuery.isLoading && !serviceCloudQuery.isLoading && detectedProviders.length === 0 ? <small className="provider-detection-note">No cloud provider was identified from current service topology or service metric dimensions. You can still monitor a provider and assign services manually.</small> : null}
+      </fieldset>
       <div className="settings-form-grid">
-        <label className="field-label">Provider directory slug
-          <input value={providerSlug} onChange={(event) => setProviderSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="aws" autoComplete="off" />
-          <small>Use the slug from sla.directory, such as <code>aws</code> or <code>azure</code>.</small>
+        <label className="field-label">Active provider
+          <select value={providerSlug} onChange={(event) => setProviderSlug(event.target.value)} aria-label="Active provider for focused views">
+            {providerSlugs.map((slug) => <option key={slug} value={slug}>{providerDisplayName(slug)}</option>)}
+          </select>
+          <small>Directory, Setup, Incidents, and Provider notices focus on this provider. Other monitored providers remain configured.</small>
         </label>
         <label className="field-label">Provider tag key
           <input value={providerLabelKey} onChange={(event) => setProviderLabelKey(event.target.value)} placeholder="provider" autoComplete="off" />
@@ -108,24 +178,153 @@ const WatchSettings = () => {
         <div>
           <span className="eyebrow">Provider data source</span>
           <strong>sla.directory API</strong>
-          <small>{directoryConnection.isLoading
-            ? `Checking ${preferences.providerSlug}`
-            : directoryConnection.data
-              ? `${directoryConnection.data.provider.name} public terms are available.`
-              : `The ${preferences.providerSlug} public record could not be loaded.`}</small>
+          <small>{directoryChecking
+            ? `Checking ${providerSlug}`
+            : activeDirectory
+              ? `${activeDirectory.provider.name} public terms are available.`
+              : `The ${providerSlug} public record could not be loaded.`}</small>
         </div>
-        <span className={`connection-state ${directoryConnection.isLoading ? "checking" : directoryConnection.data ? "connected" : "unavailable"}`}>
-          {directoryConnection.isLoading ? "Checking" : directoryConnection.data ? "Connected" : "Unavailable"}
+        <span className={`connection-state ${directoryChecking ? "checking" : activeDirectory ? "connected" : "unavailable"}`}>
+          {directoryChecking ? "Checking" : activeDirectory ? "Connected" : "Unavailable"}
         </span>
-        <Button size="condensed" disabled={directoryConnection.isLoading} onClick={() => void directoryConnection.refetch()}>Check connection</Button>
+        <Button size="condensed" disabled={directoryChecking} onClick={() => void directoryConnection.refetch()}>Check connection</Button>
       </div>
       <div className="settings-preview">
-        <div className="eyebrow">Matching rule preview</div>
-        <strong>{providerLabelKey || "provider"}:{providerSlug || "provider-slug"}</strong>
-        <span>SLA Watch will look for this tag. Saving the rule does not modify Dynatrace services.</span>
+        <div className="eyebrow">Matching rules</div>
+        <div className="provider-rule-list">{providerSlugs.map((slug) => <code key={slug}>{providerLabelKey || "provider"}:{slug}</code>)}</div>
+        <span>SLA Watch checks these explicit tags and separately reports Smartscape candidates. Saving monitor settings does not modify Dynatrace services.</span>
         <NavLink className="text-action" to="/setup">Review service mapping in Setup</NavLink>
       </div>
-      <div className="settings-actions"><Button variant="emphasized" disabled={!providerSlug.trim()} onClick={() => void save()}>Save monitor settings</Button>{saved ? <SavedNote text="Monitor settings saved" /> : null}</div>
+      <div className="settings-actions"><Button variant="emphasized" disabled={providerSlugs.length === 0 || !providerSlug.trim()} onClick={() => void save()}>Save monitor settings</Button>{saved ? <SavedNote text="Monitor settings saved" /> : null}</div>
+    </section>
+  );
+};
+
+const emptyGcpConnection = (): ProviderConnectionValue => ({
+  connectionKey: "",
+  providerSlug: "gcp",
+  displayName: "Google Cloud",
+  projectId: "",
+  credentialId: "",
+  enabled: true,
+});
+
+const ProviderConnectionsSettings = () => {
+  const providerConnections = useProviderConnections();
+  const existing = providerConnections.connections.find((item) => item.providerSlug === "gcp");
+  const [draft, setDraft] = useState<ProviderConnectionValue>(emptyGcpConnection);
+  const [saved, setSaved] = useState(false);
+  const [formError, setFormError] = useState<string>();
+  const [testMessage, setTestMessage] = useState<{ tone: "positive" | "warning"; text: string }>();
+  const testRequest = useMemo(() => ({
+    projectId: draft.projectId.trim().toLowerCase(),
+    credentialId: draft.credentialId.trim().toUpperCase(),
+    lookbackHours: 24,
+    requirePersonalized: true,
+  }), [draft.credentialId, draft.projectId]);
+  const connectionTest = useAppFunction<GcpProviderNoticesResponse>(
+    { name: "gcpServiceHealth", data: testRequest, responseType: "json" },
+    { autoFetch: false, autoFetchOnUpdate: false },
+  );
+
+  useEffect(() => {
+    if (!providerConnections.loading) setDraft(existing ? { ...existing } : emptyGcpConnection());
+  }, [existing, providerConnections.loading]);
+
+  const normalizedDraft = (): ProviderConnectionValue => ({
+    ...draft,
+    connectionKey: createProviderConnectionKey("gcp", draft.projectId),
+    providerSlug: "gcp",
+    displayName: draft.displayName.trim() || "Google Cloud",
+    projectId: draft.projectId.trim().toLowerCase(),
+    credentialId: draft.credentialId.trim().toUpperCase(),
+  });
+
+  const save = async () => {
+    const value = normalizedDraft();
+    const errors = validateProviderConnection(value);
+    if (errors.length > 0) {
+      setFormError(errors[0]);
+      return;
+    }
+    setFormError(undefined);
+    if (existing) await providerConnections.updateConnection(existing, value);
+    else await providerConnections.createConnection(value);
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 2600);
+  };
+
+  const testConnection = async () => {
+    const value = normalizedDraft();
+    const errors = validateProviderConnection(value);
+    if (errors.length > 0) {
+      setFormError(errors[0]);
+      return;
+    }
+    setFormError(undefined);
+    setTestMessage(undefined);
+    try {
+      const result = await connectionTest.refetch();
+      setTestMessage({ tone: "positive", text: `${result.message} Authentication and project access are working.` });
+    } catch (error: unknown) {
+      setTestMessage({ tone: "warning", text: error instanceof Error ? error.message : "The personalized Google Cloud connection could not be verified." });
+    }
+  };
+
+  const remove = async () => {
+    if (!existing || !window.confirm(`Remove the Google Cloud connection for ${existing.projectId}? The Credential Vault entry will not be deleted.`)) return;
+    await providerConnections.deleteConnection(existing);
+    setDraft(emptyGcpConnection());
+    setTestMessage(undefined);
+  };
+
+  return (
+    <section className="settings-page provider-connections-settings">
+      <div className="page-intro">
+        <Heading level={1}>Connect provider incident data.</Heading>
+        <Paragraph>Optionally read project-relevant Google Cloud service health events. Public status remains available when no project connection is configured.</Paragraph>
+      </div>
+
+      <div className="provider-connection-boundary">
+        <div><span className="eyebrow">Release scope</span><strong>Google Cloud · one project</strong><small>Other providers require separate authentication and incident adapters.</small></div>
+        <span className="connection-state connected">Read-only</span>
+      </div>
+
+      <ol className="provider-connection-steps" aria-label="Google Cloud connection requirements">
+        <li><span>1</span><div><strong>Enable Service Health API</strong><small>Enable <code>servicehealth.googleapis.com</code> for the project.</small></div></li>
+        <li><span>2</span><div><strong>Grant one read role</strong><small>Use a dedicated service account with <code>roles/servicehealth.viewer</code>.</small></div></li>
+        <li><span>3</span><div><strong>Store the JSON key in Credential Vault</strong><small>Create a Token credential with AppEngine scope and restrict app access to SLA Watch.</small></div></li>
+      </ol>
+
+      <div className="settings-form-grid provider-connection-form">
+        <label className="field-label">Connection name
+          <input value={draft.displayName} onChange={(event) => setDraft((current) => ({ ...current, displayName: event.target.value }))} placeholder="Google Cloud" autoComplete="off" maxLength={80} required />
+          <small>Operator-facing name only.</small>
+        </label>
+        <label className="field-label">Google Cloud project ID
+          <input value={draft.projectId} onChange={(event) => setDraft((current) => ({ ...current, projectId: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} placeholder="example-project-123" autoComplete="off" maxLength={30} pattern="[a-z][a-z0-9-]{4,28}[a-z0-9]" required />
+          <small>The API returns events relevant to this project.</small>
+        </label>
+        <label className="field-label provider-credential-field">Dynatrace Credential Vault ID
+          <input value={draft.credentialId} onChange={(event) => setDraft((current) => ({ ...current, credentialId: event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "") }))} placeholder="Paste the full credential ID" autoComplete="off" spellCheck={false} maxLength={34} pattern="CREDENTIALS_VAULT-[A-Fa-f0-9]{16}" required />
+          <small>Enter the credential ID, not the service-account JSON. The secret remains in Credential Vault.</small>
+        </label>
+        <label className="provider-enabled-field"><input type="checkbox" checked={draft.enabled} onChange={(event) => setDraft((current) => ({ ...current, enabled: event.target.checked }))} /><span><strong>Use personalized notices</strong><small>When disabled, Monitor uses only the public Google Cloud status feed.</small></span></label>
+      </div>
+
+      {formError ? <div className="error-box compact-error" role="alert">{formError}</div> : null}
+      {providerConnections.error ? <div className="error-box compact-error" role="alert">Provider connection settings could not be read. Check App Settings access.</div> : null}
+      {!providerConnections.loading && !providerConnections.canWrite ? <div className="settings-callout provider-connection-note"><strong>Read-only access</strong><span>Your current role can review this configuration but cannot create or change provider connections.</span></div> : null}
+      {testMessage ? <div className={`provider-connection-test provider-connection-test-${testMessage.tone}`} role="status"><strong>{testMessage.tone === "positive" ? "Connection verified" : "Connection not verified"}</strong><span>{testMessage.text}</span></div> : null}
+
+      <div className="settings-actions">
+        <Button variant="emphasized" disabled={!providerConnections.canWrite || providerConnections.mutating || providerConnections.loading} onClick={() => void save()}>{providerConnections.mutating ? "Saving" : "Save connection"}</Button>
+        <Button disabled={connectionTest.isLoading || !draft.projectId || !draft.credentialId} onClick={() => void testConnection()}>{connectionTest.isLoading ? "Testing" : "Test connection"}</Button>
+        {existing ? <Button disabled={!providerConnections.canWrite || providerConnections.mutating} onClick={() => void remove()}>Remove connection</Button> : null}
+        {saved ? <SavedNote text="Provider connection saved" /> : null}
+      </div>
+
+      <div className="settings-callout provider-connection-note"><strong>What this connection does</strong><span>It reads provider-owned incident notices. It does not modify Google Cloud, create a Dynatrace Problem, send a notification, prove local impact, or determine SLA credit eligibility.</span></div>
     </section>
   );
 };
@@ -136,11 +335,12 @@ const SlaOverrideSettings = () => {
   const { preferences } = useSlaPreferences();
   const directoryRequest = useMemo(() => ({ vendor: preferences.providerSlug }), [preferences.providerSlug]);
   const directoryQuery = useAppFunction<SlaProviderResponse>({ name: "slaDirectory", data: directoryRequest, responseType: "json" });
+  const activeDirectory = directoryQuery.data?.provider.slug === preferences.providerSlug ? directoryQuery.data : undefined;
   const serviceQuery = useDql({ query: SERVICES_QUERY });
   const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
   const contractSettings = useContractOverrides();
 
-  const services = useMemo<ServiceRecord[]>(() => {
+  const entityServices = useMemo<ServiceRecord[]>(() => {
     const records = Array.isArray(serviceQuery.data?.records) ? serviceQuery.data.records : [];
     return records.map((value, index) => {
       const record = asRecord(value);
@@ -153,9 +353,10 @@ const SlaOverrideSettings = () => {
     });
   }, [serviceQuery.data]);
   const topology = useMemo(() => parseSmartscapeScopeEdges(topologyQuery.data), [topologyQuery.data]);
+  const services = useMemo(() => mergeServiceInventory(entityServices, topology), [entityServices, topology]);
 
   const initialValue = useMemo<ContractOverrideValue | undefined>(() => {
-    const directory = directoryQuery.data;
+    const directory = activeDirectory;
     if (!directory) return undefined;
     const params = new URLSearchParams(location.search);
     const requestedProviderServiceId = params.get("providerServiceId") ?? "*";
@@ -216,9 +417,9 @@ const SlaOverrideSettings = () => {
       enabled: true,
     };
     return { ...draft, overrideKey: createOverrideKey(draft) };
-  }, [directoryQuery.data, location.search, services, topology]);
+  }, [activeDirectory, location.search, services, topology]);
 
-  const loading = directoryQuery.isLoading || serviceQuery.isLoading || topologyQuery.isLoading || contractSettings.loading;
+  const loading = directoryQuery.isLoading || Boolean(!directoryQuery.error && directoryQuery.data && !activeDirectory) || serviceQuery.isLoading || topologyQuery.isLoading || contractSettings.loading;
 
   return (
     <section className="settings-page settings-page-wide">
@@ -228,17 +429,17 @@ const SlaOverrideSettings = () => {
         <Paragraph>Define operational terms for a provider service and an explicit Dynatrace scope. Public sla.directory terms remain available as the comparison baseline.</Paragraph>
       </div>
       {loading ? <div className="settings-callout" role="status"><strong>Loading contract scope</strong><span>Reading the provider record, service inventory, Smartscape topology, and tenant settings.</span></div> : null}
-      {!loading && !directoryQuery.data ? <div className="error-box"><strong>Provider terms are unavailable.</strong><span>Return to Monitor configuration, verify the provider slug and API connection, then try again.</span></div> : null}
-      {!loading && directoryQuery.data && initialValue ? (
+      {!loading && !activeDirectory ? <div className="error-box"><strong>Provider terms are unavailable.</strong><span>Return to Monitor configuration, verify the active provider and API connection, then try again.</span></div> : null}
+      {!loading && activeDirectory && initialValue ? (
         <>
           {!contractSettings.canWrite ? <div className="error-box compact-error">Your current role can review SLA overrides but cannot create them. Ask a Dynatrace administrator for app-settings write access.</div> : null}
           {(serviceQuery.error || topologyQuery.error) ? <div className="settings-callout"><strong>Some Dynatrace scopes are unavailable</strong><span>You can still create a provider-level SLA override. Service, host, and location choices require the corresponding entity or Smartscape read access.</span></div> : null}
           <ContractOverrideEditor
             presentation="page"
-            provider={directoryQuery.data}
+            provider={activeDirectory}
             services={services}
             topology={topology}
-            overrides={contractSettings.overrides.filter((override) => override.providerSlug === directoryQuery.data?.provider.slug)}
+            overrides={contractSettings.overrides.filter((override) => override.providerSlug === activeDirectory.provider.slug)}
             initialValue={initialValue}
             canWrite={contractSettings.canWrite}
             saving={contractSettings.mutating}
@@ -292,17 +493,17 @@ const IntroSettings = () => {
   return (
     <section className="settings-page">
       <div className="page-intro"><Text className="eyebrow">Settings · onboarding</Text><Heading level={1}>Configure onboarding and walkthrough.</Heading><Paragraph>Use the setup when the provider boundary changes. Replay the walkthrough when the evidence model needs review.</Paragraph></div>
-      <div className="onboarding-status-row"><div><span className="eyebrow">Setup status</span><strong>{preferences.onboardingComplete ? "Configured" : "Not configured"}</strong></div><div><span className="eyebrow">Walkthrough</span><strong>{preferences.tourCompleted ? "Completed" : "Ready to replay"}</strong></div><div><span className="eyebrow">Provider</span><strong>{preferences.providerSlug}</strong></div></div>
+      <div className="onboarding-status-row"><div><span className="eyebrow">Setup status</span><strong>{preferences.onboardingComplete ? "Configured" : "Not configured"}</strong></div><div><span className="eyebrow">Walkthrough</span><strong>{preferences.tourCompleted ? "Completed" : "Ready to replay"}</strong></div><div><span className="eyebrow">Providers</span><strong>{preferences.providerSlugs.map(providerDisplayName).join(", ")}</strong></div></div>
       <div className="settings-actions"><Button variant="emphasized" onClick={() => void restartIntro()}>Restart intro setup</Button><Button onClick={() => void resetTour()}>Start walkthrough now</Button>{saved ? <SavedNote text="Walkthrough is ready" /> : null}</div>
       <div className="settings-callout"><strong>What onboarding does not do.</strong><span>It does not create an SLA claim, change telemetry, add tags, or make a provider determination for you.</span></div>
     </section>
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure monitor defaults, SLA evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Monitor configuration</span><strong>Select the provider and tag convention.</strong><span>Service assignments are reviewed from Setup.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">SLA overrides</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one SLA to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run onboarding or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure monitor defaults, provider data, SLA evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Monitor configuration</span><strong>Select monitored providers and the tag convention.</strong><span>Service assignments are reviewed from Setup.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect project-relevant incident data.</strong><span>Google Cloud is read-only and optional in this release.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">SLA overrides</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one SLA to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run onboarding or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();
-  const content = page === "appearance" ? <AppearanceSettings /> : page === "intro" ? <IntroSettings /> : page === "sla-overrides" ? <SlaOverrideSettings /> : page === "watch" ? <WatchSettings /> : <SettingsLanding />;
+  const content = page === "appearance" ? <AppearanceSettings /> : page === "intro" ? <IntroSettings /> : page === "provider-connections" ? <ProviderConnectionsSettings /> : page === "sla-overrides" ? <SlaOverrideSettings /> : page === "watch" ? <WatchSettings /> : <SettingsLanding />;
   return <div className="settings-layout"><SettingsRail page={page} /><main className="settings-content">{content}</main></div>;
 };

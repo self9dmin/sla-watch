@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typography";
+import { providerDisplayName } from "../data/providers";
 
 const PROVIDER_PRESETS = [
   { slug: "aws", name: "Amazon Web Services", note: "Cloud infrastructure and managed services" },
@@ -11,7 +12,8 @@ const PROVIDER_PRESETS = [
 
 type OnboardingWizardProps = {
   initialProvider: string;
-  onComplete: (providerSlug: string) => Promise<void>;
+  initialProviders: string[];
+  onComplete: (providerSlugs: string[], providerSlug: string) => Promise<void>;
   onSkip: () => Promise<void>;
 };
 
@@ -26,14 +28,28 @@ const StepIndicator = ({ step }: { step: number }) => (
   </div>
 );
 
-export const OnboardingWizard = ({ initialProvider, onComplete, onSkip }: OnboardingWizardProps) => {
+export const OnboardingWizard = ({ initialProvider, initialProviders, onComplete, onSkip }: OnboardingWizardProps) => {
   const [step, setStep] = useState(0);
   const [providerSlug, setProviderSlug] = useState(initialProvider || "aws");
+  const [providerSlugs, setProviderSlugs] = useState(initialProviders.length > 0 ? initialProviders : [initialProvider || "aws"]);
   const [saving, setSaving] = useState(false);
 
   const complete = async () => {
     setSaving(true);
-    await onComplete(providerSlug.trim().toLowerCase());
+    await onComplete(providerSlugs, providerSlug.trim().toLowerCase());
+  };
+
+  const toggleProvider = (slug: string) => {
+    setProviderSlugs((current) => {
+      if (current.includes(slug)) {
+        if (current.length === 1) return current;
+        const next = current.filter((item) => item !== slug);
+        if (providerSlug === slug) setProviderSlug(next[0]);
+        return next;
+      }
+      setProviderSlug(slug);
+      return [...current, slug];
+    });
   };
 
   const skip = async () => {
@@ -75,22 +91,20 @@ export const OnboardingWizard = ({ initialProvider, onComplete, onSkip }: Onboar
           <div className="onboarding-panel">
             <div className="onboarding-title-block">
               <Text className="eyebrow">Step 2 · Contract source</Text>
-              <Heading level={2}>Select the provider contract.</Heading>
-              <Paragraph>Select one provider contract. You can change it in Settings and review service targets in Directory.</Paragraph>
+              <Heading level={2}>Select the provider contracts.</Heading>
+              <Paragraph>Select every provider that belongs in the monitor. The most recently selected provider opens first, and you can switch focused views at any time.</Paragraph>
             </div>
             <div className="provider-preset-grid">
               {PROVIDER_PRESETS.map((provider) => (
-                <button type="button" key={provider.slug} className={`provider-preset ${providerSlug === provider.slug ? "selected" : ""}`} onClick={() => setProviderSlug(provider.slug)}>
+                <button type="button" key={provider.slug} className={`provider-preset ${providerSlugs.includes(provider.slug) ? "selected" : ""}`} onClick={() => toggleProvider(provider.slug)} aria-pressed={providerSlugs.includes(provider.slug)}>
                   <span className="provider-preset-dot">{provider.slug.slice(0, 2).toUpperCase()}</span>
                   <span><strong>{provider.name}</strong><small>{provider.note}</small></span>
-                  <span className="provider-preset-check" aria-hidden="true">{providerSlug === provider.slug ? "Selected" : ""}</span>
+                  <span className="provider-preset-check" aria-hidden="true">{providerSlugs.includes(provider.slug) ? "Selected" : ""}</span>
                 </button>
               ))}
             </div>
-            <label className="field-label">Or enter a directory slug
-              <input value={providerSlug} onChange={(event) => setProviderSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="for example, aws" autoComplete="off" />
-            </label>
-            <div className="onboarding-actions"><Button onClick={() => setStep(0)}>Back</Button><Button variant="emphasized" disabled={!providerSlug.trim()} onClick={() => setStep(2)}>Continue</Button></div>
+            <div className="onboarding-selected-providers"><span>Opens first</span><strong>{providerDisplayName(providerSlug)}</strong><small>{providerSlugs.length} provider{providerSlugs.length === 1 ? "" : "s"} monitored</small></div>
+            <div className="onboarding-actions"><Button onClick={() => setStep(0)}>Back</Button><Button variant="emphasized" disabled={providerSlugs.length === 0} onClick={() => setStep(2)}>Continue</Button></div>
           </div>
         ) : null}
 
@@ -116,8 +130,8 @@ export const OnboardingWizard = ({ initialProvider, onComplete, onSkip }: Onboar
             <div className="ready-check">✓</div>
             <Text className="eyebrow">Step 4 · Review</Text>
             <Heading level={2}>Monitor configuration is complete.</Heading>
-            <Paragraph>The monitor will load the <strong>{providerSlug}</strong> contract, scan the last 24 hours of Dynatrace evidence, and report whether the next action is telemetry setup, provider identification, or contract review.</Paragraph>
-            <div className="ready-summary"><span>Provider contract<strong>{providerSlug}</strong></span><span>Evidence window<strong>Last 24 hours</strong></span><span>First view<strong>SLA Watch</strong></span></div>
+            <Paragraph>The monitor will load the selected contracts, scan the last 24 hours of Dynatrace evidence, and report whether the next action is telemetry setup, provider identification, or contract review.</Paragraph>
+            <div className="ready-summary"><span>Provider contracts<strong>{providerSlugs.map(providerDisplayName).join(", ")}</strong></span><span>Evidence window<strong>Last 24 hours</strong></span><span>Opens with<strong>{providerDisplayName(providerSlug)}</strong></span></div>
             <div className="onboarding-actions"><Button onClick={() => setStep(2)}>Back</Button><Button variant="emphasized" disabled={saving} onClick={() => void complete()}>{saving ? "Opening monitor" : "Open SLA Watch"}</Button></div>
           </div>
         ) : null}

@@ -1,10 +1,11 @@
-export type WatchSection = "overview" | "setup" | "directory" | "incidents";
+export type WatchSection = "overview" | "setup" | "directory" | "incidents" | "provider-notices";
 export type SlaThemePreference = "system" | "light" | "dark";
 export type RecommendationPriority = "high" | "medium" | "low";
 export type EvidenceLookbackHours = 24 | 72 | 168 | 360 | 720 | 1440 | 2160;
 
 export type SlaPreferences = {
   theme: SlaThemePreference;
+  providerSlugs: string[];
   providerSlug: string;
   providerLabelKey: string;
   lookbackHours: EvidenceLookbackHours;
@@ -13,6 +14,64 @@ export type SlaPreferences = {
 };
 
 export type ServiceRecord = { id: string; name: string; type: string; tags: string[] };
+
+export type ProviderCandidate = {
+  serviceId: string;
+  providerSlug: string;
+  evidence: string[];
+  runtimeNames: string[];
+};
+
+export type ProviderConnectionValue = {
+  connectionKey: string;
+  providerSlug: string;
+  displayName: string;
+  projectId: string;
+  credentialId: string;
+  enabled: boolean;
+};
+
+export type ProviderConnectionRecord = ProviderConnectionValue & {
+  objectId: string;
+  version: string;
+  lastModifiedBy?: string;
+  lastModifiedTime?: string;
+};
+
+export type ProviderNoticeProduct = {
+  id: string;
+  name: string;
+  directoryServiceIds: string[];
+};
+
+export type ProviderNotice = {
+  id: string;
+  source: "gcp-personalized" | "gcp-public";
+  sourceScope?: string;
+  title: string;
+  summary: string;
+  state: "ACTIVE" | "CLOSED" | "UNKNOWN";
+  detailedState?: string;
+  relevance?: string;
+  severity?: string;
+  startTime?: string;
+  endTime?: string;
+  updateTime?: string;
+  products: ProviderNoticeProduct[];
+  locations: string[];
+  url?: string;
+};
+
+export type GcpProviderNoticesResponse = {
+  provider: "gcp";
+  fetchedAt: string;
+  source: "personalized" | "public";
+  connectionState: "connected" | "public" | "fallback";
+  projectId?: string;
+  message: string;
+  warning?: string;
+  notices: ProviderNotice[];
+};
 
 export type ContractScopeKind = "provider" | "service" | "host" | "location";
 
@@ -52,12 +111,16 @@ export type SmartscapeScopeEdge = {
   serviceNodeId: string;
   serviceClassicId?: string;
   serviceName: string;
+  serviceTags: string[];
   targetNodeId: string;
   targetClassicId?: string;
   targetName: string;
   targetType: string;
   relationship: "runs_on" | "belongs_to";
   location?: string;
+  providerSlug?: string;
+  providerEvidence?: string;
+  accountId?: string;
 };
 
 export type ContractContext = {
@@ -170,6 +233,7 @@ export const slaDirectoryConnection: SlaDirectoryConnection = {
 
 export const DEFAULT_SLA_PREFERENCES: SlaPreferences = {
   theme: "system",
+  providerSlugs: ["aws"],
   providerSlug: "aws",
   providerLabelKey: "provider",
   lookbackHours: 24,
