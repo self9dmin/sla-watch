@@ -7,7 +7,7 @@ type TourStep = { target: string; title: string; body: string };
 const STEPS: TourStep[] = [
   {
     target: '[data-tour="watch"]',
-    title: "Review the watch",
+    title: "Review the monitor",
     body: "Overview shows the current provider-attribution state and the next defensible action for this environment.",
   },
   {
@@ -18,7 +18,7 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="provider"]',
     title: "Review provider records",
-    body: "Provider directory contains contract records and targets. Select a provider in Settings, then compare those records with tenant evidence.",
+    body: "Directory contains contract records and targets. Select a provider in Settings, then compare those records with tenant evidence.",
   },
   {
     target: '[data-tour="incidents"]',
@@ -28,7 +28,7 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="settings"]',
     title: "Configure the evidence boundary",
-    body: "Settings controls the provider slug, tag key, lookback window, theme, and walkthrough state. Watch configuration is shared, while theme and walkthrough state stay personal.",
+    body: "Settings controls the provider slug, tag key, lookback window, theme, and walkthrough state. Monitor configuration is shared, while theme and walkthrough state stay personal.",
   },
   {
     target: '[data-tour="changes"]',

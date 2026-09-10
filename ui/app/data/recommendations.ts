@@ -88,7 +88,7 @@ export const buildSetupRecommendations = ({
       title: "Expose the affected service boundary",
       detail: "Telemetry exists, but no service entities were returned. Confirm entity access and service detection before assigning provider responsibility.",
       evidence: "Signals were detected without a service inventory.",
-      action: "Open the watch settings",
+      action: "Open the monitor settings",
       href: "/settings/watch",
     });
   } else if (services.length === 0) {
@@ -121,7 +121,7 @@ export const buildSetupRecommendations = ({
       detail: `Add ${providerLabelKey}:${selectedProviderSlug} (or a documented equivalent) to the services that depend on ${directoryData.provider.name}. Names alone are not enough for a provider review.`,
       evidence: `${services.length} service${services.length === 1 ? "" : "s"} returned, but no provider tags were found.`,
       action: "Review services",
-      href: "/setup#provider-mapping",
+      href: "/setup?review=provider#provider-mapping",
     });
   } else if (directoryData && providerLabels.length > 0 && matchedProviderServices === 0) {
     add(recommendations, {
@@ -131,7 +131,7 @@ export const buildSetupRecommendations = ({
       detail: `Dynatrace has provider tags, but none resolve to ${directoryData.provider.name}. Confirm the intended provider before reviewing the contract.`,
       evidence: `Detected tags: ${providerLabels.slice(0, 3).join(", ")}. Selected contract: ${directoryData.provider.name}.`,
       action: "Review services",
-      href: "/setup#provider-mapping",
+      href: "/setup?review=provider#provider-mapping",
     });
   }
 
@@ -143,6 +143,7 @@ export const buildSetupRecommendations = ({
       detail: "Add team, owner, application, or service metadata so the next responder can route a provider finding without decoding a name or guessing the owning group.",
       evidence: "No owner, team, application, or app tags were found on the returned service records.",
       action: "Add ownership metadata in Dynatrace",
+      platformAction: "ownership-settings",
     });
   }
 

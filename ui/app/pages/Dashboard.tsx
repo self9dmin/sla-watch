@@ -7,9 +7,11 @@ import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typograph
 import { SetupAdvisor } from "../components/SetupAdvisor";
 import { IncidentReview } from "../components/IncidentReview";
 import { ProviderTagSetup } from "../components/ProviderTagSetup";
+import { ProviderDirectoryWorkspace } from "../components/ProviderDirectoryWorkspace";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
 import { providerTagValue } from "../data/providerTags";
 import { buildSetupRecommendations } from "../data/recommendations";
+import { formatEvidenceLookback } from "../data/lookback";
 import {
   createLogsCountQuery,
   createProblemsQuery,
@@ -18,7 +20,6 @@ import {
   SERVICES_QUERY,
 } from "../data/queries";
 import {
-  slaDirectoryConnection,
   type ProblemRecord,
   type ServiceRecord,
   type SlaProviderResponse,
@@ -74,7 +75,7 @@ const WATCH_LINKS: ReadonlyArray<{ section: WatchRouteSection; label: string; to
 ];
 
 const WatchNavigation = ({ section }: { section: WatchRouteSection }) => (
-  <nav className="section-tabs" aria-label="Watch sections">
+  <nav className="section-tabs" aria-label="Monitor sections">
     {WATCH_LINKS.map((item) => (
       <Link
         key={item.section}
@@ -98,7 +99,7 @@ const EvidenceStep = ({ number, title, detail, state }: { number: number; title:
 
 export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
   const section = initialSection;
-  const { preferences } = useSlaPreferences();
+  const { preferences, updatePreferences } = useSlaPreferences();
   const { providerSlug, providerLabelKey, lookbackHours } = preferences;
   const problemsQuery = useMemo(() => createProblemsQuery(lookbackHours), [lookbackHours]);
   const logsQuery = useMemo(() => createLogsCountQuery(lookbackHours), [lookbackHours]);
@@ -147,7 +148,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
         ? { tone: "warning" as Tone, title: "Entity inventory incomplete", detail: "Telemetry exists, but no service entities were returned. Check entity permissions or entity mapping before evaluating provider responsibility." }
         : telemetrySignalsPresent
           ? { tone: "positive" as Tone, title: "Telemetry detected", detail: "Dynatrace has service entities or signals that can support an evidence review." }
-          : { tone: "warning" as Tone, title: "Telemetry missing", detail: `No Problems, logs, spans, or service request series were detected in the last ${lookbackHours} hours.` };
+          : { tone: "warning" as Tone, title: "Telemetry missing", detail: `No Problems, logs, spans, or service request series were detected in the last ${formatEvidenceLookback(lookbackHours)}.` };
   const providerState = directoryLoading
     ? { tone: "neutral" as Tone, title: "Checking provider identity", detail: `Loading the ${providerSlug} contract before evaluating tags.` }
     : !directoryData
@@ -207,7 +208,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
         : !telemetrySignalsPresent
           ? {
               title: "Add a recent service signal",
-              detail: `No Problems, logs, spans, or service request series were detected in the last ${lookbackHours} hours.`,
+              detail: `No Problems, logs, spans, or service request series were detected in the last ${formatEvidenceLookback(lookbackHours)}.`,
               action: "Review evidence scope",
               href: "/setup",
             }
@@ -235,7 +236,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
                 : activeProblems === 0
                   ? {
                       title: "No incident requires provider review",
-                      detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? " matches" : "s match"} ${providerName}. No active Problems were found in the last ${lookbackHours} hours.`,
+                      detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? " matches" : "s match"} ${providerName}. No active Problems were found in the last ${formatEvidenceLookback(lookbackHours)}.`,
                       action: "Review provider terms",
                       href: "/directory",
                     }
@@ -277,20 +278,20 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     <div className="dashboard-shell">
       <section className="hero-row">
         <div className="hero-copy-block">
-          <Heading level={1}>Provider SLA watch</Heading>
-          <Paragraph className="hero-copy">Monitor provider mapping, Dynatrace Problems, and filing windows for this environment.</Paragraph>
+          <Heading level={1}>{section === "directory" ? "Directory" : "Provider SLA monitor"}</Heading>
+          <Paragraph className="hero-copy">{section === "directory" ? "Review public and tenant-specific SLA terms for the selected provider." : "Monitor provider mapping, Dynatrace Problems, and filing windows for this environment."}</Paragraph>
         </div>
         <div className="hero-actions">
-          <div className="hero-status-line">
-            <StatusPill tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}>
-              {slaDirectoryConnection.source}: {directoryLoading ? "checking" : directoryData ? "connected" : "unavailable"}
-            </StatusPill>
-            <span>Watching <strong>{providerName}</strong></span>
+          <div className="hero-provider">
+            <span>Provider</span>
+            <strong>{providerName}</strong>
           </div>
-          <Button variant="emphasized" onClick={handleRefresh} disabled={telemetryLoading || directoryLoading} size="condensed">
-            {telemetryLoading || directoryLoading ? "Refreshing" : "Refresh watch"}
-          </Button>
-          <Link className="text-action" to="/settings/watch">Configure watch</Link>
+          <div className="hero-action-buttons">
+            <Button className="hero-action-secondary" onClick={handleRefresh} disabled={telemetryLoading || directoryLoading} size="condensed">
+              {telemetryLoading || directoryLoading ? "Refreshing" : "Refresh data"}
+            </Button>
+            <Button className="hero-action-primary" as={Link} to="/settings/watch" variant="emphasized" size="condensed">Configure</Button>
+          </div>
         </div>
       </section>
 
@@ -316,7 +317,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
                 ) : null}
               </div>
             </div>
-            <div className="overview-facts" aria-label="Current watch facts">
+            <div className="overview-facts" aria-label="Current monitor facts">
               <OverviewFact
                 label="Provider"
                 value={directoryLoading ? "Checking" : directoryData ? providerName : "Unavailable"}
@@ -332,7 +333,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
               <OverviewFact
                 label="Incidents"
                 value={problemsLoading ? "Checking" : `${activeProblems} active`}
-                detail={`${problems.length} observed in ${lookbackHours}h`}
+                detail={`${problems.length} observed in ${formatEvidenceLookback(lookbackHours)}`}
                 tone={problemsLoading ? "neutral" : activeProblems > 0 ? "warning" : "neutral"}
               />
               <OverviewFact
@@ -363,9 +364,26 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
             </div>
           </Surface>
         ) : section === "directory" ? (
-          <Surface className="panel-card directory-panel"><div className="panel-heading-row"><div><Text className="eyebrow">Provider and service map</Text><Heading level={2}>Provider directory</Heading></div><StatusPill tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}>{directoryLoading ? "Checking" : directoryData ? `${directoryData.provider.name} connected` : "Directory unavailable"}</StatusPill></div><Paragraph>{directoryData ? `${directoryData.provider.name} has ${directoryData.services.length} service records. These are contractual targets, not measured tenant availability.` : directoryError ? `${directoryError.message}. Check the environment External requests allowlist.` : "Loading provider data..."}</Paragraph>{serviceError ? <div className="error-box">Dynatrace service inventory could not be loaded: {serviceError.message}</div> : null}{directoryData ? <div className="service-table" role="table" aria-label="Provider SLA services"><div className="service-row service-row-header" role="row"><span>Provider service</span><span>Target</span><span>Contract record</span><span>Verification</span></div>{directoryData.services.slice(0, 20).map((service) => <div className="service-row" role="row" key={service.id}><div><strong>{service.name}</strong><small>{service.id}</small></div><span>{service.uptime ? `${service.uptime}%` : "No target"}</span><StatusPill tone={service.eligible ? "positive" : "neutral"}>{service.eligible ? "Published SLA" : "Reference"}</StatusPill><span>{directoryData.provider.lastVerified}</span></div>)}</div> : null}<div className="directory-footer"><span>Need a different provider or tag convention?</span><Link className="inline-action" to="/settings/watch">Open watch settings</Link></div>{servicesLoading || directoryLoading ? <div className="empty-state">Loading watch data...</div> : null}</Surface>
+          <Surface className="panel-card directory-panel">
+            <ProviderDirectoryWorkspace
+              directory={directoryData}
+              directoryLoading={directoryLoading}
+              directoryError={directoryError ?? undefined}
+              services={services}
+              servicesLoading={servicesLoading}
+              serviceError={serviceError ?? undefined}
+            />
+          </Surface>
         ) : (
-          <IncidentReview provider={directoryData} problems={problems} services={services} lookbackHours={lookbackHours} loading={problemsLoading} error={problemError ?? undefined} />
+          <IncidentReview
+            provider={directoryData}
+            problems={problems}
+            services={services}
+            lookbackHours={lookbackHours}
+            onLookbackChange={(value) => void updatePreferences({ lookbackHours: value })}
+            loading={problemsLoading}
+            error={problemError ?? undefined}
+          />
         )}
       </div>
     </div>

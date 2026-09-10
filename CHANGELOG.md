@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.31
+
+- Added tenant-owned SLA overrides in App Settings while preserving `sla.directory` as the public comparison baseline.
+- Added explicit multi-entity evidence boundaries for Dynatrace services, hosts, runtimes, and observed locations. Entity IDs establish the assignment; names are display context only.
+- Added a Smartscape-backed scope map and precedence for host, location, service, provider, then public terms.
+- Added conservative incident matching that can select one uniquely applicable custom SLA from affected service and topology evidence without declaring provider fault.
+- Moved new and custom SLA creation into Settings. Existing records retain a compact quick-edit dialog.
+- Renamed the primary workspaces to Monitor and Directory, simplified the Monitor header actions, and added inline incident lookback choices from 24 hours through 90 days.
+
 ## 0.0.30
 
 - Reorganized Watch into Overview, Setup, and Incidents so each page has one operational purpose.
@@ -95,4 +104,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.30` release candidate.
+- Reserved for changes after the `0.0.31` release candidate.

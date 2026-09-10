@@ -18,7 +18,7 @@ export const ChangeLogPage = () => {
       <div>
         <span className="eyebrow">Scope</span>
         <strong>Application releases</strong>
-        <span>Provider settings and tenant evidence remain in the watch and settings surfaces.</span>
+        <span>Provider settings and tenant evidence remain in the monitor and settings surfaces.</span>
       </div>
       <CommunityLink className="inline-action" />
     </section>
@@ -49,6 +49,6 @@ export const ChangeLogPage = () => {
       </div>
     </section>
 
-    <div className="workflow-note"><strong>Operational boundary</strong><span>{communityLive ? "Use the watch to review provider evidence. Use the Dynatrace Community profile for questions, support, or issue discussion." : "Use the watch to review provider evidence. Dynatrace Community support remains unavailable until public launch."}</span></div>
+    <div className="workflow-note"><strong>Operational boundary</strong><span>{communityLive ? "Use the monitor to review provider evidence. Use the Dynatrace Community profile for questions, support, or issue discussion." : "Use the monitor to review provider evidence. Dynatrace Community support remains unavailable until public launch."}</span></div>
   </div>
 };

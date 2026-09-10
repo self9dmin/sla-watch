@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.30",
+    version: "0.0.31",
     label: "Current release",
+    summary: "Added tenant SLA terms with explicit Dynatrace evidence boundaries.",
+    details: [
+      "Added shared SLA overrides while retaining sla.directory as the read-only public baseline.",
+      "Allowed one custom SLA to target multiple exact services, hosts, runtimes, or observed locations from the tenant.",
+      "Added a Smartscape-backed scope map and conservative incident matching that never treats names or topology as proof of provider fault.",
+      "Renamed the primary workspaces to Monitor and Directory, simplified the header actions, and expanded incident lookback options through 90 days.",
+    ],
+  },
+  {
+    version: "0.0.30",
+    label: "Previous release",
     summary: "Reorganized Watch around setup, status, and incident work.",
     details: [
       "Replaced the Evidence and Incident review navigation with focused Setup and Incidents workspaces.",

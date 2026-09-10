@@ -18,7 +18,7 @@ const LoadingScreen = () => (
   <div className="sla-loading-screen">
     <ProgressCircle aria-label="Loading SLA Watch" />
     <div>
-      <Heading level={3}>Loading your watch setup</Heading>
+      <Heading level={3}>Loading your monitor setup</Heading>
       <Paragraph>Restoring provider, theme, and workflow preferences.</Paragraph>
     </div>
   </div>
@@ -36,7 +36,7 @@ const AppShell = ({
   saveError: string | null;
 }) => {
   const location = useLocation();
-  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents";
+  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents" || location.pathname === "/directory";
   return (
     <div className="sla-app">
       <header className="sla-header">
@@ -66,6 +66,16 @@ const AppContent = () => {
   const { preferences, loading, saveError, updatePreferences } = useSlaPreferences();
   const [tourOpen, setTourOpen] = useState(false);
   const theme: AppTheme = preferences.theme === "system" ? systemTheme : preferences.theme;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const previousTheme = root.getAttribute("data-app-theme");
+    root.setAttribute("data-app-theme", theme);
+    return () => {
+      if (previousTheme) root.setAttribute("data-app-theme", previousTheme);
+      else root.removeAttribute("data-app-theme");
+    };
+  }, [theme]);
 
   useEffect(() => {
     if (!loading && preferences.onboardingComplete && !preferences.tourCompleted) setTourOpen(true);

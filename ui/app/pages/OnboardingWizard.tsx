@@ -57,7 +57,7 @@ export const OnboardingWizard = ({ initialProvider, onComplete, onSkip }: Onboar
             <div>
               <Text className="eyebrow">Initial setup</Text>
               <Heading level={1} id="onboarding-title">Review provider evidence for this environment.</Heading>
-              <Paragraph>Select a provider contract and define the evidence boundary used by the watch. The watch separates service symptoms, provider identity, and contract eligibility.</Paragraph>
+              <Paragraph>Select a provider contract and define the evidence boundary used by the monitor. The monitor separates service symptoms, provider identity, and contract eligibility.</Paragraph>
             </div>
             <div className="onboarding-proof-grid" aria-label="Checks performed by SLA Watch">
               <div><span className="proof-index">01</span><strong>Telemetry</strong><small>Is there enough live signal to investigate?</small></div>
@@ -66,7 +66,7 @@ export const OnboardingWizard = ({ initialProvider, onComplete, onSkip }: Onboar
             </div>
             <div className="onboarding-footer-row">
               <span className="muted-copy">No changes are made to your tenant.</span>
-              <Button variant="emphasized" onClick={() => setStep(1)}>Configure watch</Button>
+              <Button variant="emphasized" onClick={() => setStep(1)}>Configure monitor</Button>
             </div>
           </div>
         ) : null}
@@ -76,7 +76,7 @@ export const OnboardingWizard = ({ initialProvider, onComplete, onSkip }: Onboar
             <div className="onboarding-title-block">
               <Text className="eyebrow">Step 2 · Contract source</Text>
               <Heading level={2}>Select the provider contract.</Heading>
-              <Paragraph>Select one provider contract. You can change it in Settings and review service targets in Provider directory.</Paragraph>
+              <Paragraph>Select one provider contract. You can change it in Settings and review service targets in Directory.</Paragraph>
             </div>
             <div className="provider-preset-grid">
               {PROVIDER_PRESETS.map((provider) => (
@@ -99,7 +99,7 @@ export const OnboardingWizard = ({ initialProvider, onComplete, onSkip }: Onboar
             <div className="onboarding-title-block">
               <Text className="eyebrow">Step 3 · Evidence model</Text>
               <Heading level={2}>Provider attribution requires evidence.</Heading>
-              <Paragraph>The watch evaluates provider attribution in stages. Review each stage before treating a service symptom as provider-related.</Paragraph>
+              <Paragraph>The monitor evaluates provider attribution in stages. Review each stage before treating a service symptom as provider-related.</Paragraph>
             </div>
             <div className="evidence-ladder">
               <div className="evidence-ladder-row"><span className="evidence-state state-neutral">1</span><div><strong>Telemetry exists</strong><small>Problems, logs, spans, or service request signals are present.</small></div></div>
@@ -115,10 +115,10 @@ export const OnboardingWizard = ({ initialProvider, onComplete, onSkip }: Onboar
           <div className="onboarding-panel onboarding-ready">
             <div className="ready-check">✓</div>
             <Text className="eyebrow">Step 4 · Review</Text>
-            <Heading level={2}>Watch configuration is complete.</Heading>
-            <Paragraph>The watch will load the <strong>{providerSlug}</strong> contract, scan the last 24 hours of Dynatrace evidence, and report whether the next action is telemetry setup, provider identification, or contract review.</Paragraph>
+            <Heading level={2}>Monitor configuration is complete.</Heading>
+            <Paragraph>The monitor will load the <strong>{providerSlug}</strong> contract, scan the last 24 hours of Dynatrace evidence, and report whether the next action is telemetry setup, provider identification, or contract review.</Paragraph>
             <div className="ready-summary"><span>Provider contract<strong>{providerSlug}</strong></span><span>Evidence window<strong>Last 24 hours</strong></span><span>First view<strong>SLA Watch</strong></span></div>
-            <div className="onboarding-actions"><Button onClick={() => setStep(2)}>Back</Button><Button variant="emphasized" disabled={saving} onClick={() => void complete()}>{saving ? "Opening watch" : "Open SLA Watch"}</Button></div>
+            <div className="onboarding-actions"><Button onClick={() => setStep(2)}>Back</Button><Button variant="emphasized" disabled={saving} onClick={() => void complete()}>{saving ? "Opening monitor" : "Open SLA Watch"}</Button></div>
           </div>
         ) : null}
 

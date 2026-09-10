@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { monitoredEntitiesCustomTagsClient } from "@dynatrace-sdk/client-classic-environment-v2";
 import { effectivePermissionsClient } from "@dynatrace-sdk/client-platform-management-service";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -41,6 +41,7 @@ export const ProviderTagSetup = ({
   loading: boolean;
   onRefresh: () => void | Promise<unknown>;
 }) => {
+  const location = useLocation();
   const [permission, setPermission] = useState<PermissionState>("checking");
   const [step, setStep] = useState<ReviewStep>("summary");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -68,6 +69,11 @@ export const ProviderTagSetup = ({
     setMessage(null);
     setLastChange(null);
   }, [providerSlug, providerTagKey]);
+
+  useEffect(() => {
+    const review = new URLSearchParams(location.search).get("review");
+    if ((review === "provider" || location.hash === "#provider-mapping") && services.length > 0) setStep("select");
+  }, [location.hash, location.search, services.length]);
 
   const rows = useMemo(() => services.map((service) => {
     const values = providerTagValues(service.tags, providerTagKey, providerSlug);
