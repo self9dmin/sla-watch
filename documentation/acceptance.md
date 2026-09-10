@@ -1,18 +1,20 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.35`, plus prior release records. Version `0.0.36` is a local candidate and is not represented here as deployed. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.36`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
 
-## 0.0.36 local candidate checks
+## 0.0.36 verified scenarios
 
-The `0.0.36` source was exercised through the Dynatrace local-development shell on 2026-09-10. No provider credential, Credential Vault record, provider connection, tag, scope mapping, or SLA override was created or changed.
+The `0.0.36` artifact from source commit `44c853a` was deployed to the designated Dynatrace target environment on 2026-09-10 and exercised through the installed application. No provider credential, Credential Vault record, provider connection, tag, scope mapping, monitor setting, or SLA override was created or changed.
 
 | Scenario | Result | Evidence |
 | --- | --- | --- |
+| Release artifact | The `0.0.36` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully; the installed change log reports `0.0.36 Current release` | Installed production deployment and Chrome smoke; source commit `44c853a` |
 | Release gate | Type checks, lint, 16 test suites with 88 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed | `npm run verify:release`; production dependency audit reported zero vulnerabilities |
-| Core cloud model | AWS, Azure, GCP, and OCI are peer provider connection types; a fresh workspace monitors all four and AWS is only the initial focused view | Local Dynatrace shell, default-provider unit coverage, and provider-connection unit coverage |
-| Multiple account scopes | The settings surface supports collections of AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies without one provider replacing another | Local Dynatrace shell and provider-connection schema/unit coverage |
+| Core cloud model | AWS, Azure, GCP, and OCI are peer provider connection types; a fresh workspace monitors all four and AWS is only the initial focused view | Installed Provider connections smoke, default-provider unit coverage, and provider-connection unit coverage |
+| Multiple account scopes | The settings surface supports collections of AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies without one provider replacing another | Installed Provider connections smoke and provider-connection schema/unit coverage |
 | Secret boundary | The form accepts only a Credential Vault record ID; AWS signing material, Azure client secrets, Google service-account keys, and OCI private keys are never entered into App Settings or returned to the browser | Local settings smoke, schema review, and function tests with synthetic credentials |
-| One-screen layout | All four connection forms fit without settings-page scrolling in both dark and light themes at the tested desktop viewport | Each provider reported equal body client and scroll dimensions of 1646 by 744 CSS pixels in both themes |
+| One-screen layout | All four installed connection forms fit without settings-page scrolling in both dark and light themes at the tested desktop viewport | Each provider reported equal document and body client and scroll dimensions of 1646 by 800 CSS pixels in both themes |
+| Operational paths | Monitor retained the existing AWS/GCP workspace state, Directory loaded AWS published terms and tenant overrides, and Provider notices requested an account-specific AWS source without substituting unrelated public data | Installed production Chrome smoke |
 | AWS request boundary | The function validates the account, verifies it with STS, signs bounded Health requests, filters to account-specific events, and rejects a wrong-account credential before reading Health events | `tests/awsHealth.function.test.ts`, typecheck, lint, and production build |
 | Azure request boundary | The function validates the subscription and vaulted client credential, uses fixed Entra and Resource Manager hosts, bounds Resource Health reads, and reduces provider markup to text | `tests/azureServiceHealth.function.test.ts`, typecheck, lint, and production build |
 | OCI request boundary | The function accepts only validated commercial regions, constructs `announcements.<region>.oraclecloud.com`, signs a bounded read request, and reports auth or IAM errors without public fallback | `tests/ociAnnouncements.function.test.ts`, typecheck, lint, and production build |
