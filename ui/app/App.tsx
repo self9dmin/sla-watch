@@ -36,7 +36,7 @@ const AppShell = ({
   saveError: string | null;
 }) => {
   const location = useLocation();
-  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents" || location.pathname === "/directory";
+  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents" || location.pathname === "/provider-notices" || location.pathname === "/directory";
   return (
     <div className="sla-app">
       <header className="sla-header">
@@ -48,6 +48,7 @@ const AppShell = ({
           <Route path="/" element={<Dashboard />} />
           <Route path="/setup" element={<Dashboard initialSection="setup" />} />
           <Route path="/incidents" element={<Dashboard initialSection="incidents" />} />
+          <Route path="/provider-notices" element={<Dashboard initialSection="provider-notices" />} />
           <Route path="/evidence" element={<Navigate to="/setup" replace />} />
           <Route path="/review" element={<Navigate to="/incidents" replace />} />
           <Route path="/directory" element={<Dashboard initialSection="directory" />} />
@@ -85,8 +86,8 @@ const AppContent = () => {
     if (!preferences.onboardingComplete) setTourOpen(false);
   }, [preferences.onboardingComplete]);
 
-  const completeOnboarding = async (providerSlug: string) => {
-    await updatePreferences({ onboardingComplete: true, tourCompleted: false, providerSlug });
+  const completeOnboarding = async (providerSlugs: string[], providerSlug: string) => {
+    await updatePreferences({ onboardingComplete: true, tourCompleted: false, providerSlugs, providerSlug });
     await navigate("/");
   };
 
@@ -100,6 +101,7 @@ const AppContent = () => {
   ) : !preferences.onboardingComplete ? (
     <OnboardingWizard
       initialProvider={preferences.providerSlug}
+      initialProviders={preferences.providerSlugs}
       onComplete={completeOnboarding}
       onSkip={skipOnboarding}
     />

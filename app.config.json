@@ -3,13 +3,14 @@
   "environmentUrl": "https://your-environment.apps.dynatrace.com/",
   "app": {
     "name": "SLA Watch",
-    "version": "0.0.31",
+    "version": "0.0.34",
     "icon": "ui/assets/sla-watch-icon.svg",
     "description": "Correlate provider SLAs with Dynatrace evidence and service ownership",
     "id": "my.sla",
     "scopes": [
       { "name": "storage:entities:read", "comment": "Read services and managed entities for the SLA watch" },
       { "name": "environment-api:entities:write", "comment": "Add or remove an explicitly confirmed provider tag on selected service entities" },
+      { "name": "environment-api:credentials:read", "comment": "Read an administrator-selected AppEngine credential for an optional provider incident connection" },
       { "name": "storage:events:read", "comment": "Read problem events that can affect SLA posture" },
       { "name": "storage:metrics:read", "comment": "Read service health signals for SLA evaluation" },
       { "name": "storage:logs:read", "comment": "Check whether correlated log telemetry exists" },

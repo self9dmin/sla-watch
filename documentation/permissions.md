@@ -13,6 +13,7 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | `storage:spans:read` | Count recent spans | Show span count as unavailable |
 | `storage:smartscape:read` | Read service-to-runtime and location relationships used for evidence-boundary selection | Hide unavailable topology choices; never infer them from entity names |
 | `environment-api:entities:write` | Add or remove the configured provider tag on explicitly selected service entities | Keep Setup read-only and explain that entity-settings permission is required |
+| `environment-api:credentials:read` | Read the administrator-selected AppEngine Token credential inside the provider AppEngine function | Keep personalized provider notices unavailable; public status can remain available |
 | `app-settings:objects:read` | Read shared tenant SLA overrides from the app's `contract-overrides` schema | Use the public directory baseline and identify tenant terms as unavailable |
 | `app-settings:objects:write` | Create, update, disable, or remove explicitly confirmed tenant SLA overrides | Keep SLA override management read-only |
 | `state:user-app-states:read` | Restore theme, onboarding, and walkthrough state | Use browser fallback |
@@ -28,6 +29,9 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | Problems, logs, spans, metrics | Current-user scope | None | Evidence posture becomes unknown when a read fails |
 | Smartscape relationships | Current-user scope | None | Host, runtime, and location assignments are unavailable when denied; names are not substituted |
 | `sla.directory` contract | AppEngine external request allowlist | None | Provider contract becomes unavailable when the function cannot run |
+| Google Cloud provider notices | Public status, or current-user plus app access to one Credential Vault record and Google `roles/servicehealth.viewer` | None | Show public, project-specific, or fallback source explicitly; never claim project impact from public status |
+| Provider connection metadata | Authenticated app users with App Settings read access | Users with App Settings write access for `provider-connections` | The service-account JSON remains in Credential Vault; settings contain only provider, project, and credential IDs |
+| Credential Vault | Selected AppEngine credential only | None | The app cannot create, edit, list, rotate, or delete provider credentials |
 | Tenant SLA overrides | All authenticated users of the app with App Settings read access | Users with App Settings write access for `contract-overrides` | Public terms remain unchanged; unavailable or denied settings fall back conservatively to the public record |
 | User app state | User state read | User state write | Personal preferences remain local when denied |
 | Shared app state | App state read | App state write | Workspace configuration remains local when denied |
@@ -46,6 +50,8 @@ The provider-tag operation also requires the signed-in user to have Dynatrace en
 - Verify a user missing each scope receives the documented conservative state.
 - Verify granted, denied, management-zone-limited, partial-match, and undo outcomes for the provider-tag workflow.
 - Verify App Settings read/write separation with a read-only user and confirm that tenant SLA records remain visible but immutable.
+- Verify Provider connections with a least-privilege Google service account, an inaccessible credential, an invalid project, an unavailable external host, and public fallback.
+- Confirm the Hub Technical information discloses the Credential Vault read scope and the administrator-owned lifecycle for provider credentials.
 - Verify missing Smartscape permission removes runtime and location choices without producing a name-based assignment.
 - Confirm the Hub Technical information and installation copy clearly disclose the entity-write scope before distribution.
 - Verify that shared watch configuration is not presented as globally saved when the write was denied.

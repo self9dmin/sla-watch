@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.0.34
+
+- Replaced the single global provider setting with a monitored-provider collection and a separate active provider for focused views.
+- Added exact-ID Smartscape provider candidates from cloud runtime relationships without using service names as evidence or changing tags automatically.
+- Merged topology-backed services into Setup so service records visible only through Smartscape are not omitted from provider review.
+- Added a confirmation-first workflow for applying provider tags to selected candidates while preserving existing tags and unresolved services.
+- Kept provider monitoring separate from optional provider-account connections and blocked stale directory data from crossing provider views.
+
+## 0.0.33
+
+- Fixed Provider notices so the selected source loads after shared connection settings finish initializing.
+- Added a stable loading state instead of allowing an empty provider-notice workspace.
+- Removed forward-looking provider promises from the interface and clarified which settings are shared with the workspace.
+
+## 0.0.32
+
+- Added an optional Google Cloud Personalized Service Health connection using a customer-owned, AppEngine-scoped Credential Vault record.
+- Added a separate Provider notices workspace with explicit project-specific, public, and fallback source states.
+- Added stable Google product-ID mappings to sla.directory service IDs without inferring service ownership, local impact, provider fault, or credit eligibility.
+- Added public Google Cloud Status as a no-credential fallback and kept Test connection strict so authentication failures are never hidden.
+
 ## 0.0.31
 
 - Added tenant-owned SLA overrides in App Settings while preserving `sla.directory` as the public comparison baseline.
@@ -104,4 +125,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.31` release candidate.
+- Reserved for changes after the `0.0.34` release candidate.

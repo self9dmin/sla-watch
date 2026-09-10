@@ -14,6 +14,10 @@ This document separates executable coverage from manual or proposed coverage. Pa
 | SLO follow-up | SLO advice requires a known provider boundary | A matched provider tag with owner context can suggest native SLO follow-up | `tests/recommendations.test.ts` | Existing unit test |
 | App-state expiry | Expiration must remain inside the platform limit | The generated timestamp includes a safety margin below 90 days | `tests/stateExpiration.test.ts` | Existing unit test |
 | External contract parsing | Untrusted directory payloads must be validated | Invalid envelope or service identity throws before data reaches the UI | `tests/slaDirectory.function.test.ts` | Existing unit test |
+| Multi-provider normalization | Provider monitoring is a collection with one valid active provider | Slugs are normalized, deduplicated, bounded, and invalid values are rejected | `tests/providers.test.ts` | Existing unit test |
+| Smartscape provider candidates | Cloud topology may suggest an exact service boundary but never auto-assign one | Only exact service entity IDs connected to provider metadata become candidates; names do not create candidates | `tests/providerAttribution.test.ts`, `tests/topology.test.ts` | Existing unit test |
+| Provider notice parsing | Provider responses remain source-labeled and bounded | Personalized relevance, public-state handling, stable product-ID mapping, lookback filtering, and malformed payloads normalize conservatively | `tests/gcpServiceHealth.function.test.ts` | Existing unit test |
+| Provider connection validation | Secret values must not enter App Settings | Project and Credential Vault identifiers normalize; incomplete and malformed records are rejected | `tests/providerConnections.test.ts` | Existing unit test |
 | Custom SLA precedence | Tenant terms must layer predictably over the public baseline | Host, location, service, provider, and directory values are applied in documented order; unrelated, expired, and disabled records are ignored | `tests/contractOverrides.test.ts` | Existing unit test |
 | Multi-entity SLA assignment | One SLA may cover several exact entities without broad name matching | Either assigned service ID matches the custom SLA; an unrelated service keeps the public baseline | `tests/contractOverrides.test.ts` | Existing unit test |
 | Settings compatibility | Existing single-target SLA records remain readable after the multi-target schema addition | A legacy `scopeEntityId` is normalized into the target list | `tests/contractOverrides.test.ts` | Existing unit test |
@@ -21,7 +25,7 @@ This document separates executable coverage from manual or proposed coverage. Pa
 | Lookback boundaries | Only supported evidence windows reach DQL | 24 hours, 72 hours, 7, 15, 30, 60, and 90 days normalize to bounded values | `tests/lookback.test.ts` | Existing unit test |
 | Static quality | Type and lint errors block a change | `npm run typecheck` and `npm run lint` exit successfully | `package.json`, CI workflow | Existing CI gate |
 | Bundle validity | App manifest and bundle must be accepted by `dt-app` | `npm run build` and `npm run analyze` exit successfully | `dt-app` output | Existing CI gate |
-| Browser smoke | A deployed app exposes focused Overview, Setup, and Incidents routes with a conservative posture | The Playwright suite visits all three views and requires each normal desktop state to fit without body scrolling | `tests/e2e/sla-watch.spec.ts`, `playwright.config.ts` | Prepared guarded E2E |
+| Browser smoke | A deployed app exposes focused Overview, Setup, Incidents, and Provider notices routes with a conservative posture | The Playwright suite visits each view, confirms the multi-provider controls, and requires normal desktop states to fit without body scrolling | `tests/e2e/sla-watch.spec.ts`, `playwright.config.ts` | Prepared guarded E2E |
 | Header action guidance | Every icon-only header action must retain its icon and identify itself without relying on icon recognition | The Playwright suite requires one SVG and the matching Strato tooltip for each header action, including the disabled Community state | `tests/e2e/sla-watch.spec.ts` | Prepared guarded E2E |
 | Pre-launch Community gate | Community destinations must not navigate before public launch | The Playwright suite verifies the header action is disabled and no Community link is exposed from release history or settings | `tests/e2e/sla-watch.spec.ts` | Prepared guarded E2E |
 | SLA settings workflow | New records belong in Settings and require explicit evidence targets | Browser smoke confirms no create dialog is used, service scope begins empty, and selecting an exact target updates the assignment | `tests/e2e/sla-watch.spec.ts` | Prepared guarded E2E |
@@ -32,6 +36,7 @@ This document separates executable coverage from manual or proposed coverage. Pa
 | --- | --- | --- | --- | --- |
 | Tenant access matrix | Each missing declared scope yields the documented degraded state | A test user without entities, events, logs, spans, metrics, or state access sees unknown/incomplete, never false absence | Guarded live integration | Proposed |
 | External dependency | Upstream timeout, 4xx, 5xx, invalid JSON, and empty services remain safe | Directory status is unavailable and no contract result is reused as current | Automated function integration | Proposed |
+| Personalized provider connection | Google OAuth, Credential Vault, Service Health, and fallback boundaries remain distinguishable | A valid project is project-specific, failed test never falls back, failed monitor read is labeled public fallback, and no secret reaches the UI | Guarded live integration | Proposed |
 | Provider-tag authorization | The tag action requires both app scope and user permission | Granted, denied, unverifiable, and management-zone-limited users receive the documented action state | Guarded live integration | Proposed |
 | Provider-tag mutation | Only confirmed entity IDs and one key/value are changed | Existing tags remain, conflicts are excluded, partial counts are shown, and undo removes only the last app-applied key/value | Guarded live integration | Proposed |
 | Browser first run | Onboarding completes and can be skipped | The app reaches the dashboard; skip does not fabricate provider evidence | `tests/e2e/sla-watch.spec.ts` | Prepared, guarded live run pending |
@@ -49,6 +54,7 @@ This document separates executable coverage from manual or proposed coverage. Pa
 4. Provider-service-to-Dynatrace-entity joins are explicit operator assignments, not automatic discovery. Tests verify exact-ID matching, but no test can claim provider fault or end-to-end credit eligibility.
 5. The tag write and undo require a disposable live-service fixture before automated mutation coverage can run safely.
 6. No automated accessibility scan is wired into CI.
+7. Google provider authentication requires a disposable live key for acceptance. The key and its Credential Vault record must be revoked and deleted after the test.
 
 ## CI policy
 

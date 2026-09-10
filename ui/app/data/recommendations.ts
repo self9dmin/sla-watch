@@ -16,6 +16,7 @@ type RecommendationInput = {
   selectedProviderSlug: string;
   providerLabelKey: string;
   matchedProviderServices: number;
+  providerCandidateServices?: number;
 };
 
 const priorityRank: Record<SetupRecommendation["priority"], number> = { high: 0, medium: 1, low: 2 };
@@ -54,6 +55,7 @@ export const buildSetupRecommendations = ({
   selectedProviderSlug,
   providerLabelKey,
   matchedProviderServices,
+  providerCandidateServices = 0,
 }: RecommendationInput): SetupRecommendation[] => {
   const recommendations: SetupRecommendation[] = [];
   const activeProblems = problems.filter((problem) => problem.status === "ACTIVE").length;
@@ -117,10 +119,14 @@ export const buildSetupRecommendations = ({
     add(recommendations, {
       id: "provider-label",
       priority: "high",
-      title: "Identify services that use this provider",
-      detail: `Add ${providerLabelKey}:${selectedProviderSlug} (or a documented equivalent) to the services that depend on ${directoryData.provider.name}. Names alone are not enough for a provider review.`,
-      evidence: `${services.length} service${services.length === 1 ? "" : "s"} returned, but no provider tags were found.`,
-      action: "Review services",
+      title: providerCandidateServices > 0 ? `Confirm ${directoryData.provider.name} service candidates` : "Identify services that use this provider",
+      detail: providerCandidateServices > 0
+        ? `Smartscape links ${providerCandidateServices} service${providerCandidateServices === 1 ? "" : "s"} to ${directoryData.provider.name} runtime metadata. Confirm the exact services before adding ${providerLabelKey}:${selectedProviderSlug}.`
+        : `Add ${providerLabelKey}:${selectedProviderSlug} (or a documented equivalent) to the services that depend on ${directoryData.provider.name}. Names alone are not enough for a provider review.`,
+      evidence: providerCandidateServices > 0
+        ? `${providerCandidateServices} topology candidate${providerCandidateServices === 1 ? "" : "s"}; ${services.length - providerCandidateServices} service${services.length - providerCandidateServices === 1 ? " has" : "s have"} no matching ${directoryData.provider.name} runtime evidence.`
+        : `${services.length} service${services.length === 1 ? "" : "s"} returned, but no provider tags were found.`,
+      action: providerCandidateServices > 0 ? "Review candidates" : "Review services",
       href: "/setup?review=provider#provider-mapping",
     });
   } else if (directoryData && providerLabels.length > 0 && matchedProviderServices === 0) {

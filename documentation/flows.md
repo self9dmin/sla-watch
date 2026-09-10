@@ -12,11 +12,11 @@ Sequence:
 
 1. `App` restores personal and workspace state. If app-state reads fail, it uses local browser state and displays the degraded storage message.
 2. `Dashboard` issues DQL reads for services, Problems, logs, spans, service-request telemetry, and Smartscape service-to-runtime relationships.
-3. `Dashboard` calls the `slaDirectory` AppEngine function with the configured vendor slug.
+3. `Dashboard` calls the `slaDirectory` AppEngine function with the active provider slug. Other monitored providers remain configured and can be selected without replacing each other.
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
 5. The app reads active tenant SLA overrides from App Settings and preserves the public directory record as the fallback baseline.
 6. The UI classifies the first unresolved evidence boundary as loading, access-incomplete, telemetry-missing, service-inventory-incomplete, provider-unidentified, provider-mismatched, no-incident-in-scope, or candidate-for-human-review.
-7. Overview presents that state with one next action. Setup contains the supporting diagnostics and provider-tag workflow. Incidents contains the observed Problem queue and effective filing references.
+7. Overview presents that state with one next action. Setup contains the supporting diagnostics and provider-tag workflow. Incidents contains the observed Problem queue and effective filing references. Provider notices remains a separate provider-owned event queue.
 8. Loading or refreshing the monitor does not change a Dynatrace entity, tag, metric, Problem, SLO, custom SLA, or external ticket.
 
 Deny or degraded behavior: a missing read scope is shown as access incomplete, not as no telemetry. A failed directory request is shown as unavailable, not as a provider breach.
@@ -25,12 +25,25 @@ Deny or degraded behavior: a missing read scope is shown as access incomplete, n
 
 Actor: user with `state:app-states:write`.
 
-1. The user edits provider slug, tag key, or lookback in Settings.
-2. Input is normalized before persistence. The provider slug is restricted to lowercase slug characters.
+1. The user selects one or more monitored providers, chooses the active provider, and edits the tag key or lookback in Settings.
+2. Inputs are normalized before persistence. Provider slugs are restricted to lowercase slug characters, deduplicated, and the active provider must belong to the monitored collection.
 3. The context optimistically updates the UI and writes the workspace state with an expiry just inside the platform's 90-day limit.
 4. If the shared write is denied, the same normalized value is kept in local storage and a status message explains the fallback.
 
-Deny behavior: saving monitor defaults never writes to Dynatrace entity settings or telemetry. A user without app-state write access can still inspect the app but cannot create a shared configuration.
+Deny behavior: saving monitor defaults never writes to Dynatrace entity settings or telemetry. A user without app-state write access can still inspect the app but cannot create a shared configuration. Switching the active provider changes only the focused view.
+
+## Configure Google Cloud provider notices
+
+Actor: administrator with App Settings write access, access to the selected Credential Vault record, and permission to configure Google Cloud IAM.
+
+1. The administrator enables `servicehealth.googleapis.com` in the target Google Cloud project.
+2. The administrator grants a dedicated service account only `roles/servicehealth.viewer` for that project and creates a JSON key.
+3. The JSON key is stored as a Token credential with AppEngine scope and application access limited to SLA Watch. The secret is never entered in SLA Watch settings.
+4. The administrator enters the Google Cloud project ID and Credential Vault record ID under Provider connections.
+5. Test connection calls the personalized endpoint with fallback disabled. Save writes only the non-secret identifiers to `provider-connections`.
+6. Provider notices reads project-relevant events. The function exchanges a short-lived Google OAuth token at request time and returns normalized event data only.
+
+Deny or degraded behavior: a missing connection uses public Google Cloud Status and labels it non-project-specific. A failed saved connection can fall back to public status with a warning during monitoring. Test connection never hides a failure behind the fallback. No path creates a Dynatrace Problem, notification, ticket, provider mutation, or SLA claim.
 
 ## Add or edit a custom SLA
 
@@ -63,13 +76,13 @@ Deny or degraded behavior: missing topology, settings, or Problem access is surf
 Actor: signed-in user with `environment-api:entities:write` in the app and the Dynatrace permission to manage entity settings.
 
 1. Setup resolves the user's effective entity-write permission and displays whether the action is available, management-zone limited, denied, or unverifiable.
-2. The user opens the service review. The app shows every returned service as already mapped, conflicting, or unassigned. Conflicting services cannot be selected in bulk.
-3. The user explicitly selects exact unassigned service entities. Service names are context only and never create an automatic assignment.
+2. The user opens the service review. The app merges the service inventory with exact service entities returned by Smartscape, then shows each service as already mapped, conflicting, an evidence-backed candidate, or unassigned. Conflicting services cannot be selected in bulk.
+3. Smartscape candidates require an exact service entity relationship to cloud-provider metadata. The user explicitly selects exact unassigned service entities. Service names are context only and never create an automatic assignment.
 4. A confirmation screen names the tag, selected service count, and common Dynatrace features that may consume tags.
 5. On confirmation, the app calls the custom-tag API with an entity selector built only from the selected entity IDs. Existing tags remain in place.
 6. The app reports the matched entity count, refreshes inventory, and retains the exact last action for an optional undo. Undo removes only that key/value pair from those exact entity IDs.
 
-Deny or degraded behavior: no selection or confirmation means no write. Denied permission keeps the action read-only. Management-zone restrictions can yield a partial result, which is reported rather than represented as complete. A conflicting provider tag requires manual review. Undo is a compensating action and cannot reverse unrelated concurrent changes.
+Deny or degraded behavior: no selection or confirmation means no write. A missing or ambiguous cloud relationship remains unassigned instead of being guessed. Denied permission keeps the action read-only. Management-zone restrictions can yield a partial result, which is reported rather than represented as complete. A conflicting provider tag requires manual review. Undo is a compensating action and cannot reverse unrelated concurrent changes.
 
 ## Review the change log or get support
 
@@ -92,3 +105,5 @@ Actor: signed-in user with user app-state access.
 ## External dependency failure
 
 If `sla.directory` times out, returns a non-success status, or fails schema validation, the AppEngine function throws. The dashboard keeps the provider posture unknown and surfaces the error. It does not reuse an unverified response or infer provider responsibility from tenant symptoms.
+
+If personalized Google Cloud access fails during a normal monitor read, the provider-notice function may return the public status feed with `connectionState: fallback`. The UI identifies the source and states that it is not project evidence. During Test connection, personalized access is required and the exact setup boundary is reported as unavailable instead of falling back.

@@ -33,11 +33,12 @@ const expectNoPageScroll = async (app: FrameLocator) => {
 };
 
 test.describe('SLA Watch deployed smoke', () => {
-  test('keeps Overview, Setup, and Incidents focused and conservative', async ({ page }) => {
+  test('keeps Monitor workspaces focused and conservative', async ({ page }) => {
     const app = await openWatch(page);
 
     await expect(app.getByRole('button', { name: 'Refresh data' })).toBeVisible();
     await expect(app.getByRole('link', { name: 'Configure' })).toBeVisible();
+    await expect(app.getByRole('combobox', { name: 'Active provider' })).toBeVisible();
     await expect(app.getByText(/Needs setup|Needs telemetry|Needs service boundary|Needs mapping|No incident in scope|Candidate|Blocked/i).first()).toBeVisible();
     await expect(app.getByText(/The provider determines fault, eligibility, and any service credit/i)).toBeVisible();
     await expectNoPageScroll(app);
@@ -58,6 +59,25 @@ test.describe('SLA Watch deployed smoke', () => {
     await expect(lookback.locator('option')).toHaveCount(7);
     await expect(app.getByText(/The provider determines fault, eligibility, and any service credit/i)).toBeVisible();
     await expectNoPageScroll(app);
+
+    await app.getByRole('link', { name: 'Provider notices' }).click();
+    await expect(app.getByRole('heading', { name: 'Provider notices' })).toBeVisible();
+    await expect(app.getByText(/does not prove that a Dynatrace service was affected/i)).toBeVisible();
+    await expectNoPageScroll(app);
+  });
+
+  test('keeps provider credentials outside application settings', async ({ page }) => {
+    const app = await openWatch(page);
+
+    await app.getByRole('button', { name: 'Open monitor settings' }).click();
+    await expect(app.getByRole('heading', { name: 'Configure monitor defaults.' })).toBeVisible();
+    await expect(app.getByRole('group', { name: 'Monitored providers' })).toBeVisible();
+    await expect(app.getByRole('checkbox', { name: /Monitor AWS/i })).toBeVisible();
+    await expect(app.getByRole('combobox', { name: 'Active provider for focused views' })).toBeVisible();
+    await app.getByRole('link', { name: 'Provider connections' }).click();
+    await expect(app.getByRole('heading', { name: 'Connect provider incident data.' })).toBeVisible();
+    await expect(app.getByText(/Enter the credential ID, not the service-account JSON/i)).toBeVisible();
+    await expect(app.getByText(/does not modify Google Cloud, create a Dynatrace Problem, send a notification, prove local impact, or determine SLA credit eligibility/i)).toBeVisible();
   });
 
   test('keeps new SLA setup in Settings and reserves the modal for edits', async ({ page }) => {
