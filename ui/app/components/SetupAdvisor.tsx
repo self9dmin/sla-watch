@@ -5,9 +5,9 @@ import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import type { SetupRecommendation } from "../types";
 
 const priorityLabel: Record<SetupRecommendation["priority"], string> = {
-  high: "Do this first",
-  medium: "Improve next",
-  low: "Good follow-up",
+  high: "Required",
+  medium: "Recommended",
+  low: "Optional",
 };
 
 export const SetupAdvisor = ({
@@ -23,10 +23,10 @@ export const SetupAdvisor = ({
     <div className="advisor-intro">
       <div className="panel-heading-row">
         <div>
-          <Heading level={2}>Make this environment SLA-ready</Heading>
-          <Paragraph>Evidence-backed recommendations for the next setup move. SLA Watch never changes tags, names, or SLOs without your approval.</Paragraph>
+          <Heading level={2}>Environment checks</Heading>
+          <Paragraph>These checks identify missing telemetry, provider identity, and ownership metadata before review. SLA Watch does not change tags, names, or SLOs without approval.</Paragraph>
         </div>
-        <span className="advisor-badge">Setup advisor</span>
+        <span className="advisor-badge">Setup checks</span>
       </div>
     </div>
     {loading ? (
@@ -34,7 +34,7 @@ export const SetupAdvisor = ({
     ) : recommendations.length === 0 ? (
       <div className="advisor-empty">
         <strong>No setup gaps detected in this scan.</strong>
-        <span>Keep the provider boundary and ownership metadata stable as services change. The next review can focus on the contract and error budget.</span>
+        <span>Keep the provider boundary and ownership metadata stable as services change. The next review can focus on contract records and the error budget.</span>
       </div>
     ) : (
       <div className="advisor-grid">

@@ -108,12 +108,12 @@ const AppearanceSettings = () => {
   };
   return (
     <section className="settings-page">
-      <div className="page-intro"><Text className="eyebrow">Settings · appearance</Text><Heading level={1}>Make the watch comfortable at 2 a.m.</Heading><Paragraph>Use the tenant theme by default, or pin the app to light or dark mode. The setting follows you between sessions.</Paragraph></div>
+      <div className="page-intro"><Text className="eyebrow">Settings · appearance</Text><Heading level={1}>Configure the app theme.</Heading><Paragraph>Use the tenant theme or select light or dark mode. The setting follows you between sessions.</Paragraph></div>
       <div className="theme-choice-grid">
         {([
           ["system", "System", "Follow the Dynatrace tenant theme."],
-          ["light", "Daylight", "High-contrast light surfaces for bright rooms."],
-          ["dark", "Night shift", "Low-glare dark surfaces for incident response."],
+          ["light", "Light", "Light surfaces with readable status contrast."],
+          ["dark", "Dark", "Dark surfaces for low-light incident response."],
         ] as const).map(([value, title, detail]) => <button type="button" key={value} className={`theme-choice ${preferences.theme === value ? "selected" : ""}`} onClick={() => void save(value)}><span className={`theme-swatch theme-swatch-${value}`} /><span><strong>{title}</strong><small>{detail}</small></span><span className="theme-choice-state">{preferences.theme === value ? "Active" : "Use"}</span></button>)}
       </div>
       {saved ? <SavedNote text="Appearance saved" /> : null}
@@ -137,7 +137,7 @@ const IntroSettings = () => {
   };
   return (
     <section className="settings-page">
-      <div className="page-intro"><Text className="eyebrow">Settings · onboarding</Text><Heading level={1}>Keep the first run useful.</Heading><Paragraph>Replay the short setup when the provider boundary changes. The walkthrough can be replayed independently whenever a new teammate joins the watch.</Paragraph></div>
+      <div className="page-intro"><Text className="eyebrow">Settings · onboarding</Text><Heading level={1}>Configure onboarding and walkthrough.</Heading><Paragraph>Use the setup when the provider boundary changes. Replay the walkthrough when the evidence model needs review.</Paragraph></div>
       <div className="onboarding-status-row"><div><span className="eyebrow">Setup status</span><strong>{preferences.onboardingComplete ? "Configured" : "Not configured"}</strong></div><div><span className="eyebrow">Walkthrough</span><strong>{preferences.tourCompleted ? "Completed" : "Ready to replay"}</strong></div><div><span className="eyebrow">Provider</span><strong>{preferences.providerSlug}</strong></div></div>
       <div className="settings-actions"><Button variant="emphasized" onClick={() => void restartIntro()}>Restart intro setup</Button><Button onClick={() => void resetTour()}>Start walkthrough now</Button>{saved ? <SavedNote text="Walkthrough is ready" /> : null}</div>
       <div className="settings-callout"><strong>What the setup does not do.</strong><span>It does not create an SLA claim, change telemetry, add labels, or make a provider determination for you.</span></div>
@@ -145,7 +145,7 @@ const IntroSettings = () => {
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Settings that protect the investigation.</Heading><Paragraph>Configure the provider boundary, tune the evidence window, and keep the operator handoff consistent.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Watch configuration</span><strong>Choose your contract and label convention.</strong><span>Current provider settings are visible before every investigation.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Daylight, night shift, or system.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Replay the moment that explains the model.</strong><span>Useful for new responders and changing ownership boundaries.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure the provider boundary, evidence window, theme, and operator records.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Watch configuration</span><strong>Select the contract and label convention.</strong><span>Current provider settings are visible before each review.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run setup or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();

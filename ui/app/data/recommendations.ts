@@ -95,7 +95,7 @@ export const buildSetupRecommendations = ({
     add(recommendations, {
       id: "instrumentation",
       priority: "medium",
-      title: "Start with a service signal",
+      title: "Expose a service signal",
       detail: "No service entities or recent signals are in scope. Instrument the workload or widen the evidence window before setting up provider attribution.",
       evidence: "No service inventory, Problems, logs, spans, or service request series were detected.",
       action: "Widen the evidence window",
@@ -129,7 +129,7 @@ export const buildSetupRecommendations = ({
     add(recommendations, {
       id: "ownership-context",
       priority: "medium",
-      title: "Add ownership context before the incident",
+      title: "Add ownership metadata",
       detail: "Add team, owner, application, or service metadata so the next responder can route a provider finding without decoding a name or guessing the owning group.",
       evidence: "No owner, team, application, or app tags were found on the returned service records.",
       action: "Add ownership metadata in Dynatrace",

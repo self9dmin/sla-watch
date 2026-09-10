@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.21
+
+- Replaced promotional UI copy with neutral SRE language for provider identity, tenant evidence, contract records, and review status.
+- Aligned onboarding, walkthrough, setup checks, settings, and guidance with the directory's distinction between contract eligibility and measured tenant evidence.
+
 ## 0.0.20
 
 - Fixed light and dark emphasized-button tokens so refresh, save, and setup actions keep readable contrast in either theme.
@@ -33,4 +38,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.20` release candidate.
+- Reserved for changes after the `0.0.21` release candidate.
