@@ -34,7 +34,7 @@ Settings -> SlaPreferencesContext -> user/app state service
 2. DQL and app-state calls run in the current user's permission context. The effective access is the intersection of the app-declared scopes and the user's IAM permissions.
 3. The browser invokes `slaDirectory` through the AppEngine function endpoint. The function validates the vendor slug, calls only `https://sla.directory`, bounds the request to eight seconds, and validates the response shape before returning data.
 4. The external API response is treated as untrusted data. React renders it as text, and no HTML is injected into the DOM.
-5. App state stores provider configuration and personal display preferences. The release history is bundled with the application, and the community link opens an external Dynatrace page. App state does not store credentials or Dynatrace tokens.
+5. App state stores provider configuration and personal display preferences. The release history is bundled with the application. The Community destination is launch-gated and does not expose an external link before public launch. App state does not store credentials or Dynatrace tokens.
 
 ## Canonical sources of truth
 

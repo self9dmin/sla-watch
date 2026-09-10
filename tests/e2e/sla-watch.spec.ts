@@ -51,4 +51,25 @@ test.describe('SLA Watch deployed smoke', () => {
 
     await expect(page.getByRole('link', { name: 'Provider directory' })).toBeVisible();
   });
+
+  test('keeps Community destinations disabled before public launch', async ({ page }) => {
+    await openWatch(page);
+
+    await expect(page.getByRole('button', { name: 'Dynatrace Community, coming soon' })).toBeDisabled();
+    await expect(page.getByRole('link', { name: /Dynatrace Community/i })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Open SLA Watch guide' }).click();
+    const guide = page.locator('aside[aria-label="SLA Watch guide"]');
+    await expect(guide).toBeVisible();
+    await expect(guide.locator('[aria-disabled="true"][aria-label="Dynatrace Community, coming soon"]')).toBeVisible();
+    await page.getByRole('button', { name: 'Close guide' }).click();
+
+    await page.getByRole('button', { name: 'Open change log' }).click();
+    await expect(page.locator('[aria-disabled="true"][aria-label="Dynatrace Community, coming soon"]')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Dynatrace Community/i })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await expect(page.locator('[aria-disabled="true"][aria-label="Dynatrace Community, coming soon"]')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Dynatrace Community/i })).toHaveCount(0);
+  });
 });

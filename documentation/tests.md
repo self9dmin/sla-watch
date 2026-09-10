@@ -16,6 +16,7 @@ This document separates executable coverage from manual or proposed coverage. Pa
 | Static quality | Type and lint errors block a change | `npm run typecheck` and `npm run lint` exit successfully | `package.json`, CI workflow | Existing CI gate |
 | Bundle validity | App manifest and bundle must be accepted by `dt-app` | `npm run build` and `npm run analyze` exit successfully | `dt-app` output | Existing CI gate |
 | Browser smoke | A deployed app exposes the compact watch, dedicated evidence route, conservative posture, and theme switch | The Playwright suite reaches Overview, opens Evidence, and preserves the evidence surface | `tests/e2e/sla-watch.spec.ts`, `playwright.config.ts` | Prepared guarded E2E |
+| Pre-launch Community gate | Community destinations must not navigate before public launch | The Playwright suite verifies the header action is disabled and no Community link is exposed from release history or settings | `tests/e2e/sla-watch.spec.ts` | Prepared guarded E2E |
 
 ## Proposed tests
 

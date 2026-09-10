@@ -1,10 +1,13 @@
 import React from "react";
 import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typography";
+import { CommunityLink } from "../components/CommunityLink";
 import { CHANGE_LOG_ENTRIES } from "../data/changeLog";
-import { COMMUNITY_PROFILE_URL } from "../data/externalLinks";
+import { isCommunityLive } from "../data/externalLinks";
 
-export const ChangeLogPage = () => (
-  <div className="workflow-page change-log-page">
+export const ChangeLogPage = () => {
+  const communityLive = isCommunityLive();
+
+  return <div className="workflow-page change-log-page">
     <div className="page-intro">
       <Text className="eyebrow">SLA Watch · release history</Text>
       <Heading level={1}>Change log</Heading>
@@ -17,7 +20,7 @@ export const ChangeLogPage = () => (
         <strong>Application releases</strong>
         <span>Provider settings and tenant evidence remain in the watch and settings surfaces.</span>
       </div>
-      <a className="inline-action" href={COMMUNITY_PROFILE_URL} target="_blank" rel="noreferrer">Open Dynatrace Community</a>
+      <CommunityLink className="inline-action" />
     </section>
 
     <section className="change-log-list-panel" aria-labelledby="change-log-heading">
@@ -46,6 +49,6 @@ export const ChangeLogPage = () => (
       </div>
     </section>
 
-    <div className="workflow-note"><strong>Operational boundary</strong><span>Use the watch to review provider evidence. Use the Dynatrace Community profile for questions, support, or issue discussion.</span></div>
+    <div className="workflow-note"><strong>Operational boundary</strong><span>{communityLive ? "Use the watch to review provider evidence. Use the Dynatrace Community profile for questions, support, or issue discussion." : "Use the watch to review provider evidence. Dynatrace Community support remains unavailable until public launch."}</span></div>
   </div>
-);
+};

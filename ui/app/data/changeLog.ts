@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.26",
+    version: "0.0.27",
     label: "Current release",
+    summary: "Held Community destinations until public launch.",
+    details: [
+      "Muted and disabled Community actions in the header, settings, guide, and release history.",
+      "Centralized the launch gate so Community links can be enabled deliberately from one source.",
+      "Restored the header guide as a visible side panel so its pre-launch support state can be reviewed.",
+    ],
+  },
+  {
+    version: "0.0.26",
+    label: "Previous release",
     summary: "Corrected the evidence-stage status markers.",
     details: [
       "Centered every step number inside a fixed circular marker in both themes.",

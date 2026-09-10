@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typography";
+import { CommunityLink } from "../components/CommunityLink";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
-import { COMMUNITY_PROFILE_URL } from "../data/externalLinks";
 import type { SlaThemePreference } from "../types";
 
 const SETUP_LINKS = [
@@ -29,7 +29,7 @@ const SettingsRail = ({ page }: { page: string }) => {
       </div>
       <div className="settings-rail-group">
         <div className="settings-rail-label">SUPPORT</div>
-        <a className="settings-rail-link" href={COMMUNITY_PROFILE_URL} target="_blank" rel="noreferrer">Dynatrace Community</a>
+        <CommunityLink className="settings-rail-link" />
       </div>
       <div className="settings-rail-note">Watch configuration is shared with the workspace. Theme and walkthrough state stay personal to you. The change log is read-only.</div>
     </aside>

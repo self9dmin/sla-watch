@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
+import { isCommunityLive } from "../data/externalLinks";
 
 type TourStep = { target: string; title: string; body: string };
 
@@ -36,8 +37,8 @@ const STEPS: TourStep[] = [
   },
   {
     target: '[data-tour="community"]',
-    title: "Find community support",
-    body: "Open the Dynatrace Community profile for questions, support, and issue discussion outside the app.",
+    title: isCommunityLive() ? "Find community support" : "Community support is coming soon",
+    body: isCommunityLive() ? "Open the Dynatrace Community profile for questions, support, and issue discussion outside the app." : "The Community destination remains disabled until SLA Watch is ready for public launch.",
   },
   {
     target: '[data-tour="tour"]',
