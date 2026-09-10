@@ -62,22 +62,37 @@ const businessDaysUntil = (from: Date, to: Date): number => {
   return count;
 };
 
+const getDeadlineAnchor = (claimProcess: SlaClaimProcess): "start" | "end" | "provider" => {
+  const basis = (claimProcess.deadlineBasis ?? "").toLowerCase();
+  if (/billing|cycle|invoice/.test(basis)) return "provider";
+  if (/incident|outage|impact|service/.test(basis) && /end|close|resolve|finish/.test(basis)) return "end";
+  if (/incident|outage|impact|service/.test(basis) && /start|begin|open/.test(basis)) return "start";
+  return "provider";
+};
+
 const getWindowReference = (problem: ProblemRecord, claimProcess: SlaClaimProcess | null | undefined, now = new Date()): WindowReference => {
   const deadlineDays = claimProcess?.deadlineDays;
-  const anchor = parseDate(problem.endedAt ?? problem.startedAt);
   if (!claimProcess || deadlineDays === null || deadlineDays === undefined || deadlineDays <= 0) {
     return { title: "Filing window not published", detail: "The selected directory record does not include a filing window.", tone: "neutral" };
   }
+  const anchorMode = getDeadlineAnchor(claimProcess);
+  if (anchorMode === "provider") {
+    const basis = claimProcess.deadlineBasis ? formatStatus(claimProcess.deadlineBasis) : "the provider's stated basis";
+    const unit = claimProcess.businessDays ? "business" : "calendar";
+    return { title: `${deadlineDays} ${unit} days published`, detail: `The directory record uses ${basis}. A remaining-day date cannot be derived from tenant Problem timestamps alone. Confirm the provider timeline before filing.`, tone: "neutral" };
+  }
+  const anchorValue = anchorMode === "end" ? problem.endedAt : problem.startedAt;
+  const anchor = parseDate(anchorValue);
   if (!anchor) {
-    return { title: "Impact window required", detail: "Add or verify the Problem timestamps before using the directory filing window as a planning reference.", tone: "warning" };
+    return { title: anchorMode === "end" ? "Impact end required" : "Impact start required", detail: `The directory record is incident-anchored at the observed ${anchorMode}. Add or verify that Problem timestamp before using the filing window as a planning reference.`, tone: "warning" };
   }
 
   const deadline = claimProcess.businessDays ? addBusinessDays(anchor, deadlineDays) : new Date(anchor.getTime() + deadlineDays * DAY_MS);
   const remaining = claimProcess.businessDays ? businessDaysUntil(now, deadline) : Math.ceil((deadline.getTime() - now.getTime()) / DAY_MS);
   const unit = claimProcess.businessDays ? "business" : "calendar";
-  const anchorLabel = problem.endedAt ? "observed end" : "observed start";
+  const anchorLabel = anchorMode === "end" ? "observed end" : "observed start";
   const basis = claimProcess.deadlineBasis ? ` ${formatStatus(claimProcess.deadlineBasis)}.` : "";
-  const planningNote = problem.endedAt ? "" : " This is a planning date from the observed start because an end time is not available.";
+  const planningNote = anchorMode === "start" ? " This is a planning date from the observed start." : "";
 
   if (remaining < 0 || (!claimProcess.businessDays && deadline.getTime() < now.getTime())) {
     return {
@@ -173,7 +188,7 @@ export const IncidentReview = ({ provider, problems, services, lookbackHours, lo
           <div className="panel-heading-row"><div><Text className="eyebrow">Provider record</Text><Heading level={3}>Published terms</Heading></div><StatusPill tone={provider ? "positive" : "neutral"}>{provider ? formatStatus(providerRecord?.status ?? "available") : "Unavailable"}</StatusPill></div>
           {providerRecord ? (
             <>
-              <div className="review-term-grid"><div><span>Uptime target</span><strong>{formatUptime(providerRecord.uptime)}</strong></div><div><span>Maximum published credit</span><strong>{maxCredit === null || maxCredit === undefined ? "Not published" : `${maxCredit}%`}</strong></div><div><span>Credit application</span><strong>{providerRecord.hasAutomaticCredits === true || policy?.automatic === true ? "Automatic record" : "Provider review"}</strong></div><div><span>Last verified</span><strong>{providerRecord.lastVerified}</strong></div></div>
+              <div className="review-term-grid"><div><span>Uptime target</span><strong>{formatUptime(providerRecord.uptime)}</strong></div><div><span>Maximum published credit</span><strong>{maxCredit === null || maxCredit === undefined ? "Not published" : `${maxCredit}%`}</strong></div><div><span>Decision model</span><strong>{providerRecord.hasAutomaticCredits === true || policy?.automatic === true ? "Automatic record" : "Provider review"}</strong></div><div><span>Last verified</span><strong>{providerRecord.lastVerified}</strong></div></div>
               {policy?.creditTiers.length ? <div className="review-policy-block"><span className="review-field-label">Published credit tiers</span><div className="review-tier-list">{policy.creditTiers.map((tier) => <span key={`${tier.below}-${tier.credit}`}>Below {tier.below}%: {tier.credit}%</span>)}</div></div> : <div className="review-inline-empty">No credit tiers are published in this directory record.</div>}
             </>
           ) : <div className="review-inline-empty">Load the provider directory before comparing contract terms.</div>}
@@ -183,7 +198,7 @@ export const IncidentReview = ({ provider, problems, services, lookbackHours, lo
       <div className="review-details-grid">
         <Surface className="panel-card review-panel">
           <div className="panel-heading-row"><div><Text className="eyebrow">Submission planning</Text><Heading level={3}>Provider filing window</Heading></div><StatusPill tone={claimProcess?.deadlineDays ? "positive" : "neutral"}>{claimProcess?.deadlineDays ? `${claimProcess.deadlineDays} ${claimProcess.businessDays ? "business" : "calendar"} days` : "Not published"}</StatusPill></div>
-          {claimProcess ? <div className="review-detail-list"><div><span>Basis</span><strong>{claimProcess.deadlineBasis ? formatStatus(claimProcess.deadlineBasis) : "Provider incident terms"}</strong></div><div><span>Submission method</span><strong>{claimProcess.method ?? "Not published"}</strong></div><div><span>Provider review time</span><strong>{claimProcess.reviewDays ? `${claimProcess.reviewDays} business days` : "Not published"}</strong></div></div> : <div className="review-inline-empty">The directory record does not include a filing process. Confirm the provider policy before using this workflow.</div>}
+          {claimProcess ? <div className="review-detail-list"><div><span>Basis</span><strong>{claimProcess.deadlineBasis ? formatStatus(claimProcess.deadlineBasis) : "Provider incident terms"}</strong></div><div><span>Submission method</span><strong>{claimProcess.method ?? "Not published"}</strong></div><div><span>Provider review time</span><strong>{claimProcess.reviewDays ? `${claimProcess.reviewDays} business days` : "Not published"}</strong></div><div><span>Credit application</span><strong>{claimProcess.creditApplication ?? "Not published"}</strong></div></div> : <div className="review-inline-empty">The directory record does not include a filing process. Confirm the provider policy before using this workflow.</div>}
           {claimProcess?.url ? <a className="inline-action" href={claimProcess.url} target="_blank" rel="noreferrer">Open submission guidance</a> : null}
         </Surface>
 
