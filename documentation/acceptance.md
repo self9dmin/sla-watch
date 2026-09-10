@@ -1,6 +1,23 @@
 # Release acceptance record
 
-This record captures manual target-environment smoke evidence for the current `0.0.30` installed release and retains the prior `0.0.29` record. It complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record captures manual target-environment smoke evidence for the current `0.0.31` installed release and retains the prior release records. It complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.31 verified scenarios
+
+The `0.0.31` artifact from source commit `887c847` was deployed to the designated Dynatrace target environment and exercised through the installed application. No provider tag or tenant SLA test record was written during verification.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.31` manifest, App Settings schema, function, and UI deployed successfully | Installed production deployment and browser smoke; source commit `887c847` |
+| Tenant settings read path | The installed app registered the contract-override schema and returned the empty AWS tenant collection without an access or schema error | Installed Directory `SLA overrides` view reports `0 tenant overrides` and retains the public fallback |
+| Full-page SLA editor | New custom terms open under Workspace settings instead of in a modal; leaving with Cancel returns to Directory without persisting data | Installed production browser smoke |
+| Exact multi-entity boundary | One EC2 SLA accepted two selected runtime IDs and reported `2 exact targets`; service, host/runtime, and location modes are available | Installed production browser smoke; the editor was cancelled without saving |
+| Smartscape scope map | The app returned four explicit service-to-runtime/location relationships for the available content-pipeline topology | Installed production `Scope map` smoke; entity IDs and locations were shown as evidence boundaries |
+| Incident lookback | Incident review exposes 24 hours, 72 hours, 7 days, 15 days, 30 days, 60 days, and 90 days | Installed production browser smoke |
+| Desktop fit | Overview, Directory, and Incidents have equal body client and scroll dimensions, with no page scroll at the tested desktop viewport | Installed browser dimension check at 1849 by 855 CSS pixels |
+| Connection placement | The sla.directory connection state appears in Monitor settings and is not repeated in the operational header | Installed production Monitor and settings smoke |
+| Theme support | Monitor, Directory, settings, controls, icons, and tooltips remain readable in light and dark themes | Installed production visual smoke and computed-style check |
+| Assessment boundary | Exact assignments select applicable terms but do not claim provider fault, eligibility, or a credit decision | Installed editor, Scope map, and Incident review copy |
 
 ## 0.0.30 verified scenarios
 
