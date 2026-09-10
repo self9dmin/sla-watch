@@ -52,10 +52,11 @@ test.describe('SLA Watch deployed smoke', () => {
     await expect(page.getByRole('link', { name: 'Provider directory' })).toBeVisible();
   });
 
-  test('explains icon-only header actions on hover', async ({ page }) => {
+  test('renders and explains icon-only header actions', async ({ page }) => {
     await openWatch(page);
 
     const themeAction = page.getByRole('button', { name: /Switch to (light|dark) theme/ });
+    await expect(themeAction.locator('svg')).toHaveCount(1);
     const themeTooltip = await themeAction.getAttribute('aria-label');
     await themeAction.hover();
     await expect(page.getByRole('tooltip').filter({ hasText: themeTooltip ?? 'Switch theme' })).toBeVisible();
@@ -70,7 +71,9 @@ test.describe('SLA Watch deployed smoke', () => {
     ];
 
     for (const { action, tooltip } of tooltipCases) {
-      await page.getByRole('button', { name: action }).hover();
+      const actionButton = page.getByRole('button', { name: action });
+      await expect(actionButton.locator('svg')).toHaveCount(1);
+      await actionButton.hover();
       await expect(page.getByRole('tooltip').filter({ hasText: tooltip })).toBeVisible();
       await page.mouse.move(0, 100);
     }
