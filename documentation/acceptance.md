@@ -1,6 +1,6 @@
 # Release acceptance record
 
-This record captures the manual target-environment smoke evidence for the `0.0.28` release. The release was deployed to the sal98008 Dynatrace environment and exercised through the installed application. This record complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record captures the manual target-environment smoke evidence for the `0.0.29` release. The release was deployed to the sal98008 Dynatrace environment and exercised through the installed application. This record complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
 
 ## Verified scenarios
 
@@ -15,10 +15,10 @@ This record captures the manual target-environment smoke evidence for the `0.0.2
 | App-state fallback presentation | When remote state cannot be loaded, the app identifies browser-local fallback in the document flow rather than covering the page with a fixed notification | Authenticated local-development tenant smoke |
 | Theme support | Light and dark views preserve readable navigation, status, actions, diagnostics, and setup checks | Installed production smoke in both themes |
 | Shell navigation | The Telemetry Grand Prix-derived header structure remains unchanged while Watch also selects the Evidence route | Installed production smoke |
-| Header action tooltips | Every icon-only header action identifies itself on keyboard focus, uses an action-specific accessible name, and remains readable in light and dark themes | Authenticated local-development smoke plus installed production smoke |
+| Header action tooltips | Every icon-only header action retains its SVG, identifies itself on keyboard focus, uses an action-specific accessible name, and remains readable in light and dark themes | Authenticated local-development smoke plus installed production smoke |
 | Header guide | The guide opens as a visible side panel and presents the operating sequence without obscuring the application shell | Installed production smoke in dark theme |
 | Pre-launch Community gate | Community destinations are muted, disabled, labeled `Coming soon`, omitted from keyboard navigation, and not exposed as links in the header, settings, guide, or change log | Installed production smoke plus Playwright smoke assertions |
-| Release artifact | The `0.0.28` manifest, icon, function, and UI pass the supported-runtime release gate and deploy successfully | Node 24 typechecks, lint, unit coverage, build, App Toolkit analysis, and production dependency audit passed; `dt-app deploy` completed; installed change log reports `0.0.28 Current release` |
+| Release artifact | The `0.0.29` manifest, icon, function, and UI pass the supported-runtime release gate and deploy successfully | Node 24 typechecks, lint, unit coverage, build, App Toolkit analysis, and production dependency audit passed; `dt-app deploy` completed; installed change log reports `0.0.29 Current release` |
 
 ## Not proven by this record
 
