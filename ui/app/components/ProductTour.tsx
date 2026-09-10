@@ -15,6 +15,11 @@ const STEPS: TourStep[] = [
     body: "Provider directory contains contract records and targets. Select a provider in Settings, then compare those records with tenant evidence.",
   },
   {
+    target: '[data-tour="review"]',
+    title: "Review observed impact",
+    body: "Incident review compares detected Problems with provider terms, observed dates, and required evidence. It does not make a vendor eligibility or credit decision.",
+  },
+  {
     target: '[data-tour="settings"]',
     title: "Configure the evidence boundary",
     body: "Settings controls the provider slug, label key, lookback window, theme, and walkthrough state. Watch configuration is shared, while theme and walkthrough state stay personal.",

@@ -7,6 +7,7 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 - Reads the tenant service inventory with DQL.
 - Reads Davis Problems, logs, spans, and service-request telemetry for a selectable 24- or 72-hour window.
 - Retrieves provider and service contract data from the versioned `sla.directory` JSON API through an AppEngine function.
+- Provides an Incident review tab with observed Problem windows, provider-published credit terms, filing guidance, required evidence, and exclusions.
 - Separates missing telemetry, incomplete entity access, missing provider labels, and labels that do not match the selected provider.
 - Recommends setup actions for provider boundaries, ownership metadata, service naming, and native SLO follow-up.
 - Keeps personal theme and onboarding state separate from shared watch configuration and workflow records.
@@ -14,7 +15,7 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 
 ## Deliberate boundaries
 
-SLA Watch does not issue credits, prove provider fault, mutate service tags, create SLOs, or silently infer ownership from a service name. A matching label and an active Problem are only a candidate for review. Provider service IDs are not yet joined automatically to Dynatrace service entity IDs, so the app must not be treated as an automated eligibility decision.
+SLA Watch does not issue credits, prove provider fault, mutate service tags, create SLOs, or silently infer ownership from a service name. A matching label and an active Problem are only a candidate for review. Provider terms and filing dates are planning references from the directory record, not an automated eligibility or approval decision. Provider service IDs are not yet joined automatically to Dynatrace service entity IDs, so the app must not be treated as an automated eligibility decision.
 
 The runtime data path does not require an MCP server. `sla.directory` MCP is useful for agent-assisted research and contract discovery, while the deployed app uses the public versioned JSON API.
 

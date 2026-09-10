@@ -42,6 +42,7 @@ const AppShell = ({
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/directory" element={<Dashboard initialSection="directory" />} />
+        <Route path="/review" element={<Dashboard initialSection="review" />} />
         <Route path="/bugs" element={<BugReportPage />} />
         <Route path="/changes" element={<ChangeManagementPage />} />
         <Route path="/settings/:page?" element={<SettingsPage />} />

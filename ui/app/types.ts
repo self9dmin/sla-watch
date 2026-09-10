@@ -1,4 +1,4 @@
-export type WatchSection = "overview" | "directory";
+export type WatchSection = "overview" | "directory" | "review";
 export type SlaThemePreference = "system" | "light" | "dark";
 export type BugCategory = "data" | "provider-matching" | "access" | "ux";
 export type BugSeverity = "low" | "medium" | "high";
@@ -59,6 +59,31 @@ export type ProblemRecord = {
   category: string;
   affectedEntityIds: string[];
   hasRootCause: boolean;
+  startedAt?: string;
+  endedAt?: string;
+};
+
+export type SlaCreditTier = { below: number; credit: number };
+
+export type SlaCreditPolicy = {
+  calculation: string;
+  remedy: string | null;
+  maxCreditPercent: number | null;
+  unit: string;
+  note: string | null;
+  automatic: boolean;
+  creditTiers: SlaCreditTier[];
+};
+
+export type SlaClaimProcess = {
+  deadlineDays: number | null;
+  deadlineBasis: string | null;
+  businessDays: boolean;
+  method: string | null;
+  url: string | null;
+  requiredEvidence: string[];
+  reviewDays: number | null;
+  creditApplication: string | null;
 };
 
 export type SlaProviderResponse = {
@@ -70,6 +95,15 @@ export type SlaProviderResponse = {
     uptime: number | null;
     status: string;
     lastVerified: string;
+    slaUrl?: string | null;
+    website?: string | null;
+    scope?: string | null;
+    maxCreditPercent?: number | null;
+    hasAutomaticCredits?: boolean;
+    minPlanForSla?: string | null;
+    defaultCreditPolicy?: SlaCreditPolicy | null;
+    claimProcess?: SlaClaimProcess | null;
+    exclusions?: string[];
   };
   services: Array<{
     id: string;
@@ -78,6 +112,10 @@ export type SlaProviderResponse = {
     uptime: number | null;
     eligible: boolean;
     slaUrl: string;
+    description?: string | null;
+    uptimeScope?: string | null;
+    lastVerified?: string | null;
+    creditPolicy?: SlaCreditPolicy | null;
   }>;
 };
 

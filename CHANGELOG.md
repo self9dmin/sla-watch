@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.22
+
+- Added an Incident review tab for comparing observed Dynatrace Problems with the selected provider record.
+- Exposed directory-published credit tiers, filing method, stated filing window, required evidence, review timing, and exclusions without treating them as an eligibility or approval decision.
+- Added observed Problem timestamps and a compact impact timeline, then moved the dense Problems table out of the Overview surface.
+- Reduced evidence ladder height and updated contract language to distinguish a directory record from verified provider fault.
+
 ## 0.0.21
 
 - Replaced promotional UI copy with neutral SRE language for provider identity, tenant evidence, contract records, and review status.
@@ -38,4 +45,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.21` release candidate.
+- Reserved for changes after the `0.0.22` release candidate.
