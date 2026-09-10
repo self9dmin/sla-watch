@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.28",
+    version: "0.0.29",
     label: "Current release",
+    summary: "Restored header icons alongside their tooltips.",
+    details: [
+      "Composed each icon through the Strato button-prefix slot so tooltip wrappers cannot drop it.",
+      "Applied a consistent high-contrast tooltip surface in light and dark themes.",
+      "Added browser checks that require both the SVG icon and its action tooltip.",
+    ],
+  },
+  {
+    version: "0.0.28",
+    label: "Previous release",
     summary: "Added accessible guidance for header actions.",
     details: [
       "Added concise Strato tooltips to every icon-only header action.",

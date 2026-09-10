@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Button } from "@dynatrace/strato-components/buttons";
 import { AppHeader } from "@dynatrace/strato-components/layouts";
 import { Tooltip } from "@dynatrace/strato-components/overlays";
 import {
@@ -49,76 +50,76 @@ export const Header = ({
           </AppHeader.NavigationItem>
         </AppHeader.Navigation>
         <AppHeader.ActionItems>
-          <Tooltip text={themeActionLabel} placement="bottom">
+          <Tooltip className="header-action-tooltip" text={themeActionLabel} placement="bottom">
             <AppHeader.ActionButton
               onClick={onToggleTheme}
-              prefixIcon={theme === "dark" ? <LightmodeIcon /> : <DarkmodeIcon />}
-              showLabel={false}
               aria-label={themeActionLabel}
-            />
+            >
+              <Button.Prefix>{theme === "dark" ? <LightmodeIcon /> : <DarkmodeIcon />}</Button.Prefix>
+            </AppHeader.ActionButton>
           </Tooltip>
-          <Tooltip text="Open watch settings" placement="bottom">
+          <Tooltip className="header-action-tooltip" text="Open watch settings" placement="bottom">
             <AppHeader.ActionButton
               onClick={() => { void navigate("/settings/watch"); }}
-              prefixIcon={<SettingIcon />}
-              showLabel={false}
               className={isSettings ? "active" : undefined}
               aria-label="Open watch settings"
               data-tour="settings"
-            />
+            >
+              <Button.Prefix><SettingIcon /></Button.Prefix>
+            </AppHeader.ActionButton>
           </Tooltip>
-          <Tooltip text="Start or replay walkthrough" placement="bottom">
+          <Tooltip className="header-action-tooltip" text="Start or replay walkthrough" placement="bottom">
             <AppHeader.ActionButton
               onClick={onStartTour}
-              prefixIcon={<GuideIcon />}
-              showLabel={false}
               aria-label="Start or replay SLA Watch walkthrough"
               data-tour="tour"
-            />
+            >
+              <Button.Prefix><GuideIcon /></Button.Prefix>
+            </AppHeader.ActionButton>
           </Tooltip>
-          <Tooltip text={guideActionLabel} placement="bottom">
+          <Tooltip className="header-action-tooltip" text={guideActionLabel} placement="bottom">
             <AppHeader.ActionButton
               onClick={() => setHelpOpen((current) => !current)}
-              prefixIcon={<HelpIcon />}
-              showLabel={false}
               className={helpOpen ? "active" : undefined}
               aria-label={guideActionLabel}
               aria-expanded={helpOpen}
-            />
+            >
+              <Button.Prefix><HelpIcon /></Button.Prefix>
+            </AppHeader.ActionButton>
           </Tooltip>
-          <Tooltip text="Open change log" placement="bottom">
+          <Tooltip className="header-action-tooltip" text="Open change log" placement="bottom">
             <AppHeader.ActionButton
               onClick={() => { void navigate("/changes"); }}
-              prefixIcon={<HistoryIcon />}
-              showLabel={false}
               className={isChanges ? "active" : undefined}
               aria-label="Open change log"
               data-tour="changes"
-            />
+            >
+              <Button.Prefix><HistoryIcon /></Button.Prefix>
+            </AppHeader.ActionButton>
           </Tooltip>
           {communityLive ? (
-            <Tooltip text="Open Dynatrace Community" placement="bottom-end">
+            <Tooltip className="header-action-tooltip" text="Open Dynatrace Community" placement="bottom-end">
               <AppHeader.ActionButton
                 as="a"
                 href={COMMUNITY_PROFILE.url}
                 target="_blank"
                 rel="noreferrer"
-                prefixIcon={<SupportIcon />}
-                showLabel={false}
                 aria-label="Open Dynatrace Community profile"
                 data-tour="community"
-              />
+              >
+                <Button.Prefix><SupportIcon /></Button.Prefix>
+              </AppHeader.ActionButton>
             </Tooltip>
           ) : (
-            <Tooltip text="Dynatrace Community (coming soon)" placement="bottom-end">
+            <Tooltip className="header-action-tooltip" text="Dynatrace Community (coming soon)" placement="bottom-end">
               <AppHeader.ActionButton
                 disabled
-                prefixIcon={<SupportIcon />}
-                showLabel={false}
                 className="community-action-disabled"
                 aria-label="Dynatrace Community, coming soon"
                 data-tour="community"
-              />
+              >
+                <Button.Prefix><SupportIcon /></Button.Prefix>
+              </AppHeader.ActionButton>
             </Tooltip>
           )}
         </AppHeader.ActionItems>

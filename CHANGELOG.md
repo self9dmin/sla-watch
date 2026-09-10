@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.29
+
+- Restored every header SVG by composing icons through the Strato button-prefix slot used by tooltip-wrapped actions.
+- Added a consistent high-contrast tooltip surface for light and dark themes.
+- Extended the browser smoke test to require both each header icon and its tooltip.
+
 ## 0.0.28
 
 - Added concise Strato tooltips to every icon-only header action.
@@ -82,4 +88,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.28` release candidate.
+- Reserved for changes after the `0.0.29` release candidate.
