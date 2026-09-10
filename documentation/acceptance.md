@@ -1,6 +1,6 @@
 # Release acceptance record
 
-This record captures the manual target-environment smoke evidence for the `0.0.21` release candidate. It complements automated tests; it is not a substitute for authenticated least-privilege and Playwright acceptance jobs.
+This record captures the manual target-environment smoke evidence for the `0.0.22` release candidate. It complements automated tests; it is not a substitute for authenticated least-privilege and Playwright acceptance jobs.
 
 ## Verified scenarios
 
@@ -8,10 +8,11 @@ This record captures the manual target-environment smoke evidence for the `0.0.2
 | --- | --- | --- |
 | First-run onboarding | The app explains telemetry, provider identity, and contract scope; skipping reaches the watch without changing tenant data | Deployed browser smoke |
 | Provider directory connection | The AppEngine function loads a provider contract through the allowlisted `sla.directory` host | Deployed browser smoke; connected directory status |
+| Incident review | The app shows observed Problem timestamps, provider-published filing terms, credit tiers, required evidence, and exclusions as planning information without declaring eligibility or approval | Deployed browser smoke |
 | Missing provider identity | Services and telemetry can be present while attribution status remains `Needs labeling`; the app recommends a provider boundary and ownership metadata | Deployed browser smoke |
 | App-state access denied | The app says shared state is unavailable and identifies browser-local fallback rather than claiming a workspace save | Deployed browser smoke |
 | Theme support | Light and dark views preserve readable navigation, status cards, warnings, and setup recommendations | Deployed browser smoke |
-| Release artifact | The `0.0.21` manifest, icon, function, and UI deploy successfully through `dt-app` | `npx dt-app deploy --environment-url ...` completed successfully |
+| Release artifact | The `0.0.22` manifest, icon, function, and UI deploy successfully through `dt-app` | `npx dt-app deploy --environment-url ...` completed successfully |
 
 ## Not proven by this record
 

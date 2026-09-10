@@ -28,7 +28,7 @@ export const Header = ({
   const isSettings = location.pathname.startsWith("/settings");
   const isBugs = location.pathname.startsWith("/bugs");
   const isChanges = location.pathname.startsWith("/changes");
-  const isWatch = location.pathname === "/";
+  const isWatch = location.pathname === "/" || location.pathname === "/review";
   const isDirectory = location.pathname === "/directory";
 
   return (
@@ -111,7 +111,7 @@ export const Header = ({
           </section>
           <section>
             <h3>3. Review</h3>
-            <p>A matching service and active Problem create a candidate for review. They do not prove provider fault or credit eligibility by themselves.</p>
+            <p>Incident review compares observed Problems with provider terms and planning dates. A matching service and active Problem do not prove provider fault or credit eligibility by themselves.</p>
           </section>
           <div className="help-drawer-actions">
             <button type="button" className="link-button" onClick={() => { setHelpOpen(false); void navigate("/settings/watch"); }}>Open watch settings</button>
