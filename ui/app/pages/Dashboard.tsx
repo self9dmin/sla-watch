@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAppFunction, useDql } from "@dynatrace-sdk/react-hooks";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -7,7 +7,6 @@ import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typograph
 import { SetupAdvisor } from "../components/SetupAdvisor";
 import { IncidentReview } from "../components/IncidentReview";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
-import { COMMUNITY_PROFILE_URL } from "../data/externalLinks";
 import { buildSetupRecommendations } from "../data/recommendations";
 import {
   createLogsCountQuery,
@@ -26,6 +25,7 @@ import {
 
 type DashboardProps = { initialSection?: WatchSection };
 type Tone = "neutral" | "warning" | "positive";
+type WatchRouteSection = Exclude<WatchSection, "directory">;
 
 const asRecord = (value: unknown): Record<string, unknown> => typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
 const textValue = (value: unknown, fallback: string): string => typeof value === "string" && value.trim().length > 0 ? value : fallback;
@@ -70,8 +70,34 @@ const providerLabel = (tag: string, configuredKey: string): string | null => {
 
 const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode }) => <span className={`status-pill status-pill-${tone}`}>{children}</span>;
 
-const MetricCard = ({ label, value, detail, tone = "neutral" }: { label: string; value: string; detail: string; tone?: Tone }) => (
-  <Surface className="metric-card"><Text className="eyebrow">{label}</Text><div className={`metric-value metric-value-${tone}`}>{value}</div><Text className="metric-detail">{detail}</Text></Surface>
+const OverviewFact = ({ label, value, detail, tone = "neutral" }: { label: string; value: string; detail: string; tone?: Tone }) => (
+  <div className="overview-fact">
+    <span>{label}</span>
+    <strong className={`overview-fact-value overview-fact-value-${tone}`}>{value}</strong>
+    <small>{detail}</small>
+  </div>
+);
+
+const WATCH_LINKS: ReadonlyArray<{ section: WatchRouteSection; label: string; to: string; tour: string }> = [
+  { section: "overview", label: "Overview", to: "/", tour: "overview" },
+  { section: "evidence", label: "Evidence", to: "/evidence", tour: "evidence" },
+  { section: "review", label: "Incident review", to: "/review", tour: "review" },
+];
+
+const WatchNavigation = ({ section }: { section: WatchRouteSection }) => (
+  <nav className="section-tabs" aria-label="Watch sections">
+    {WATCH_LINKS.map((item) => (
+      <Link
+        key={item.section}
+        className={section === item.section ? "section-tab active" : "section-tab"}
+        to={item.to}
+        aria-current={section === item.section ? "page" : undefined}
+        data-tour={item.tour}
+      >
+        {item.label}
+      </Link>
+    ))}
+  </nav>
 );
 
 const DiagnosticCard = ({ label, title, detail, tone, children }: { label: string; title: string; detail: string; tone: Tone; children?: React.ReactNode }) => (
@@ -83,9 +109,8 @@ const EvidenceStep = ({ number, title, detail, state }: { number: number; title:
 );
 
 export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
-  const [section, setSection] = useState<WatchSection>(initialSection);
+  const section = initialSection;
   const { preferences } = useSlaPreferences();
-  useEffect(() => setSection(initialSection), [initialSection]);
   const { providerSlug, providerLabelKey, lookbackHours } = preferences;
   const problemsQuery = useMemo(() => createProblemsQuery(lookbackHours), [lookbackHours]);
   const logsQuery = useMemo(() => createLogsCountQuery(lookbackHours), [lookbackHours]);
@@ -157,15 +182,91 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     ? { tone: "neutral" as Tone, value: "Checking", detail: "Waiting for the evidence path to settle." }
     : telemetryError || !directoryData
       ? { tone: "warning" as Tone, value: "Blocked", detail: "Access or contract lookup must be repaired first." }
-      : services.length === 0
-        ? { tone: "warning" as Tone, value: "Needs telemetry", detail: "No service boundary is available for attribution." }
-        : providerLabels.length === 0
-          ? { tone: "warning" as Tone, value: "Needs labeling", detail: "Add a provider label or configure a mapping." }
-          : matchedProviderServices === 0
-            ? { tone: "warning" as Tone, value: "Needs mapping", detail: "Detected labels do not match the selected contract." }
-            : activeProblems === 0
-              ? { tone: "neutral" as Tone, value: "No active claim", detail: "Provider is identified, but there is no active Problem in scope." }
-              : { tone: "positive" as Tone, value: "Candidate", detail: "A human review can compare the active Problem with the provider contract." };
+      : !telemetrySignalsPresent
+        ? { tone: "warning" as Tone, value: "Needs telemetry", detail: "No recent signal supports an evidence review." }
+        : services.length === 0
+          ? { tone: "warning" as Tone, value: "Needs service boundary", detail: "No service entity is available for attribution." }
+          : providerLabels.length === 0
+            ? { tone: "warning" as Tone, value: "Needs labeling", detail: "Add a provider label or configure a mapping." }
+            : matchedProviderServices === 0
+              ? { tone: "warning" as Tone, value: "Needs mapping", detail: "Detected labels do not match the selected contract." }
+              : activeProblems === 0
+                ? { tone: "neutral" as Tone, value: "No incident in scope", detail: "The provider is identified, but there is no active Problem in scope." }
+                : { tone: "positive" as Tone, value: "Candidate", detail: "A human review can compare the active Problem with the provider contract." };
+
+  const providerName = directoryData?.provider.name ?? providerSlug;
+  const overviewAssessment = telemetryLoading || directoryLoading
+    ? {
+        title: "Checking this environment",
+        detail: "Dynatrace telemetry and the selected provider contract are still loading.",
+        action: "Open evidence checks",
+        href: "/evidence",
+      }
+    : telemetryError
+      ? {
+          title: "Complete the Dynatrace evidence read",
+          detail: telemetryState.detail,
+          action: "Review app access",
+          href: "/settings/watch",
+        }
+      : !directoryData
+        ? {
+            title: "Restore the provider contract connection",
+            detail: directoryError?.message ?? `The ${providerSlug} contract could not be loaded from sla.directory.`,
+            action: "Review provider connection",
+            href: "/settings/watch",
+          }
+        : !telemetrySignalsPresent
+          ? {
+              title: "Add a recent service signal",
+              detail: `No Problems, logs, spans, or service request series were detected in the last ${lookbackHours} hours.`,
+              action: "Review evidence scope",
+              href: "/settings/watch",
+            }
+          : services.length === 0
+            ? {
+                title: "Expose the affected service boundary",
+                detail: "Telemetry is present, but no service entities were returned. Provider attribution should wait until the service boundary is visible.",
+                action: "Review service access",
+                href: "/settings/watch",
+              }
+            : providerLabels.length === 0
+              ? {
+                  title: `Identify which services depend on ${providerName}`,
+                  detail: `${services.length} service${services.length === 1 ? " is" : "s are"} visible, but no explicit provider label was found.`,
+                  action: "Configure provider identity",
+                  href: "/settings/watch",
+                }
+              : matchedProviderServices === 0
+                ? {
+                    title: `Resolve provider labels to ${providerName}`,
+                    detail: `${providerLabels.length} provider label${providerLabels.length === 1 ? " is" : "s are"} visible, but none resolves to the selected contract.`,
+                    action: "Resolve provider mapping",
+                    href: "/settings/watch",
+                  }
+                : activeProblems === 0
+                  ? {
+                      title: "No incident requires provider review",
+                      detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? " matches" : "s match"} ${providerName}. No active Problems were found in the last ${lookbackHours} hours.`,
+                      action: "Review evidence details",
+                      href: "/evidence",
+                    }
+                  : {
+                      title: "Review the active Problem before considering a claim",
+                      detail: `${activeProblems} active Problem${activeProblems === 1 ? "" : "s"} and ${matchedProviderServices} provider-matched service${matchedProviderServices === 1 ? "" : "s"} require human review.`,
+                      action: "Review incident evidence",
+                      href: "/review",
+                    };
+
+  const evidenceStatus = telemetryLoading || directoryLoading
+    ? "Checking evidence"
+    : telemetryError
+      ? "Access incomplete"
+      : !directoryData
+        ? "Contract unavailable"
+        : matchedProviderServices > 0
+          ? activeProblems > 0 ? "Review available" : "Boundary ready"
+          : "Action required";
 
   const setupRecommendations = useMemo(() => buildSetupRecommendations({
     services,
@@ -187,24 +288,113 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
   return (
     <div className="dashboard-shell">
       <section className="hero-row">
-        <div><Text className="eyebrow">SLA / environment watch</Text><Heading level={1}>Review provider evidence for this environment.</Heading><Paragraph className="hero-copy">Compare the selected SLA contract with service inventory, Problems, and supporting Dynatrace signals.</Paragraph></div>
-        <div className="hero-actions"><div className="hero-status-line"><StatusPill tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}>{slaDirectoryConnection.source}: {directoryLoading ? "checking" : directoryData ? "connected" : "unavailable"}</StatusPill><span>Watching <strong>{directoryData?.provider.name ?? providerSlug}</strong></span></div><Button variant="emphasized" onClick={handleRefresh} disabled={telemetryLoading || directoryLoading}>{telemetryLoading || directoryLoading ? "Refreshing" : "Refresh watch"}</Button><Link className="text-action" to="/settings/watch">Configure watch</Link></div>
+        <div className="hero-copy-block">
+          <Heading level={1}>Review provider evidence for this environment.</Heading>
+          <Paragraph className="hero-copy">Compare the selected SLA contract with service inventory, Problems, and supporting Dynatrace signals.</Paragraph>
+        </div>
+        <div className="hero-actions">
+          <div className="hero-status-line">
+            <StatusPill tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}>
+              {slaDirectoryConnection.source}: {directoryLoading ? "checking" : directoryData ? "connected" : "unavailable"}
+            </StatusPill>
+            <span>Watching <strong>{providerName}</strong></span>
+          </div>
+          <Button variant="emphasized" onClick={handleRefresh} disabled={telemetryLoading || directoryLoading} size="condensed">
+            {telemetryLoading || directoryLoading ? "Refreshing" : "Refresh watch"}
+          </Button>
+          <Link className="text-action" to="/settings/watch">Configure watch</Link>
+        </div>
       </section>
 
-      <div className="section-tabs" role="tablist" aria-label="SLA watch sections"><button type="button" className={section === "overview" ? "section-tab active" : "section-tab"} onClick={() => setSection("overview")} role="tab" aria-selected={section === "overview"} data-tour="overview">Overview</button><button type="button" className={section === "directory" ? "section-tab active" : "section-tab"} onClick={() => setSection("directory")} role="tab" aria-selected={section === "directory"} data-tour="provider-directory">Provider directory</button><button type="button" className={section === "review" ? "section-tab active" : "section-tab"} onClick={() => setSection("review")} role="tab" aria-selected={section === "review"} data-tour="review">Incident review</button></div>
+      {section !== "directory" ? <WatchNavigation section={section} /> : null}
 
       {section === "overview" ? (
-        <>
-          <div className="metric-grid"><MetricCard label="Providers" value={directoryLoading ? "..." : directoryData ? "1" : "Unavailable"} detail={directoryData ? `${directoryData.provider.name} contract loaded` : "SLA.directory provider records"} tone={directoryData ? "positive" : directoryLoading ? "neutral" : "warning"} /><MetricCard label="Services in tenant" value={servicesLoading ? "..." : String(services.length)} detail="Live entity inventory" tone={servicesLoading ? "neutral" : services.length > 0 ? "positive" : "warning"} /><MetricCard label={`Problems · ${lookbackHours}h`} value={problemsLoading ? "..." : String(problems.length)} detail={problemsLoading ? "Reading Davis data" : `${activeProblems} active · ${problems.length - activeProblems} closed`} tone={problemsLoading ? "neutral" : activeProblems > 0 ? "warning" : "neutral"} /><MetricCard label="Attribution status" value={claimReadiness.value} detail={claimReadiness.detail} tone={claimReadiness.tone} /></div>
-
-          <div className="content-grid"><Surface className="panel-card connector-card"><Text className="eyebrow">Provider contract</Text><Heading level={3}>Selected provider contract</Heading><Paragraph>{slaDirectoryConnection.message}</Paragraph><div className="contract-list"><div><span>Provider</span><strong>{directoryData?.provider.name ?? providerSlug}</strong></div><div><span>Directory transport</span><strong>Versioned JSON API</strong></div><div><span>Dynatrace evidence</span><strong>Services, Problems, logs, spans</strong></div></div><Button variant="default" onClick={() => void refetchDirectory()} disabled={directoryLoading}>{directoryLoading ? "Testing" : "Refresh provider"}</Button></Surface><Surface className="panel-card"><Text className="eyebrow">Next check</Text><Heading level={3}>{claimReadiness.value === "Candidate" ? "Candidate for human review" : providerState.title}</Heading><Paragraph>Service health is an observed symptom. Provider attribution requires a service boundary, a matching contract, and enough customer-side evidence to rule out a local cause.</Paragraph><div className="signal-row"><StatusPill tone={telemetryState.tone}>{telemetryState.title}</StatusPill><Text>{services.length} services · {problems.length} Problems</Text></div><div className="signal-row"><StatusPill tone={providerState.tone}>{providerState.title}</StatusPill><Text>{providerLabels.length} provider labels detected</Text></div>{providerState.tone === "warning" ? <Link className="inline-action" to="/settings/watch">Configure provider identity</Link> : <a className="inline-action" href={COMMUNITY_PROFILE_URL} target="_blank" rel="noreferrer">Open Dynatrace Community profile</a>}</Surface></div>
-
+        <Surface className={`panel-card overview-status-panel overview-status-panel-${claimReadiness.tone}`} data-tour="overview-status">
+          <div className="overview-status-main">
+            <div className="overview-status-copy">
+              <StatusPill tone={claimReadiness.tone}>{claimReadiness.value}</StatusPill>
+              <Heading level={2}>{overviewAssessment.title}</Heading>
+              <Paragraph>{overviewAssessment.detail}</Paragraph>
+            </div>
+            <div className="overview-status-actions">
+              <Button className="overview-primary-action" as={Link} to={overviewAssessment.href} variant="emphasized" color="primary">
+                {overviewAssessment.action}
+              </Button>
+              {overviewAssessment.href !== "/evidence" ? (
+                <Link className="text-action" to="/evidence">
+                  {setupRecommendations.length > 0
+                    ? `View ${setupRecommendations.length} setup check${setupRecommendations.length === 1 ? "" : "s"}`
+                    : "Open evidence"}
+                </Link>
+              ) : setupRecommendations.length > 0 ? (
+                <Text className="overview-check-count">{setupRecommendations.length} setup check{setupRecommendations.length === 1 ? "" : "s"} available</Text>
+              ) : null}
+            </div>
+          </div>
+          <div className="overview-facts" aria-label="Current watch facts">
+            <OverviewFact
+              label="Provider contract"
+              value={directoryLoading ? "Checking" : directoryData ? providerName : "Unavailable"}
+              detail={directoryData ? "sla.directory record loaded" : "Contract connection"}
+              tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}
+            />
+            <OverviewFact
+              label="Service boundary"
+              value={servicesLoading ? "Checking" : String(services.length)}
+              detail={servicesLoading ? "Reading tenant inventory" : `service${services.length === 1 ? "" : "s"} returned`}
+              tone={servicesLoading ? "neutral" : services.length > 0 ? "positive" : "warning"}
+            />
+            <OverviewFact
+              label={`Problems · ${lookbackHours}h`}
+              value={problemsLoading ? "Checking" : String(problems.length)}
+              detail={problemsLoading ? "Reading Davis data" : `${activeProblems} active`}
+              tone={problemsLoading ? "neutral" : activeProblems > 0 ? "warning" : "neutral"}
+            />
+            <OverviewFact
+              label="Provider match"
+              value={telemetryLoading || directoryLoading ? "Checking" : String(matchedProviderServices)}
+              detail={matchedProviderServices === 1 ? "service matches contract" : "services match contract"}
+              tone={telemetryLoading || directoryLoading ? "neutral" : matchedProviderServices > 0 ? "positive" : "warning"}
+            />
+          </div>
+          <div className="overview-boundary-note">
+            <strong>Assessment boundary</strong>
+            <span>Dynatrace shows observed tenant evidence. The provider determines fault, eligibility, and any service credit.</span>
+          </div>
+        </Surface>
+      ) : section === "evidence" ? (
+        <div className="evidence-page">
+          <Surface className="panel-card diagnostics-panel">
+            <div className="panel-heading-row">
+              <div>
+                <Heading level={2}>Evidence required for provider attribution</Heading>
+                <Paragraph>Verify each boundary before moving an incident to provider review.</Paragraph>
+              </div>
+              <StatusPill tone={claimReadiness.tone}>{evidenceStatus}</StatusPill>
+            </div>
+            <div className="evidence-ladder">
+              <EvidenceStep number={1} title="Telemetry captured" detail="Problems, logs, spans, or service request signals are present." state={telemetryState.tone === "positive" ? "positive" : telemetryState.tone} />
+              <EvidenceStep number={2} title="Service boundary visible" detail={`${services.length} service${services.length === 1 ? "" : "s"} returned from the tenant inventory.`} state={services.length > 0 && !servicesLoading ? "positive" : telemetryLoading ? "neutral" : "warning"} />
+              <EvidenceStep number={3} title="Provider boundary identified" detail={`${matchedProviderServices} service${matchedProviderServices === 1 ? "" : "s"} match the ${providerName} contract.`} state={matchedProviderServices > 0 && !directoryLoading ? "positive" : providerState.tone} />
+              <EvidenceStep number={4} title="Contract record available" detail="The directory record supports review; it does not establish provider fault or credit eligibility." state={directoryData ? "positive" : "neutral"} />
+            </div>
+            <div className="diagnostic-grid">
+              <DiagnosticCard label="Telemetry coverage" title={telemetryState.title} tone={telemetryState.tone} detail={telemetryState.detail}>
+                <span>Services <strong>{services.length}</strong></span>
+                <span>Problems <strong>{problems.length}</strong></span>
+                <span>Logs <strong>{logCount === null ? "n/a" : logCount.toLocaleString()}</strong></span>
+                <span>Spans <strong>{spanCount === null ? "n/a" : spanCount.toLocaleString()}</strong></span>
+              </DiagnosticCard>
+              <DiagnosticCard label="Provider identity" title={providerState.title} tone={providerState.tone} detail={providerState.detail}>
+                <span>Selected contract <strong>{providerName}</strong></span>
+                <span>Explicit labels <strong>{providerLabels.length}</strong></span>
+                <span>Matched services <strong>{matchedProviderServices}</strong></span>
+              </DiagnosticCard>
+            </div>
+            {telemetryError ? <div className="error-box">Telemetry scan incomplete: {telemetryError.message}</div> : null}
+          </Surface>
           <SetupAdvisor recommendations={setupRecommendations} loading={telemetryLoading || directoryLoading} limitedContext={Boolean(telemetryError || (services.length === 0 && telemetrySignalsPresent))} />
-
-          <Surface className="panel-card diagnostics-panel" data-tour="evidence"><div className="panel-heading-row"><div><Text className="eyebrow">Tenant evidence diagnostics</Text><Heading level={2}>Evidence required for provider attribution</Heading></div><StatusPill tone={claimReadiness.tone}>{claimReadiness.value === "Candidate" ? "Candidate for review" : "Action required"}</StatusPill></div><Paragraph>These checks separate telemetry availability, service boundary, provider identity, and contract evidence. No check by itself establishes provider fault or credit eligibility.</Paragraph><div className="evidence-ladder"><EvidenceStep number={1} title="Telemetry captured" detail="Problems, logs, spans, or service request signals are present." state={telemetryState.tone === "positive" ? "positive" : telemetryState.tone} /><EvidenceStep number={2} title="Service boundary visible" detail={`${services.length} service${services.length === 1 ? "" : "s"} returned from the tenant inventory.`} state={services.length > 0 && !servicesLoading ? "positive" : telemetryLoading ? "neutral" : "warning"} /><EvidenceStep number={3} title="Provider boundary identified" detail={`${matchedProviderServices} service${matchedProviderServices === 1 ? "" : "s"} match the ${directoryData?.provider.name ?? providerSlug} contract.`} state={matchedProviderServices > 0 && !directoryLoading ? "positive" : providerState.tone} /><EvidenceStep number={4} title="Contract record available" detail="The directory record supports review; it does not establish provider fault or credit eligibility." state={directoryData ? "positive" : "neutral"} /></div><div className="diagnostic-grid"><DiagnosticCard label="Telemetry coverage" title={telemetryState.title} tone={telemetryState.tone} detail={telemetryState.detail}><span>Services <strong>{services.length}</strong></span><span>Problems <strong>{problems.length}</strong></span><span>Logs <strong>{logCount === null ? "n/a" : logCount.toLocaleString()}</strong></span><span>Spans <strong>{spanCount === null ? "n/a" : spanCount.toLocaleString()}</strong></span></DiagnosticCard><DiagnosticCard label="Provider identity" title={providerState.title} tone={providerState.tone} detail={providerState.detail}><span>Selected contract <strong>{directoryData?.provider.name ?? providerSlug}</strong></span><span>Explicit labels <strong>{providerLabels.length}</strong></span><span>Matched services <strong>{matchedProviderServices}</strong></span></DiagnosticCard></div>{telemetryError ? <div className="error-box">Telemetry scan incomplete: {telemetryError.message}</div> : null}</Surface>
-
-          <Surface className="panel-card review-link-panel"><div><Text className="eyebrow">Incident review</Text><Heading level={3}>Review observed Problems</Heading><Paragraph>{problems.length > 0 ? `${problems.length} tenant Problem${problems.length === 1 ? "" : "s"} can be compared with the provider record, observed dates, and published filing terms.` : `No Problems were returned in the last ${lookbackHours} hours. The review tab is ready when the tenant records one.`}</Paragraph></div><Link className="inline-action" to="/review">Open incident review</Link></Surface>
-        </>
+        </div>
       ) : section === "directory" ? (
         <Surface className="panel-card directory-panel"><div className="panel-heading-row"><div><Text className="eyebrow">Provider and service map</Text><Heading level={2}>Provider directory</Heading></div><StatusPill tone={directoryLoading ? "neutral" : directoryData ? "positive" : "warning"}>{directoryLoading ? "Checking" : directoryData ? `${directoryData.provider.name} connected` : "Directory unavailable"}</StatusPill></div><Paragraph>{directoryData ? `${directoryData.provider.name} has ${directoryData.services.length} service records. These are contractual targets, not measured tenant availability.` : directoryError ? `${directoryError.message}. Check the environment External requests allowlist.` : "Loading provider data..."}</Paragraph>{serviceError ? <div className="error-box">Dynatrace service inventory could not be loaded: {serviceError.message}</div> : null}{directoryData ? <div className="service-table" role="table" aria-label="Provider SLA services"><div className="service-row service-row-header" role="row"><span>Provider service</span><span>Target</span><span>Contract record</span><span>Verification</span></div>{directoryData.services.slice(0, 20).map((service) => <div className="service-row" role="row" key={service.id}><div><strong>{service.name}</strong><small>{service.id}</small></div><span>{service.uptime ? `${service.uptime}%` : "No target"}</span><StatusPill tone={service.eligible ? "positive" : "neutral"}>{service.eligible ? "Published SLA" : "Reference"}</StatusPill><span>{directoryData.provider.lastVerified}</span></div>)}</div> : null}<div className="directory-footer"><span>Need a different provider or label convention?</span><Link className="inline-action" to="/settings/watch">Open watch settings</Link></div>{servicesLoading || directoryLoading ? <div className="empty-state">Loading watch data...</div> : null}</Surface>
       ) : (

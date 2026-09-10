@@ -7,6 +7,8 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 - Reads the tenant service inventory with DQL.
 - Reads Davis Problems, logs, spans, and service-request telemetry for a selectable 24- or 72-hour window.
 - Retrieves provider and service contract data from the versioned `sla.directory` JSON API through an AppEngine function.
+- Presents a compact Watch overview with the current evidence state, supporting facts, and one recommended next action.
+- Provides a dedicated Evidence view for the full attribution ladder, telemetry diagnostics, provider identity, and setup checks.
 - Provides an Incident review tab with observed Problem windows, provider-published credit terms, filing guidance, required evidence, and exclusions.
 - Separates missing telemetry, incomplete entity access, missing provider labels, and labels that do not match the selected provider.
 - Recommends setup actions for provider boundaries, ownership metadata, service naming, and native SLO follow-up.
@@ -76,7 +78,7 @@ Every change to `app.config.json` requires a new app version before deployment. 
 
 ## State and privacy
 
-User theme and walkthrough state use user app state. Provider selection, label convention, and lookback use shared app state when the workspace scope is available. The browser fallback is local storage and is clearly surfaced when shared state cannot be written. App-state records expire after 90 days.
+User theme and walkthrough state use user app state. Provider selection, label convention, and lookback use shared app state when the workspace scope is available. The browser fallback is local storage and is clearly surfaced when shared state cannot be written. App-state records expire within the platform's 90-day limit.
 
 Do not enter secrets, credentials, or unnecessary personal data into app state. No secret is bundled in the app or stored in this repository.
 

@@ -28,18 +28,22 @@ const AppShell = ({
   theme,
   onToggleTheme,
   onStartTour,
+  saveError,
 }: {
   theme: AppTheme;
   onToggleTheme: () => void;
   onStartTour: () => void;
+  saveError: string | null;
 }) => (
   <div className="sla-app">
     <header className="sla-header">
       <Header theme={theme} onToggleTheme={onToggleTheme} onStartTour={onStartTour} />
     </header>
     <main className="sla-main">
+      {saveError ? <div className="save-status" role="status">{saveError}</div> : null}
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/evidence" element={<Dashboard initialSection="evidence" />} />
         <Route path="/directory" element={<Dashboard initialSection="directory" />} />
         <Route path="/review" element={<Dashboard initialSection="review" />} />
         <Route path="/changes" element={<ChangeLogPage />} />
@@ -90,13 +94,13 @@ const AppContent = () => {
         void updatePreferences({ theme: theme === "dark" ? "light" : "dark" });
       }}
       onStartTour={() => setTourOpen(true)}
+      saveError={saveError}
     />
   );
 
   return (
     <div className="sla-theme-root" data-app-theme={theme}>
       {content}
-      {saveError ? <div className="save-status" role="status">{saveError}</div> : null}
       {tourOpen ? (
         <ProductTour
           onComplete={() => {

@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.24",
+    version: "0.0.25",
     label: "Current release",
+    summary: "Refocused Watch on the current environment state and next action.",
+    details: [
+      "Replaced the long Overview with one assessment, four supporting facts, and one primary action.",
+      "Moved detailed diagnostics and setup recommendations to a dedicated Evidence view.",
+      "Changed the shared-state fallback from an overlay to an inline status message.",
+      "Corrected state expiration and header-action runtime warnings found during verification.",
+    ],
+  },
+  {
+    version: "0.0.24",
+    label: "Previous release",
     summary: "Clarified support and release history in the application shell.",
     details: [
       "Replaced the operational change register with a read-only release history.",

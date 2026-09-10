@@ -101,6 +101,16 @@ export const buildSetupRecommendations = ({
       action: "Widen the evidence window",
       href: "/settings/watch",
     });
+  } else if (!telemetrySignalsPresent) {
+    add(recommendations, {
+      id: "recent-telemetry",
+      priority: "high",
+      title: "Add a recent service signal",
+      detail: "Service entities are visible, but the selected window has no Problems, logs, spans, or service-request series to support an incident review.",
+      evidence: `${services.length} service${services.length === 1 ? " is" : "s are"} visible without a recent supporting signal.`,
+      action: "Review the evidence window",
+      href: "/settings/watch",
+    });
   }
 
   if (directoryData && services.length > 0 && providerLabels.length === 0) {

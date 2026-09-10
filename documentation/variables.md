@@ -9,11 +9,11 @@
 | `DT_APP_OAUTH_CLIENT_ID` | CI deployment | CI only | CI secret store | Rotate with the OAuth client | Low by itself |
 | `DT_APP_OAUTH_CLIENT_SECRET` | CI deployment | CI only | CI secret store | Rotate periodically and after suspected exposure | High |
 | `sla.directory` | AppEngine function | Server-side outbound host | Function source and environment allowlist | Review allowlist ownership and upstream availability | Medium: external dependency |
-| `providerSlug` | DQL-derived attribution and directory function | Shared app state | User input | State expires after 90 days | Low, but controls external lookup |
-| `providerLabelKey` | Provider tag parsing | Shared app state | User input | State expires after 90 days | Low, affects attribution |
-| `lookbackHours` | DQL query construction | Shared app state | Controlled select input | State expires after 90 days | Low |
-| `sla.user.v1` | Theme and walkthrough state | User app state/local fallback | App constants | State expires after 90 days | Low |
-| `sla.workspace.v1` | Provider and watch configuration | Shared app state/local fallback | App constants | State expires after 90 days | Medium: shared operator context |
+| `providerSlug` | DQL-derived attribution and directory function | Shared app state | User input | State expires within 90 days | Low, but controls external lookup |
+| `providerLabelKey` | Provider tag parsing | Shared app state | User input | State expires within 90 days | Low, affects attribution |
+| `lookbackHours` | DQL query construction | Shared app state | Controlled select input | State expires within 90 days | Low |
+| `sla.user.v1` | Theme and walkthrough state | User app state/local fallback | App constants | State expires within 90 days | Low |
+| `sla.workspace.v1` | Provider and watch configuration | Shared app state/local fallback | App constants | State expires within 90 days | Medium: shared operator context |
 
 ## Secret handling
 
