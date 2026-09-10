@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppHeader } from "@dynatrace/strato-components/layouts";
-import { Tooltip } from "@dynatrace/strato-components-preview/overlays";
 import {
   BugReportIcon,
   DarkmodeIcon,
@@ -36,71 +35,59 @@ export const Header = ({
     <AppHeader>
       <AppHeader.Navigation>
         <AppHeader.Logo as={Link} to="/" appName="SLA Watch" />
-        <AppHeader.NavigationItem as={Link} to="/" isSelected={isWatch} data-tour="watch">
-          SLA Watch
+        <AppHeader.NavigationItem as={Link} to="/" isSelected={isWatch} className="sla-nav-primary" data-tour="watch">
+          Watch
         </AppHeader.NavigationItem>
         <AppHeader.NavigationItem as={Link} to="/directory" isSelected={isDirectory} data-tour="provider">
           Provider directory
         </AppHeader.NavigationItem>
       </AppHeader.Navigation>
       <AppHeader.ActionItems>
-        <Tooltip text="Open change management">
-          <AppHeader.ActionButton
-            onClick={() => { void navigate("/changes"); }}
-            prefixIcon={<HistoryIcon />}
-            showLabel={false}
-            isSelected={isChanges}
-            aria-label="Change management"
-            data-tour="changes"
-          />
-        </Tooltip>
-        <Tooltip text="Report and manage bugs">
-          <AppHeader.ActionButton
-            onClick={() => { void navigate("/bugs"); }}
-            prefixIcon={<BugReportIcon />}
-            showLabel={false}
-            isSelected={isBugs}
-            aria-label="Bug management"
-            data-tour="bugs"
-          />
-        </Tooltip>
-        <Tooltip text={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
-          <AppHeader.ActionButton
-            onClick={onToggleTheme}
-            prefixIcon={theme === "dark" ? <LightmodeIcon /> : <DarkmodeIcon />}
-            showLabel={false}
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-          />
-        </Tooltip>
-        <Tooltip text="Open settings">
-          <AppHeader.ActionButton
-            onClick={() => { void navigate("/settings/watch"); }}
-            prefixIcon={<SettingIcon />}
-            showLabel={false}
-            isSelected={isSettings}
-            aria-label="Settings"
-            data-tour="settings"
-          />
-        </Tooltip>
-        <Tooltip text="Start or replay the walkthrough">
-          <AppHeader.ActionButton
-            onClick={onStartTour}
-            prefixIcon={<GuideIcon />}
-            showLabel={false}
-            aria-label="Start or replay SLA Watch walkthrough"
-            data-tour="tour"
-          />
-        </Tooltip>
-        <Tooltip text="Open the SLA Watch guide">
-          <AppHeader.ActionButton
-            onClick={() => setHelpOpen((current) => !current)}
-            prefixIcon={<HelpIcon />}
-            showLabel={false}
-            isSelected={helpOpen}
-            aria-label="Open SLA Watch guide"
-            aria-expanded={helpOpen}
-          />
-        </Tooltip>
+        <AppHeader.ActionButton
+          onClick={onToggleTheme}
+          prefixIcon={theme === "dark" ? <LightmodeIcon /> : <DarkmodeIcon />}
+          showLabel={false}
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+        />
+        <AppHeader.ActionButton
+          onClick={() => { void navigate("/settings/watch"); }}
+          prefixIcon={<SettingIcon />}
+          showLabel={false}
+          isSelected={isSettings}
+          aria-label="Settings"
+          data-tour="settings"
+        />
+        <AppHeader.ActionButton
+          onClick={onStartTour}
+          prefixIcon={<GuideIcon />}
+          showLabel={false}
+          aria-label="Start or replay SLA Watch walkthrough"
+          data-tour="tour"
+        />
+        <AppHeader.ActionButton
+          onClick={() => setHelpOpen((current) => !current)}
+          prefixIcon={<HelpIcon />}
+          showLabel={false}
+          isSelected={helpOpen}
+          aria-label="Open SLA Watch guide"
+          aria-expanded={helpOpen}
+        />
+        <AppHeader.ActionButton
+          onClick={() => { void navigate("/changes"); }}
+          prefixIcon={<HistoryIcon />}
+          showLabel={false}
+          isSelected={isChanges}
+          aria-label="Change management"
+          data-tour="changes"
+        />
+        <AppHeader.ActionButton
+          onClick={() => { void navigate("/bugs"); }}
+          prefixIcon={<BugReportIcon />}
+          showLabel={false}
+          isSelected={isBugs}
+          aria-label="Bug management"
+          data-tour="bugs"
+        />
       </AppHeader.ActionItems>
       {helpOpen ? (
         <aside className="help-drawer" aria-label="SLA Watch guide">

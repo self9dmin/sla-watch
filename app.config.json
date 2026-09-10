@@ -3,7 +3,7 @@
   "environmentUrl": "https://your-environment.apps.dynatrace.com/",
   "app": {
     "name": "SLA Watch",
-    "version": "0.0.18",
+    "version": "0.0.20",
     "icon": "ui/assets/sla-watch-icon.svg",
     "description": "Correlate provider SLAs with Dynatrace evidence and service ownership",
     "id": "my.sla",
