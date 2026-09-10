@@ -14,8 +14,9 @@ Sequence:
 2. `Dashboard` issues DQL reads for services, Problems, logs, spans, and service-request telemetry.
 3. `Dashboard` calls the `slaDirectory` AppEngine function with the configured vendor slug.
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
-5. The UI classifies evidence as loading, access-incomplete, telemetry-missing, service-inventory-incomplete, provider-unidentified, provider-mismatched, or candidate-for-human-review.
-6. The UI renders conservative setup recommendations. No Dynatrace entity, tag, metric, Problem, SLO, or external ticket is changed.
+5. The UI classifies the first unresolved evidence boundary as loading, access-incomplete, telemetry-missing, service-inventory-incomplete, provider-unidentified, provider-mismatched, no-incident-in-scope, or candidate-for-human-review.
+6. Overview presents that state with one next action. The Evidence view contains the supporting diagnostics and conservative setup recommendations.
+7. No Dynatrace entity, tag, metric, Problem, SLO, or external ticket is changed.
 
 Deny or degraded behavior: a missing read scope is shown as access incomplete, not as no telemetry. A failed directory request is shown as unavailable, not as a provider breach.
 
@@ -25,7 +26,7 @@ Actor: user with `state:app-states:write`.
 
 1. The user edits provider slug, label key, or lookback in Settings.
 2. Input is normalized before persistence. The provider slug is restricted to lowercase slug characters.
-3. The context optimistically updates the UI and writes the workspace state with a 90-day expiry.
+3. The context optimistically updates the UI and writes the workspace state with an expiry just inside the platform's 90-day limit.
 4. If the shared write is denied, the same normalized value is kept in local storage and a status message explains the fallback.
 
 Deny behavior: the app never writes to Dynatrace entity settings or telemetry. A user without app-state write access can still inspect the app but cannot create a shared configuration.
@@ -36,7 +37,7 @@ Actor: signed-in Dynatrace user.
 
 1. The user opens the change log from the application header or settings rail.
 2. The app renders the bundled version history as read-only release information.
-3. The user opens the Dynatrace Community profile from the application header, help guide, change log, or dashboard support action when support or issue discussion is needed.
+3. The user opens the Dynatrace Community profile from the application header, help guide, or change log when support or issue discussion is needed.
 
 Deny behavior: these surfaces do not write app state, Dynatrace entities, telemetry, or external tickets. The community profile opens outside the app and follows the user's existing Dynatrace Community access.
 
@@ -45,7 +46,7 @@ Deny behavior: these surfaces do not write app state, Dynatrace entities, teleme
 Actor: signed-in user with user app-state access.
 
 1. The user selects a theme, restarts onboarding, or replays the walkthrough.
-2. The preference is stored in user app state with a 90-day expiry.
+2. The preference is stored in user app state with an expiry just inside the platform's 90-day limit.
 3. A failure falls back to local state without changing workspace configuration.
 
 ## External dependency failure

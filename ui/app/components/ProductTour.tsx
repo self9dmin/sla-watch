@@ -7,7 +7,12 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="watch"]',
     title: "Review the watch",
-    body: "The watch combines tenant telemetry with the selected provider contract. Use the sections to review evidence and configuration.",
+    body: "Overview shows the current provider-attribution state and the next defensible action for this environment.",
+  },
+  {
+    target: '[data-tour="evidence"]',
+    title: "Inspect the evidence path",
+    body: "Evidence separates telemetry, service boundary, provider identity, and contract availability. Open it when you need the facts behind the Overview status.",
   },
   {
     target: '[data-tour="provider"]',

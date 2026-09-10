@@ -20,14 +20,12 @@ export const SetupAdvisor = ({
   limitedContext: boolean;
 }) => (
   <Surface className="panel-card advisor-panel" data-tour="advisor">
-    <div className="advisor-intro">
-      <div className="panel-heading-row">
-        <div>
-          <Heading level={2}>Environment checks</Heading>
-          <Paragraph>These checks identify missing telemetry, provider identity, and ownership metadata before review. SLA Watch does not change tags, names, or SLOs without approval.</Paragraph>
-        </div>
-        <span className="advisor-badge">Setup checks</span>
+    <div className="panel-heading-row">
+      <div className="advisor-intro">
+        <Heading level={2}>Setup checks</Heading>
+        <Paragraph>Resolve required telemetry and identity gaps before an incident review. SLA Watch does not change tags, names, or SLOs.</Paragraph>
       </div>
+      {!loading ? <span className="advisor-count">{recommendations.length} open</span> : null}
     </div>
     {loading ? (
       <div className="advisor-empty" role="status">Reading the tenant boundary before making recommendations...</div>
@@ -37,14 +35,20 @@ export const SetupAdvisor = ({
         <span>Keep the provider boundary and ownership metadata stable as services change. The next review can focus on contract records and the error budget.</span>
       </div>
     ) : (
-      <div className="advisor-grid">
+      <div className="advisor-list">
         {recommendations.map((recommendation) => (
           <article className={`advisor-item advisor-item-${recommendation.priority}`} key={recommendation.id}>
-            <div className="advisor-item-top"><span className="advisor-priority">{priorityLabel[recommendation.priority]}</span><span className="advisor-dot" aria-hidden="true" /></div>
-            <h3>{recommendation.title}</h3>
-            <p>{recommendation.detail}</p>
-            <div className="advisor-evidence"><span>Why this is showing</span><strong>{recommendation.evidence}</strong></div>
-            {recommendation.href ? <Link className="advisor-action" to={recommendation.href}>{recommendation.action} <span aria-hidden="true">→</span></Link> : <span className="advisor-action advisor-action-muted">{recommendation.action}</span>}
+            <div className="advisor-item-copy">
+              <div className="advisor-item-title">
+                <span className="advisor-priority">{priorityLabel[recommendation.priority]}</span>
+                <h3>{recommendation.title}</h3>
+              </div>
+              <p>{recommendation.detail}</p>
+              <div className="advisor-evidence"><span>Reason</span><strong>{recommendation.evidence}</strong></div>
+            </div>
+            {recommendation.href
+              ? <Link className="advisor-action" to={recommendation.href}>{recommendation.action} <span aria-hidden="true">→</span></Link>
+              : <span className="advisor-action advisor-action-muted">{recommendation.action}</span>}
           </article>
         ))}
       </div>

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.25
+
+- Replaced the long Watch landing page with a compact, action-led environment assessment.
+- Moved the full evidence ladder, telemetry diagnostics, provider identity checks, and setup recommendations into a dedicated Evidence view.
+- Removed the duplicate Provider directory tab from Watch while preserving the Telemetry Grand Prix shell navigation.
+- Changed the shared-state fallback message from a fixed overlay to an inline status that does not cover evidence.
+- Added a safety margin to app-state expiration and removed invalid header properties observed during browser verification.
+
 ## 0.0.24
 
 - Replaced the operational change register with a read-only application change log.
@@ -56,4 +64,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.24` release candidate.
+- Reserved for changes after the `0.0.25` release candidate.

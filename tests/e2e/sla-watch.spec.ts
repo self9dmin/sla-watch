@@ -21,8 +21,12 @@ test.describe('SLA Watch deployed smoke', () => {
     await openWatch(page);
 
     await expect(page.getByText(/sla\.directory API\s*:/i)).toBeVisible();
-    await expect(page.getByText(/Needs labeling|Ready for review|Unavailable|Access incomplete/i)).toBeVisible();
-    await expect(page.getByText(/never changes tags, names, or SLOs/i)).toBeVisible();
+    await expect(page.getByText(/Needs labeling|Needs telemetry|Needs service boundary|Needs mapping|No incident in scope|Candidate|Blocked/i).first()).toBeVisible();
+    await expect(page.getByText(/The provider determines fault, eligibility, and any service credit/i)).toBeVisible();
+
+    await page.getByRole('link', { name: 'Evidence' }).click();
+    await expect(page.getByRole('heading', { name: 'Evidence required for provider attribution' })).toBeVisible();
+    await expect(page.getByText(/does not change tags, names, or SLOs/i)).toBeVisible();
   });
 
   test('switches themes without losing the evidence surface', async ({ page }) => {

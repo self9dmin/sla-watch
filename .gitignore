@@ -5,6 +5,9 @@
 # Local agent operating instructions are not part of the public product source
 /AGENTS.md
 
+# Local UX review snapshots are not part of the public product source
+/.impeccable/
+
 # Compiled output
 /dist
 /build

@@ -10,6 +10,7 @@ import {
   type SlaPreferences,
   type SlaThemePreference,
 } from "../types";
+import { createStateExpiration } from "../data/stateExpiration";
 
 const USER_STATE_KEY = "sla.user.v1";
 const WORKSPACE_STATE_KEY = "sla.workspace.v1";
@@ -17,7 +18,6 @@ const LEGACY_STATE_KEY = "sla.preferences.v1";
 const USER_LOCAL_KEY = "sla.user.v1.local";
 const WORKSPACE_LOCAL_KEY = "sla.workspace.v1.local";
 const LEGACY_LOCAL_KEY = "sla.preferences.v1.local";
-const STATE_TTL_DAYS = 90;
 
 type PreferencesPatch = Partial<SlaPreferences>;
 type UserPreferencesState = Pick<SlaPreferences, "theme" | "onboardingComplete" | "tourCompleted">;
@@ -100,9 +100,6 @@ const writeLocalState = (value: SlaPreferences): void => {
   }
 };
 
-const expiresAt = (): string =>
-  new Date(Date.now() + STATE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
-
 const hasField = (patch: PreferencesPatch, fields: ReadonlyArray<string>): boolean =>
   Object.keys(patch).some((key) => fields.includes(key));
 
@@ -161,7 +158,7 @@ export const SlaPreferencesProvider = ({ children }: { children: React.ReactNode
                   onboardingComplete: nextPreferences.onboardingComplete,
                   tourCompleted: nextPreferences.tourCompleted,
                 }),
-                validUntilTime: expiresAt(),
+                validUntilTime: createStateExpiration(),
               },
             })
           : Promise.resolve(),
@@ -174,7 +171,7 @@ export const SlaPreferencesProvider = ({ children }: { children: React.ReactNode
                   providerLabelKey: nextPreferences.providerLabelKey,
                   lookbackHours: nextPreferences.lookbackHours,
                 }),
-                validUntilTime: expiresAt(),
+                validUntilTime: createStateExpiration(),
               },
             })
           : Promise.resolve(),

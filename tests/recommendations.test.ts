@@ -88,6 +88,25 @@ describe("buildSetupRecommendations", () => {
     expect(recommendations.some(({ id }) => id === "provider-label")).toBe(false);
   });
 
+  it("reports missing recent telemetry separately from a visible service boundary", () => {
+    const recommendations = buildSetupRecommendations({
+      services: [service(["provider:aws", "team:checkout"])],
+      problems: [],
+      telemetrySignalsPresent: false,
+      directoryData: provider,
+      providerLabels: ["aws"],
+      selectedProviderSlug: "aws",
+      providerLabelKey: "provider",
+      matchedProviderServices: 1,
+    });
+
+    expect(recommendations[0]).toMatchObject({
+      id: "recent-telemetry",
+      priority: "high",
+    });
+    expect(recommendations[0].evidence).toContain("visible without a recent supporting signal");
+  });
+
   it("suggests native SLO coverage only after the boundary is identified", () => {
     const recommendations = buildSetupRecommendations({
       services: [service(["provider:aws", "team:checkout"])],

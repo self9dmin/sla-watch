@@ -28,7 +28,7 @@ export const Header = ({
   const [helpOpen, setHelpOpen] = useState(false);
   const isSettings = location.pathname.startsWith("/settings");
   const isChanges = location.pathname.startsWith("/changes");
-  const isWatch = location.pathname === "/" || location.pathname === "/review";
+  const isWatch = location.pathname === "/" || location.pathname === "/evidence" || location.pathname === "/review";
   const isDirectory = location.pathname === "/directory";
 
   return (
@@ -53,7 +53,7 @@ export const Header = ({
           onClick={() => { void navigate("/settings/watch"); }}
           prefixIcon={<SettingIcon />}
           showLabel={false}
-          isSelected={isSettings}
+          className={isSettings ? "active" : undefined}
           aria-label="Settings"
           data-tour="settings"
         />
@@ -68,7 +68,7 @@ export const Header = ({
           onClick={() => setHelpOpen((current) => !current)}
           prefixIcon={<HelpIcon />}
           showLabel={false}
-          isSelected={helpOpen}
+          className={helpOpen ? "active" : undefined}
           aria-label="Open SLA Watch guide"
           aria-expanded={helpOpen}
         />
@@ -76,7 +76,7 @@ export const Header = ({
           onClick={() => { void navigate("/changes"); }}
           prefixIcon={<HistoryIcon />}
           showLabel={false}
-          isSelected={isChanges}
+          className={isChanges ? "active" : undefined}
           aria-label="Open change log"
           data-tour="changes"
         />

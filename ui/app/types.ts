@@ -1,4 +1,4 @@
-export type WatchSection = "overview" | "directory" | "review";
+export type WatchSection = "overview" | "evidence" | "directory" | "review";
 export type SlaThemePreference = "system" | "light" | "dark";
 export type RecommendationPriority = "high" | "medium" | "low";
 

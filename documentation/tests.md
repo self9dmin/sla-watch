@@ -9,11 +9,13 @@ This document separates executable coverage from manual or proposed coverage. Pa
 | Provider setup advice | Missing provider labels must not become provider proof | A service inventory with no provider label produces a high-priority labeling recommendation and no outage claim | `tests/recommendations.test.ts` | Existing unit test |
 | Provider setup advice | A wrong label must be distinguished from a missing label | Existing labels that do not match the selected contract produce a mapping recommendation | `tests/recommendations.test.ts` | Existing unit test |
 | Access failure | Permission failure is not absence of data | Telemetry error produces an access recommendation and suppresses provider-label advice | `tests/recommendations.test.ts` | Existing unit test |
+| Telemetry boundary | Visible services do not prove recent incident evidence exists | A visible service inventory without Problems, logs, spans, or request series produces a separate telemetry recommendation | `tests/recommendations.test.ts` | Existing unit test |
 | SLO follow-up | SLO advice requires a known provider boundary | A matched provider label with owner context can suggest native SLO follow-up | `tests/recommendations.test.ts` | Existing unit test |
+| App-state expiry | Expiration must remain inside the platform limit | The generated timestamp includes a safety margin below 90 days | `tests/stateExpiration.test.ts` | Existing unit test |
 | External contract parsing | Untrusted directory payloads must be validated | Invalid envelope or service identity throws before data reaches the UI | `tests/slaDirectory.function.test.ts` | Existing unit test |
 | Static quality | Type and lint errors block a change | `npm run typecheck` and `npm run lint` exit successfully | `package.json`, CI workflow | Existing CI gate |
 | Bundle validity | App manifest and bundle must be accepted by `dt-app` | `npm run build` and `npm run analyze` exit successfully | `dt-app` output | Existing CI gate |
-| Browser smoke | A deployed app exposes the watch, conservative posture, and theme switch | The Playwright suite reaches the watch and preserves the evidence surface | `tests/e2e/sla-watch.spec.ts`, `playwright.config.ts` | Prepared guarded E2E |
+| Browser smoke | A deployed app exposes the compact watch, dedicated evidence route, conservative posture, and theme switch | The Playwright suite reaches Overview, opens Evidence, and preserves the evidence surface | `tests/e2e/sla-watch.spec.ts`, `playwright.config.ts` | Prepared guarded E2E |
 
 ## Proposed tests
 
