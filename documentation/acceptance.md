@@ -1,6 +1,24 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.31`, plus prior release records. The `0.0.35` source remains a local release candidate until a separate deployment and acceptance entry is recorded. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.35`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.35 verified scenarios
+
+The `0.0.35` artifact from source commit `f1da4f2` was deployed to the designated Dynatrace target environment on 2026-09-10 and exercised through the installed application. No provider tag, SLA override, provider connection, credential, or confirmed scope mapping was written during verification.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.35` manifest, three AppEngine functions, App Settings schemas, and UI deployed successfully | Supported Node 24 release gate and installed production browser smoke; source commit `f1da4f2` |
+| Release gate | Type checks, lint, 13 test suites with 71 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed | `verify:release`; production dependency audit reported zero vulnerabilities |
+| Multiple monitored providers | AWS and GCP remain configured at the same time, AWS stays active, and Azure, OCI, OpenAI, Anthropic, ElevenLabs, plus another directory provider are available without replacing the current provider | Installed Monitor settings smoke |
+| Multiple Google Cloud projects | Provider connections is a collection-oriented setup surface with a saved-connection selector and `Add a new project` state rather than a one-project limit | Installed Provider connections smoke; no project credential was entered or saved |
+| Scope map placement | The Smartscape-backed scope map is a dedicated Setup view and no longer appears in Directory | Installed Setup and Directory smoke |
+| Scope mapping evidence | Setup returned four AWS service-to-runtime relationships, suggested Amazon EC2 from runtime metadata, and required explicit confirmation before reuse | Installed Scope map smoke; production remained at `0 of 4 confirmed` |
+| Incident attribution fallback | A Problem affecting `wayfinder-engage-api-inter` had no exact confirmed mapping or unique Smartscape candidate, so Incident review showed `Provider-level terms (no service match)`, `Provider-wide scope`, and a `Review scope map` action instead of guessing | Installed Incidents smoke against 16 observed Problems |
+| Directory separation | Directory contains only Published terms and SLA overrides; scope mapping stays in Setup | Installed Directory smoke |
+| Desktop fit | Setup Scope map has equal body client and scroll dimensions, with no page scroll at the tested desktop viewport | Installed browser dimension check at 1646 by 747 CSS pixels |
+| Provider status adapters | OCI, OpenAI, Anthropic, and ElevenLabs public-status adapters are included and covered by parser and response tests | Deployed `providerPublicStatus` function and automated tests; target-environment outbound-host access was not exercised in this smoke |
+| Assessment boundary | Smartscape suggestions and confirmed mappings select evidence scope only; the UI does not claim provider fault, customer impact, SLA eligibility, or credit approval | Installed Setup and Incidents copy |
 
 ## 0.0.31 verified scenarios
 
@@ -56,5 +74,7 @@ The `0.0.30` artifact from source commit `c8d3b6f` was deployed to the designate
 - A separate least-privilege user for every declared telemetry and state scope.
 - A provider-tag write or undo against a disposable service under granted, denied, or management-zone-limited permissions.
 - Automated Playwright coverage against a disposable authenticated tenant.
-- End-to-end provider-service ID correlation or automated credit eligibility.
+- A confirmed scope mapping carried from Setup into an incident against a disposable target-environment dataset.
+- Target-environment outbound-host access for every optional public provider-status adapter.
+- Automated credit eligibility or provider-side approval.
 - Dynatrace Hub listing approval, standard verification, or code signing.
