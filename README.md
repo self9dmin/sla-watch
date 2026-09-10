@@ -13,7 +13,7 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 - Separates missing telemetry, incomplete entity access, missing provider labels, and labels that do not match the selected provider.
 - Recommends setup actions for provider boundaries, ownership metadata, service naming, and native SLO follow-up.
 - Keeps personal theme and onboarding state separate from shared watch configuration.
-- Provides a read-only application change log and a direct link to the Dynatrace Community profile for support and issue discussion.
+- Provides a read-only application change log. Dynatrace Community support is visible as coming soon and remains disabled until public launch.
 
 ## Deliberate boundaries
 

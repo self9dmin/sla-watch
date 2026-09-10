@@ -37,9 +37,9 @@ Actor: signed-in Dynatrace user.
 
 1. The user opens the change log from the application header or settings rail.
 2. The app renders the bundled version history as read-only release information.
-3. The user opens the Dynatrace Community profile from the application header, help guide, or change log when support or issue discussion is needed.
+3. Before public launch, each Dynatrace Community destination is visible as a disabled `Coming soon` item and exposes no external link. After the launch gate is enabled, those surfaces open the configured Community profile for support or issue discussion.
 
-Deny behavior: these surfaces do not write app state, Dynatrace entities, telemetry, or external tickets. The community profile opens outside the app and follows the user's existing Dynatrace Community access.
+Deny behavior: these surfaces do not write app state, Dynatrace entities, telemetry, or external tickets. A disabled Community destination is not keyboard-focusable and cannot open a browser tab.
 
 ## Replay onboarding or change appearance
 

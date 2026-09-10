@@ -10,7 +10,8 @@ import {
   SettingIcon,
   SupportIcon,
 } from "@dynatrace/strato-icons";
-import { COMMUNITY_PROFILE_URL } from "../data/externalLinks";
+import { COMMUNITY_PROFILE, isCommunityLive } from "../data/externalLinks";
+import { CommunityLink } from "./CommunityLink";
 
 type AppTheme = "light" | "dark";
 
@@ -30,67 +31,82 @@ export const Header = ({
   const isChanges = location.pathname.startsWith("/changes");
   const isWatch = location.pathname === "/" || location.pathname === "/evidence" || location.pathname === "/review";
   const isDirectory = location.pathname === "/directory";
+  const communityLive = isCommunityLive();
 
   return (
-    <AppHeader>
-      <AppHeader.Navigation>
-        <AppHeader.Logo as={Link} to="/" appName="SLA Watch" />
-        <AppHeader.NavigationItem as={Link} to="/" isSelected={isWatch} className="sla-nav-primary" data-tour="watch">
-          Watch
-        </AppHeader.NavigationItem>
-        <AppHeader.NavigationItem as={Link} to="/directory" isSelected={isDirectory} data-tour="provider">
-          Provider directory
-        </AppHeader.NavigationItem>
-      </AppHeader.Navigation>
-      <AppHeader.ActionItems>
-        <AppHeader.ActionButton
-          onClick={onToggleTheme}
-          prefixIcon={theme === "dark" ? <LightmodeIcon /> : <DarkmodeIcon />}
-          showLabel={false}
-          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-        />
-        <AppHeader.ActionButton
-          onClick={() => { void navigate("/settings/watch"); }}
-          prefixIcon={<SettingIcon />}
-          showLabel={false}
-          className={isSettings ? "active" : undefined}
-          aria-label="Settings"
-          data-tour="settings"
-        />
-        <AppHeader.ActionButton
-          onClick={onStartTour}
-          prefixIcon={<GuideIcon />}
-          showLabel={false}
-          aria-label="Start or replay SLA Watch walkthrough"
-          data-tour="tour"
-        />
-        <AppHeader.ActionButton
-          onClick={() => setHelpOpen((current) => !current)}
-          prefixIcon={<HelpIcon />}
-          showLabel={false}
-          className={helpOpen ? "active" : undefined}
-          aria-label="Open SLA Watch guide"
-          aria-expanded={helpOpen}
-        />
-        <AppHeader.ActionButton
-          onClick={() => { void navigate("/changes"); }}
-          prefixIcon={<HistoryIcon />}
-          showLabel={false}
-          className={isChanges ? "active" : undefined}
-          aria-label="Open change log"
-          data-tour="changes"
-        />
-        <AppHeader.ActionButton
-          as="a"
-          href={COMMUNITY_PROFILE_URL}
-          target="_blank"
-          rel="noreferrer"
-          prefixIcon={<SupportIcon />}
-          showLabel={false}
-          aria-label="Open Dynatrace Community profile"
-          data-tour="community"
-        />
-      </AppHeader.ActionItems>
+    <>
+      <AppHeader>
+        <AppHeader.Navigation>
+          <AppHeader.Logo as={Link} to="/" appName="SLA Watch" />
+          <AppHeader.NavigationItem as={Link} to="/" isSelected={isWatch} className="sla-nav-primary" data-tour="watch">
+            Watch
+          </AppHeader.NavigationItem>
+          <AppHeader.NavigationItem as={Link} to="/directory" isSelected={isDirectory} data-tour="provider">
+            Provider directory
+          </AppHeader.NavigationItem>
+        </AppHeader.Navigation>
+        <AppHeader.ActionItems>
+          <AppHeader.ActionButton
+            onClick={onToggleTheme}
+            prefixIcon={theme === "dark" ? <LightmodeIcon /> : <DarkmodeIcon />}
+            showLabel={false}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+          />
+          <AppHeader.ActionButton
+            onClick={() => { void navigate("/settings/watch"); }}
+            prefixIcon={<SettingIcon />}
+            showLabel={false}
+            className={isSettings ? "active" : undefined}
+            aria-label="Settings"
+            data-tour="settings"
+          />
+          <AppHeader.ActionButton
+            onClick={onStartTour}
+            prefixIcon={<GuideIcon />}
+            showLabel={false}
+            aria-label="Start or replay SLA Watch walkthrough"
+            data-tour="tour"
+          />
+          <AppHeader.ActionButton
+            onClick={() => setHelpOpen((current) => !current)}
+            prefixIcon={<HelpIcon />}
+            showLabel={false}
+            className={helpOpen ? "active" : undefined}
+            aria-label="Open SLA Watch guide"
+            aria-expanded={helpOpen}
+          />
+          <AppHeader.ActionButton
+            onClick={() => { void navigate("/changes"); }}
+            prefixIcon={<HistoryIcon />}
+            showLabel={false}
+            className={isChanges ? "active" : undefined}
+            aria-label="Open change log"
+            data-tour="changes"
+          />
+          {communityLive ? (
+            <AppHeader.ActionButton
+              as="a"
+              href={COMMUNITY_PROFILE.url}
+              target="_blank"
+              rel="noreferrer"
+              prefixIcon={<SupportIcon />}
+              showLabel={false}
+              aria-label="Open Dynatrace Community profile"
+              data-tour="community"
+            />
+          ) : (
+            <AppHeader.ActionButton
+              disabled
+              prefixIcon={<SupportIcon />}
+              showLabel={false}
+              className="community-action-disabled"
+              aria-label="Dynatrace Community, coming soon"
+              title="Available after public launch"
+              data-tour="community"
+            />
+          )}
+        </AppHeader.ActionItems>
+      </AppHeader>
       {helpOpen ? (
         <aside className="help-drawer" aria-label="SLA Watch guide">
           <div className="help-drawer-header">
@@ -117,15 +133,15 @@ export const Header = ({
           </section>
           <section>
             <h3>4. Get support</h3>
-            <p>The change log documents application releases. Questions and issue discussion belong on the Dynatrace Community profile.</p>
+            <p>{communityLive ? "The change log documents application releases. Questions and issue discussion belong on the Dynatrace Community profile." : "The change log documents application releases. Dynatrace Community support will be enabled at public launch."}</p>
           </section>
           <div className="help-drawer-actions">
             <button type="button" className="link-button" onClick={() => { setHelpOpen(false); void navigate("/settings/watch"); }}>Open watch settings</button>
-            <a className="link-button" href={COMMUNITY_PROFILE_URL} target="_blank" rel="noreferrer" onClick={() => setHelpOpen(false)}>Open community profile</a>
+            <CommunityLink className="link-button" label="Community profile" onClick={() => setHelpOpen(false)} />
             <button type="button" className="link-button" onClick={() => { setHelpOpen(false); onStartTour(); }}>Replay walkthrough</button>
           </div>
         </aside>
       ) : null}
-    </AppHeader>
+    </>
   );
 };

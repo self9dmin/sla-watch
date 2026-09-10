@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.27
+
+- Added a single public-launch gate for the Dynatrace Community destination.
+- Rendered Community actions as muted, disabled “Coming soon” items across the header, settings, guide, walkthrough, and release history.
+- Removed Community URLs and keyboard interaction from the pre-launch interface.
+- Restored the header guide as a visible side panel so support guidance remains reachable.
+
 ## 0.0.26
 
 - Corrected the evidence-stage marker layout so each step number remains centered inside its status circle.
@@ -69,4 +76,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.26` release candidate.
+- Reserved for changes after the `0.0.27` release candidate.
