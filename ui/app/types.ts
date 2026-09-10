@@ -1,33 +1,6 @@
 export type WatchSection = "overview" | "directory" | "review";
 export type SlaThemePreference = "system" | "light" | "dark";
-export type BugCategory = "data" | "provider-matching" | "access" | "ux";
-export type BugSeverity = "low" | "medium" | "high";
-export type BugStatus = "open" | "triaged" | "resolved";
-export type ChangeRisk = "low" | "medium" | "high";
-export type ChangeStatus = "planned" | "in-progress" | "complete" | "rolled-back";
 export type RecommendationPriority = "high" | "medium" | "low";
-
-export type SlaBug = {
-  id: string;
-  title: string;
-  category: BugCategory;
-  severity: BugSeverity;
-  details: string;
-  status: BugStatus;
-  createdAt: string;
-  evidence: string;
-};
-
-export type SlaChange = {
-  id: string;
-  title: string;
-  scope: string;
-  risk: ChangeRisk;
-  owner: string;
-  rollbackPlan: string;
-  status: ChangeStatus;
-  createdAt: string;
-};
 
 export type SlaPreferences = {
   theme: SlaThemePreference;
@@ -36,8 +9,6 @@ export type SlaPreferences = {
   lookbackHours: 24 | 72;
   onboardingComplete: boolean;
   tourCompleted: boolean;
-  bugs: SlaBug[];
-  changes: SlaChange[];
 };
 
 export type ServiceRecord = { id: string; name: string; type: string; tags: string[] };
@@ -137,27 +108,4 @@ export const DEFAULT_SLA_PREFERENCES: SlaPreferences = {
   lookbackHours: 24,
   onboardingComplete: false,
   tourCompleted: false,
-  bugs: [],
-  changes: [
-    {
-      id: "CHG-BASELINE-01",
-      title: "Evidence-first provider attribution",
-      scope: "Separates telemetry presence, service inventory, provider labels, and Problems before a claim is considered.",
-      risk: "low",
-      owner: "SLA workspace",
-      rollbackPlan: "Disable the watch and return to the previous dashboard while preserving raw evidence.",
-      status: "complete",
-      createdAt: "Baseline",
-    },
-    {
-      id: "CHG-BASELINE-02",
-      title: "sla.directory contract lookup",
-      scope: "Loads provider and service targets through the versioned directory API from an AppEngine function.",
-      risk: "medium",
-      owner: "SLA workspace",
-      rollbackPlan: "Use the last verified contract snapshot and mark the directory as unavailable.",
-      status: "complete",
-      createdAt: "Baseline",
-    },
-  ],
 };

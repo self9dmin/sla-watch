@@ -3,7 +3,7 @@
   "environmentUrl": "https://your-environment.apps.dynatrace.com/",
   "app": {
     "name": "SLA Watch",
-    "version": "0.0.23",
+    "version": "0.0.24",
     "icon": "ui/assets/sla-watch-icon.svg",
     "description": "Correlate provider SLAs with Dynatrace evidence and service ownership",
     "id": "my.sla",
@@ -15,8 +15,8 @@
       { "name": "storage:spans:read", "comment": "Check whether distributed tracing telemetry exists" },
       { "name": "state:user-app-states:read", "comment": "Restore personal theme and onboarding preferences" },
       { "name": "state:user-app-states:write", "comment": "Save personal theme and onboarding preferences" },
-      { "name": "state:app-states:read", "comment": "Read shared SLA Watch provider and workflow configuration" },
-      { "name": "state:app-states:write", "comment": "Save shared SLA Watch provider and workflow configuration" }
+      { "name": "state:app-states:read", "comment": "Read shared SLA Watch provider configuration" },
+      { "name": "state:app-states:write", "comment": "Save shared SLA Watch provider configuration" }
     ]
   }
 }

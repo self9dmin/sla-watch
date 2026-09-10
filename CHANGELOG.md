@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.24
+
+- Replaced the operational change register with a read-only application change log.
+- Replaced in-app bug intake with a direct link to the Dynatrace Community profile for support and issue discussion.
+- Removed obsolete workflow state and aligned the settings, walkthrough, help guidance, and documentation with the read-only boundary.
+
 ## 0.0.23
 
 - Guarded incident-window calculations so billing-cycle or otherwise provider-anchored terms are shown as planning references rather than converted into a tenant-derived deadline.
@@ -24,7 +30,7 @@
 ## 0.0.19
 
 - Tightened the visual system for light and dark themes with a denser dashboard, smaller type scale, and clearer status contrast.
-- Matched the Telemetry Grand Prix shell pattern with a compact app breadcrumb and visible icon actions for theme, settings, guide, changes, and bugs.
+- Matched the Telemetry Grand Prix shell pattern with a compact app breadcrumb and visible icon actions for theme, settings, guide, change log, and community support.
 
 ## 0.0.18
 
@@ -46,8 +52,8 @@
 - Added conservative tenant setup recommendations for provider labeling, ownership metadata, service naming, and SLO follow-up.
 - Split personal preferences from shared workspace configuration and workflow records.
 - Added explicit access-incomplete and provider-identification states.
-- Added day and night theme support, onboarding, walkthrough, bug management, and change management.
+- Added day and night theme support, onboarding, walkthrough, and the initial operator guidance surfaces.
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.23` release candidate.
+- Reserved for changes after the `0.0.24` release candidate.

@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typography";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
+import { COMMUNITY_PROFILE_URL } from "../data/externalLinks";
 import type { SlaThemePreference } from "../types";
 
 const SETUP_LINKS = [
@@ -12,8 +13,7 @@ const SETUP_LINKS = [
 ] as const;
 
 const OPERATE_LINKS = [
-  ["/bugs", "Bug management"],
-  ["/changes", "Change management"],
+  ["/changes", "Change log"],
 ] as const;
 
 const SettingsRail = ({ page }: { page: string }) => {
@@ -27,7 +27,11 @@ const SettingsRail = ({ page }: { page: string }) => {
         <div className="settings-rail-label">OPERATE</div>
         {OPERATE_LINKS.map(([href, label]) => <NavLink key={href} to={href} className="settings-rail-link">{label}</NavLink>)}
       </div>
-      <div className="settings-rail-note">Watch configuration and workflow records are shared with the workspace. Theme and walkthrough state stay personal to you.</div>
+      <div className="settings-rail-group">
+        <div className="settings-rail-label">SUPPORT</div>
+        <a className="settings-rail-link" href={COMMUNITY_PROFILE_URL} target="_blank" rel="noreferrer">Dynatrace Community</a>
+      </div>
+      <div className="settings-rail-note">Watch configuration is shared with the workspace. Theme and walkthrough state stay personal to you. The change log is read-only.</div>
     </aside>
   );
 };
@@ -145,7 +149,7 @@ const IntroSettings = () => {
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure the provider boundary, evidence window, theme, and operator records.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Watch configuration</span><strong>Select the contract and label convention.</strong><span>Current provider settings are visible before each review.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run setup or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure the provider boundary, evidence window, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Watch configuration</span><strong>Select the contract and label convention.</strong><span>Current provider settings are visible before each review.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Intro & walkthrough</span><strong>Run setup or replay the walkthrough.</strong><span>Use when onboarding a responder or changing ownership boundaries.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();

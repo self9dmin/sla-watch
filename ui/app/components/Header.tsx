@@ -2,14 +2,15 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppHeader } from "@dynatrace/strato-components/layouts";
 import {
-  BugReportIcon,
   DarkmodeIcon,
   GuideIcon,
   HelpIcon,
   HistoryIcon,
   LightmodeIcon,
   SettingIcon,
+  SupportIcon,
 } from "@dynatrace/strato-icons";
+import { COMMUNITY_PROFILE_URL } from "../data/externalLinks";
 
 type AppTheme = "light" | "dark";
 
@@ -26,7 +27,6 @@ export const Header = ({
   const navigate = useNavigate();
   const [helpOpen, setHelpOpen] = useState(false);
   const isSettings = location.pathname.startsWith("/settings");
-  const isBugs = location.pathname.startsWith("/bugs");
   const isChanges = location.pathname.startsWith("/changes");
   const isWatch = location.pathname === "/" || location.pathname === "/review";
   const isDirectory = location.pathname === "/directory";
@@ -77,16 +77,18 @@ export const Header = ({
           prefixIcon={<HistoryIcon />}
           showLabel={false}
           isSelected={isChanges}
-          aria-label="Change management"
+          aria-label="Open change log"
           data-tour="changes"
         />
         <AppHeader.ActionButton
-          onClick={() => { void navigate("/bugs"); }}
-          prefixIcon={<BugReportIcon />}
+          as="a"
+          href={COMMUNITY_PROFILE_URL}
+          target="_blank"
+          rel="noreferrer"
+          prefixIcon={<SupportIcon />}
           showLabel={false}
-          isSelected={isBugs}
-          aria-label="Bug management"
-          data-tour="bugs"
+          aria-label="Open Dynatrace Community profile"
+          data-tour="community"
         />
       </AppHeader.ActionItems>
       {helpOpen ? (
@@ -113,8 +115,13 @@ export const Header = ({
             <h3>3. Review</h3>
             <p>Incident review compares observed Problems with provider terms and planning dates. A matching service and active Problem do not prove provider fault or credit eligibility by themselves.</p>
           </section>
+          <section>
+            <h3>4. Get support</h3>
+            <p>The change log documents application releases. Questions and issue discussion belong on the Dynatrace Community profile.</p>
+          </section>
           <div className="help-drawer-actions">
             <button type="button" className="link-button" onClick={() => { setHelpOpen(false); void navigate("/settings/watch"); }}>Open watch settings</button>
+            <a className="link-button" href={COMMUNITY_PROFILE_URL} target="_blank" rel="noreferrer" onClick={() => setHelpOpen(false)}>Open community profile</a>
             <button type="button" className="link-button" onClick={() => { setHelpOpen(false); onStartTour(); }}>Replay walkthrough</button>
           </div>
         </aside>

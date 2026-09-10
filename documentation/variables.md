@@ -13,7 +13,7 @@
 | `providerLabelKey` | Provider tag parsing | Shared app state | User input | State expires after 90 days | Low, affects attribution |
 | `lookbackHours` | DQL query construction | Shared app state | Controlled select input | State expires after 90 days | Low |
 | `sla.user.v1` | Theme and walkthrough state | User app state/local fallback | App constants | State expires after 90 days | Low |
-| `sla.workspace.v1` | Provider and workflow state | Shared app state/local fallback | App constants | State expires after 90 days; 100 records per workflow type | Medium: shared operator context |
+| `sla.workspace.v1` | Provider and watch configuration | Shared app state/local fallback | App constants | State expires after 90 days | Medium: shared operator context |
 
 ## Secret handling
 
@@ -25,4 +25,4 @@ No API token, OAuth secret, password, credential-vault ID, or private endpoint i
 - Confirm `.env`, token files, Playwright auth state, coverage output, and deployment artifacts are ignored.
 - Confirm the target environment allowlists only `sla.directory`, not unrestricted outbound access.
 - Confirm app-state records expire and that operators know the browser fallback is not shared.
-- Confirm user-entered workflow records do not need to contain PII or secrets.
+- Confirm app-state fields do not contain PII or secrets beyond the configured provider and label convention.
