@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest a focused improvement to SLA Watch
+title: "Feature: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: SRE problem
+      description: What decision or workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Describe the smallest useful behavior and how uncertainty should be shown.
+    validations:
+      required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Data and permission impact
+      description: Identify any new Dynatrace data, scopes, writes, external hosts, or privacy implications.
+    validations:
+      required: true

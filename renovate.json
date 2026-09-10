@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", "config:js-app"],
+  "baseBranches": ["main"],
+  "enabledManagers": ["npm"],
+  "packageRules": [
+    {
+      "description": "Group Strato patch updates",
+      "matchPackageNames": ["@dynatrace/strato-**"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "Strato patches"
+    },
+    {
+      "description": "Keep Dynatrace SDK packages on strict update checks",
+      "matchPackageNames": ["@dynatrace/**", "@dynatrace-sdk/**"],
+      "internalChecksFilter": "strict"
+    }
+  ]
+}
