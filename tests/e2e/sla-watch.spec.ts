@@ -52,6 +52,30 @@ test.describe('SLA Watch deployed smoke', () => {
     await expect(page.getByRole('link', { name: 'Provider directory' })).toBeVisible();
   });
 
+  test('explains icon-only header actions on hover', async ({ page }) => {
+    await openWatch(page);
+
+    const themeAction = page.getByRole('button', { name: /Switch to (light|dark) theme/ });
+    const themeTooltip = await themeAction.getAttribute('aria-label');
+    await themeAction.hover();
+    await expect(page.getByRole('tooltip').filter({ hasText: themeTooltip ?? 'Switch theme' })).toBeVisible();
+    await page.mouse.move(0, 100);
+
+    const tooltipCases = [
+      { action: 'Open watch settings', tooltip: 'Open watch settings' },
+      { action: 'Start or replay SLA Watch walkthrough', tooltip: 'Start or replay walkthrough' },
+      { action: 'Open SLA Watch guide', tooltip: 'Open SLA Watch guide' },
+      { action: 'Open change log', tooltip: 'Open change log' },
+      { action: 'Dynatrace Community, coming soon', tooltip: 'Dynatrace Community (coming soon)' },
+    ];
+
+    for (const { action, tooltip } of tooltipCases) {
+      await page.getByRole('button', { name: action }).hover();
+      await expect(page.getByRole('tooltip').filter({ hasText: tooltip })).toBeVisible();
+      await page.mouse.move(0, 100);
+    }
+  });
+
   test('keeps Community destinations disabled before public launch', async ({ page }) => {
     await openWatch(page);
 
@@ -68,7 +92,7 @@ test.describe('SLA Watch deployed smoke', () => {
     await expect(page.locator('[aria-disabled="true"][aria-label="Dynatrace Community, coming soon"]')).toBeVisible();
     await expect(page.getByRole('link', { name: /Dynatrace Community/i })).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('button', { name: 'Open watch settings' }).click();
     await expect(page.locator('[aria-disabled="true"][aria-label="Dynatrace Community, coming soon"]')).toBeVisible();
     await expect(page.getByRole('link', { name: /Dynatrace Community/i })).toHaveCount(0);
   });

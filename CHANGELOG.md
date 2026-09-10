@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.28
+
+- Added concise Strato tooltips to every icon-only header action.
+- Kept header actions understandable on hover and keyboard focus in both themes.
+- Preserved the disabled pre-launch Community state while explaining its availability.
+
 ## 0.0.27
 
 - Added a single public-launch gate for the Dynatrace Community destination.
@@ -76,4 +82,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.27` release candidate.
+- Reserved for changes after the `0.0.28` release candidate.

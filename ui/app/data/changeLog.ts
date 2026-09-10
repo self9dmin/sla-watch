@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.27",
+    version: "0.0.28",
     label: "Current release",
+    summary: "Added accessible guidance for header actions.",
+    details: [
+      "Added concise Strato tooltips to every icon-only header action.",
+      "Kept action names available to keyboard and assistive-technology users in both themes.",
+      "Preserved the disabled pre-launch state for the Dynatrace Community destination.",
+    ],
+  },
+  {
+    version: "0.0.27",
+    label: "Previous release",
     summary: "Held Community destinations until public launch.",
     details: [
       "Muted and disabled Community actions in the header, settings, guide, and release history.",

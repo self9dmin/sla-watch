@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AppHeader } from "@dynatrace/strato-components/layouts";
+import { Tooltip } from "@dynatrace/strato-components/overlays";
 import {
   DarkmodeIcon,
   GuideIcon,
@@ -32,6 +33,8 @@ export const Header = ({
   const isWatch = location.pathname === "/" || location.pathname === "/evidence" || location.pathname === "/review";
   const isDirectory = location.pathname === "/directory";
   const communityLive = isCommunityLive();
+  const themeActionLabel = `Switch to ${theme === "dark" ? "light" : "dark"} theme`;
+  const guideActionLabel = `${helpOpen ? "Close" : "Open"} SLA Watch guide`;
 
   return (
     <>
@@ -46,64 +49,77 @@ export const Header = ({
           </AppHeader.NavigationItem>
         </AppHeader.Navigation>
         <AppHeader.ActionItems>
-          <AppHeader.ActionButton
-            onClick={onToggleTheme}
-            prefixIcon={theme === "dark" ? <LightmodeIcon /> : <DarkmodeIcon />}
-            showLabel={false}
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-          />
-          <AppHeader.ActionButton
-            onClick={() => { void navigate("/settings/watch"); }}
-            prefixIcon={<SettingIcon />}
-            showLabel={false}
-            className={isSettings ? "active" : undefined}
-            aria-label="Settings"
-            data-tour="settings"
-          />
-          <AppHeader.ActionButton
-            onClick={onStartTour}
-            prefixIcon={<GuideIcon />}
-            showLabel={false}
-            aria-label="Start or replay SLA Watch walkthrough"
-            data-tour="tour"
-          />
-          <AppHeader.ActionButton
-            onClick={() => setHelpOpen((current) => !current)}
-            prefixIcon={<HelpIcon />}
-            showLabel={false}
-            className={helpOpen ? "active" : undefined}
-            aria-label="Open SLA Watch guide"
-            aria-expanded={helpOpen}
-          />
-          <AppHeader.ActionButton
-            onClick={() => { void navigate("/changes"); }}
-            prefixIcon={<HistoryIcon />}
-            showLabel={false}
-            className={isChanges ? "active" : undefined}
-            aria-label="Open change log"
-            data-tour="changes"
-          />
+          <Tooltip text={themeActionLabel} placement="bottom">
+            <AppHeader.ActionButton
+              onClick={onToggleTheme}
+              prefixIcon={theme === "dark" ? <LightmodeIcon /> : <DarkmodeIcon />}
+              showLabel={false}
+              aria-label={themeActionLabel}
+            />
+          </Tooltip>
+          <Tooltip text="Open watch settings" placement="bottom">
+            <AppHeader.ActionButton
+              onClick={() => { void navigate("/settings/watch"); }}
+              prefixIcon={<SettingIcon />}
+              showLabel={false}
+              className={isSettings ? "active" : undefined}
+              aria-label="Open watch settings"
+              data-tour="settings"
+            />
+          </Tooltip>
+          <Tooltip text="Start or replay walkthrough" placement="bottom">
+            <AppHeader.ActionButton
+              onClick={onStartTour}
+              prefixIcon={<GuideIcon />}
+              showLabel={false}
+              aria-label="Start or replay SLA Watch walkthrough"
+              data-tour="tour"
+            />
+          </Tooltip>
+          <Tooltip text={guideActionLabel} placement="bottom">
+            <AppHeader.ActionButton
+              onClick={() => setHelpOpen((current) => !current)}
+              prefixIcon={<HelpIcon />}
+              showLabel={false}
+              className={helpOpen ? "active" : undefined}
+              aria-label={guideActionLabel}
+              aria-expanded={helpOpen}
+            />
+          </Tooltip>
+          <Tooltip text="Open change log" placement="bottom">
+            <AppHeader.ActionButton
+              onClick={() => { void navigate("/changes"); }}
+              prefixIcon={<HistoryIcon />}
+              showLabel={false}
+              className={isChanges ? "active" : undefined}
+              aria-label="Open change log"
+              data-tour="changes"
+            />
+          </Tooltip>
           {communityLive ? (
-            <AppHeader.ActionButton
-              as="a"
-              href={COMMUNITY_PROFILE.url}
-              target="_blank"
-              rel="noreferrer"
-              prefixIcon={<SupportIcon />}
-              showLabel={false}
-              aria-label="Open Dynatrace Community profile"
-              data-tour="community"
-            />
+            <Tooltip text="Open Dynatrace Community" placement="bottom-end">
+              <AppHeader.ActionButton
+                as="a"
+                href={COMMUNITY_PROFILE.url}
+                target="_blank"
+                rel="noreferrer"
+                prefixIcon={<SupportIcon />}
+                showLabel={false}
+                aria-label="Open Dynatrace Community profile"
+                data-tour="community"
+              />
+            </Tooltip>
           ) : (
-            <AppHeader.ActionButton
-              disabled
-              prefixIcon={<SupportIcon />}
-              showLabel={false}
-              className="community-action-disabled"
-              aria-label="Dynatrace Community, coming soon"
-              title="Available after public launch"
-              data-tour="community"
-            />
+            <Tooltip text="Dynatrace Community (coming soon)" placement="bottom-end">
+              <AppHeader.ActionButton
+                disabled
+                prefixIcon={<SupportIcon />}
+                showLabel={false}
+                className="community-action-disabled"
+                aria-label="Dynatrace Community, coming soon"
+                data-tour="community"
+              />
+            </Tooltip>
           )}
         </AppHeader.ActionItems>
       </AppHeader>
