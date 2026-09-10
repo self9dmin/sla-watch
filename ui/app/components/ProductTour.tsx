@@ -6,33 +6,33 @@ type TourStep = { target: string; title: string; body: string };
 const STEPS: TourStep[] = [
   {
     target: '[data-tour="watch"]',
-    title: "Start with the watch",
-    body: "SLA Watch brings together the live tenant signals and the provider contract. It keeps the evidence chain visible while you investigate.",
+    title: "Review the watch",
+    body: "The watch combines tenant telemetry with the selected provider contract. Use the sections to review evidence and configuration.",
   },
   {
     target: '[data-tour="provider"]',
-    title: "Add providers as you go",
-    body: "Provider directory is the contract view. Choose a provider in Settings, then use the directory to compare targets and directory-eligible services.",
+    title: "Review provider records",
+    body: "Provider directory contains contract records and targets. Select a provider in Settings, then compare those records with tenant evidence.",
   },
   {
     target: '[data-tour="settings"]',
-    title: "Tune your watch",
-    body: "Settings controls the provider slug, label key, lookback window, theme, and this introduction. Watch configuration is shared, while theme and walkthrough state stay personal.",
+    title: "Configure the evidence boundary",
+    body: "Settings controls the provider slug, label key, lookback window, theme, and walkthrough state. Watch configuration is shared, while theme and walkthrough state stay personal.",
   },
   {
     target: '[data-tour="bugs"]',
-    title: "Keep the handoff honest",
-    body: "When the data or matching is wrong, capture the evidence context in Bug management. That gives the next responder something reproducible to work from.",
+    title: "Capture a reproducible issue",
+    body: "When data or matching is incorrect, record the evidence context in Bug management for the next responder.",
   },
   {
     target: '[data-tour="changes"]',
-    title: "Record what changed",
-    body: "Change management makes provider mapping and evidence-policy changes reviewable. Record the scope and rollback plan before a risky adjustment.",
+    title: "Record a configuration change",
+    body: "Use Change management to record provider mapping and evidence-policy changes, including scope and rollback plan.",
   },
   {
     target: '[data-tour="tour"]',
-    title: "You can replay this",
-    body: "Use the walkthrough icon any time. The help guide beside it explains the difference between a provider candidate and proof of provider fault.",
+    title: "Review attribution guidance",
+    body: "Use the walkthrough icon any time. The help guide explains the difference between a provider candidate and evidence of provider fault.",
   },
 ];
 

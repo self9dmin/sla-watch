@@ -94,15 +94,15 @@ export const Header = ({
           <div className="help-drawer-header">
             <div>
               <div className="eyebrow">SLA Watch guide</div>
-              <h2>Make a defensible provider call</h2>
+              <h2>Provider attribution guidance</h2>
             </div>
             <button type="button" className="icon-button" onClick={() => setHelpOpen(false)} aria-label="Close guide">
               Close
             </button>
           </div>
-          <p>Start with the live evidence, then move through the attribution ladder. The app will tell you when a provider is unidentified instead of guessing.</p>
+          <p>Review the live evidence first, then check service boundary, provider identity, and contract evidence. An unidentified provider remains unidentified until a label or mapping is available.</p>
           <section>
-            <h3>1. Watch</h3>
+            <h3>1. Observe</h3>
             <p>Review service inventory, Problems, logs, and spans for the selected lookback window.</p>
           </section>
           <section>
@@ -110,7 +110,7 @@ export const Header = ({
             <p>Provider identity requires an explicit Dynatrace label or a mapping you can explain to the next responder.</p>
           </section>
           <section>
-            <h3>3. Verify</h3>
+            <h3>3. Review</h3>
             <p>A matching service and active Problem create a candidate for review. They do not prove provider fault or credit eligibility by themselves.</p>
           </section>
           <div className="help-drawer-actions">
