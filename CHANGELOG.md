@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.26
+
+- Corrected the evidence-stage marker layout so each step number remains centered inside its status circle.
+- Added explicit evidence-list semantics and consistent marker geometry across light and dark themes.
+
 ## 0.0.25
 
 - Replaced the long Watch landing page with a compact, action-led environment assessment.
@@ -64,4 +69,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.25` release candidate.
+- Reserved for changes after the `0.0.26` release candidate.

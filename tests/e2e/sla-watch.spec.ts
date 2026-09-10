@@ -26,6 +26,9 @@ test.describe('SLA Watch deployed smoke', () => {
 
     await page.getByRole('link', { name: 'Evidence' }).click();
     await expect(page.getByRole('heading', { name: 'Evidence required for provider attribution' })).toBeVisible();
+    const evidenceStages = page.getByRole('list', { name: 'Provider attribution evidence stages' });
+    await expect(evidenceStages).toBeVisible();
+    await expect(evidenceStages.getByRole('listitem')).toHaveCount(4);
     await expect(page.getByText(/does not change tags, names, or SLOs/i)).toBeVisible();
   });
 

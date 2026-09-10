@@ -7,8 +7,17 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.25",
+    version: "0.0.26",
     label: "Current release",
+    summary: "Corrected the evidence-stage status markers.",
+    details: [
+      "Centered every step number inside a fixed circular marker in both themes.",
+      "Added explicit list semantics to the four-stage evidence path.",
+    ],
+  },
+  {
+    version: "0.0.25",
+    label: "Previous release",
     summary: "Refocused Watch on the current environment state and next action.",
     details: [
       "Replaced the long Overview with one assessment, four supporting facts, and one primary action.",
