@@ -1,6 +1,6 @@
 # Dependency audit note
 
-This note records the dependency posture for the `0.0.36` release candidate, verified with Node.js 24.19.0. It is intentionally explicit so a public-repository reviewer can distinguish production risk from upstream development-tooling findings.
+This note records the dependency posture for the `0.0.37` release candidate, verified with Node.js 24.19.0. It is intentionally explicit so a public-repository reviewer can distinguish production risk from upstream development-tooling findings.
 
 ## Checks
 

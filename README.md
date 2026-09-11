@@ -12,7 +12,7 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 - Lets administrators add multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies for customer-scoped provider notices. Credentials remain in Dynatrace Credential Vault.
 - Reads credential-free public status for Google Cloud and OCI, plus optional OpenAI, Anthropic, and ElevenLabs sources. Public records remain explicitly non-customer-specific.
 - Presents a compact Overview with the current state, supporting facts, and one recommended next action.
-- Provides a focused Setup view for telemetry checks, provider-tag review, and a Smartscape-backed service scope map.
+- Opens Setup on a Smartscape-backed service scope map, with provider-tag review as a secondary path for reuse by other Dynatrace features.
 - Uses exact service-to-cloud-runtime relationships from Smartscape to suggest provider candidates. Suggestions are never created from service names and require operator confirmation before a tag is written.
 - Lets an operator confirm the provider service for an exact Smartscape service-to-runtime scope. Confirmed mappings are stored separately from entity tags and reused automatically in Incident review.
 - Lets an authorized user add the configured provider tag to explicitly selected service entities after a confirmation step. Existing tags remain in place, conflicts are held for review, and the last app action can be undone.
@@ -36,6 +36,17 @@ Custom SLA assignments are explicit. An SRE selects the provider service and exa
 
 The runtime data path does not require an MCP server or a user-supplied `sla.directory` credential. The installed app calls the public versioned JSON API automatically through its AppEngine function. `sla.directory` MCP remains useful for agent-assisted research and contract discovery.
 
+## First-run setup
+
+1. Install SLA Watch and open it from the Dynatrace Apps page.
+2. Use onboarding to choose the providers monitored by the workspace. A fresh workspace includes AWS, Azure, GCP, and OCI, with AWS only as the initial focused view.
+3. Continue to **Setup > Scope map** to review Smartscape recommendations and confirm the exact service-to-provider-service relationships used by incident review.
+4. Add provider service tags only when other Dynatrace dashboards, alerts, management zones, or workflows should reuse the same provider boundary.
+5. Optionally open **Settings > Provider connections**. For each account, subscription, project, or tenancy, create a least-privilege provider identity and store its secret in Dynatrace Credential Vault. SLA Watch receives only the credential record ID.
+6. Add the exact provider hosts to Dynatrace External requests, test the connection, and save it only after verification succeeds. A provider connection does not assign services or prove provider fault.
+
+Provider connections are configured independently in every installing Dynatrace environment. They are not bundled with the app, inherited from this repository, or shared with the development tenant. See the [provider incident connection guide](documentation/provider-connections.md) for the complete AWS, Azure, GCP, and OCI setup.
+
 ## Prerequisites
 
 - Dynatrace AppEngine enabled in the target environment.
@@ -43,11 +54,11 @@ The runtime data path does not require an MCP server or a user-supplied `sla.dir
 - `sla.directory` added as an allowed external host for AppEngine functions. The host entry is `sla.directory`, without a protocol or path.
 - For AWS account notices, allow `sts.us-east-1.amazonaws.com` and `health.us-east-1.amazonaws.com`. The selected AWS account must have a supported AWS Health API plan. Grant a dedicated identity only `health:DescribeEvents` and `health:DescribeEventDetails`, then store JSON containing `accessKeyId`, `secretAccessKey`, and an optional `sessionToken` as an AppEngine-scoped Token credential restricted to SLA Watch.
 - For Azure subscription notices, allow `login.microsoftonline.com` and `management.azure.com`. Use a dedicated Microsoft Entra application with `Microsoft.ResourceHealth/events/read` on the selected subscription, then store JSON containing `tenantId`, `clientId`, and `clientSecret` as an AppEngine-scoped Token credential restricted to SLA Watch.
-- For Google Cloud provider notices, add `status.cloud.google.com`, `oauth2.googleapis.com`, and `servicehealth.googleapis.com` under Settings > General > External requests. Do not disable external-request enforcement.
+- For Google Cloud provider notices, add `status.cloud.google.com`, `oauth2.googleapis.com`, and `servicehealth.googleapis.com` under Settings > General > External requests. Enable the Service Health API and grant the dedicated service account both `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer`. Do not disable external-request enforcement.
 - For credential-free public provider status, allow `status.openai.com`, `status.claude.com`, `status.elevenlabs.io`, and `ocistatus.oraclecloud.com`.
 - For each OCI tenancy connection, allow the exact regional host `announcements.<region>.oraclecloud.com`. Dynatrace supports a wildcard host pattern such as `*.oraclecloud.com`, but the exact hostname is the least-privilege default.
 - For OCI tenancy notices, create a dedicated API-signing user, grant its group `Allow group AnnouncementListers to inspect announcements in tenancy`, and store JSON containing only `userOcid`, `fingerprint`, and the unencrypted RSA `privateKey` as a Token credential. Give the credential AppEngine scope, restrict application access to SLA Watch, and grant only the intended users access.
-- For personalized Google Cloud notices, enable the Service Health API, grant a dedicated service account `roles/servicehealth.viewer` on the selected project, and store its JSON key as a Token credential with AppEngine scope. Restrict application access to SLA Watch and grant only the intended users access.
+- For personalized Google Cloud notices, enable the Service Health API, grant a dedicated service account both `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer` on the selected project, and store its JSON key as a Token credential with AppEngine scope. Restrict application access to SLA Watch and grant only the intended users access.
 - Users who apply or undo provider tags need the Dynatrace permission to manage entity settings. Users without it keep a read-only Setup experience.
 - Users who create or edit custom SLAs need App Settings write access for the `contract-overrides` schema. Users who confirm provider-service scope mappings need write access for `provider-scope-assignments`. All authenticated app users can read these settings, so records must contain operational values and concise evidence references, not private contract text or credentials.
 - Node.js 24 for the supported local and CI toolchain.
@@ -110,7 +121,7 @@ Custom SLA terms use the `contract-overrides` App Settings schema so they are sh
 
 Provider connection metadata uses the `provider-connections` App Settings schema. It stores the provider, the applicable account, subscription, project, or tenancy identifier, an OCI region when required, and the Credential Vault record ID. It never stores an AWS secret access key, Azure client secret, Google service-account key, OCI private key, or access token. The AppEngine functions read the selected secret at request time, authenticate only to fixed provider endpoints, and return normalized provider notices to the browser.
 
-Confirmed service-to-provider-service mappings use the `provider-scope-assignments` App Settings schema. Each record contains exact Dynatrace service and runtime IDs, display context, the selected provider-service ID, and a short evidence note. Incident review checks exact tenant SLA scopes first, then confirmed scope mappings, then a unique Smartscape candidate. Any candidate remains visibly unconfirmed until an operator saves it in Setup.
+Confirmed service-to-provider-service mappings use the `provider-scope-assignments` App Settings schema. Each record contains exact Dynatrace service and runtime IDs, display context, the selected provider-service ID, and a short evidence note. The Setup landing page is Scope map. Incident review checks exact tenant SLA scopes first, then confirmed scope mappings, then a unique Smartscape candidate. Any candidate remains visibly unconfirmed until an operator saves it in Setup. Provider tags are optional for SLA Watch after that confirmation and remain available in the secondary Service tags view for wider Dynatrace reuse.
 
 Do not enter secrets, credentials, or unnecessary personal data into app state. No secret is bundled in the app or stored in this repository.
 
@@ -118,6 +129,7 @@ Do not enter secrets, credentials, or unnecessary personal data into app state. 
 
 - [`documentation/architecture.md`](documentation/architecture.md) maps the system and trust boundaries.
 - [`documentation/flows.md`](documentation/flows.md) describes load-bearing user journeys.
+- [`documentation/provider-connections.md`](documentation/provider-connections.md) is the installation and operations guide for AWS, Azure, GCP, and OCI incident sources.
 - [`documentation/permissions.md`](documentation/permissions.md) maps app scopes to operations and deny behavior.
 - [`documentation/variables.md`](documentation/variables.md) records configuration and secret handling.
 - [`documentation/tests.md`](documentation/tests.md) separates existing coverage from proposed tests and gaps.

@@ -16,6 +16,7 @@ type RecommendationInput = {
   selectedProviderSlug: string;
   providerLabelKey: string;
   matchedProviderServices: number;
+  taggedProviderServices?: number;
   providerCandidateServices?: number;
 };
 
@@ -55,6 +56,7 @@ export const buildSetupRecommendations = ({
   selectedProviderSlug,
   providerLabelKey,
   matchedProviderServices,
+  taggedProviderServices = matchedProviderServices,
   providerCandidateServices = 0,
 }: RecommendationInput): SetupRecommendation[] => {
   const recommendations: SetupRecommendation[] = [];
@@ -115,7 +117,7 @@ export const buildSetupRecommendations = ({
     });
   }
 
-  if (directoryData && services.length > 0 && providerLabels.length === 0) {
+  if (directoryData && services.length > 0 && providerLabels.length === 0 && matchedProviderServices === 0) {
     add(recommendations, {
       id: "provider-label",
       priority: "high",
@@ -126,8 +128,8 @@ export const buildSetupRecommendations = ({
       evidence: providerCandidateServices > 0
         ? `${providerCandidateServices} topology candidate${providerCandidateServices === 1 ? "" : "s"}; ${services.length - providerCandidateServices} service${services.length - providerCandidateServices === 1 ? " has" : "s have"} no matching ${directoryData.provider.name} runtime evidence.`
         : `${services.length} service${services.length === 1 ? "" : "s"} returned, but no provider tags were found.`,
-      action: providerCandidateServices > 0 ? "Review candidates" : "Review services",
-      href: "/setup?review=provider#provider-mapping",
+      action: providerCandidateServices > 0 ? "Open scope map" : "Review service tags",
+      href: providerCandidateServices > 0 ? "/setup" : "/setup?view=tags&review=provider#provider-service-tags",
     });
   } else if (directoryData && providerLabels.length > 0 && matchedProviderServices === 0) {
     add(recommendations, {
@@ -136,8 +138,18 @@ export const buildSetupRecommendations = ({
       title: "Resolve provider tags to the selected contract",
       detail: `Dynatrace has provider tags, but none resolve to ${directoryData.provider.name}. Confirm the intended provider before reviewing the contract.`,
       evidence: `Detected tags: ${providerLabels.slice(0, 3).join(", ")}. Selected contract: ${directoryData.provider.name}.`,
-      action: "Review services",
-      href: "/setup?review=provider#provider-mapping",
+      action: "Review service tags",
+      href: "/setup?view=tags&review=provider#provider-service-tags",
+    });
+  } else if (directoryData && matchedProviderServices > 0 && taggedProviderServices === 0) {
+    add(recommendations, {
+      id: "provider-tag-reuse",
+      priority: "low",
+      title: "Add provider tags for wider Dynatrace reuse",
+      detail: `The confirmed scope mapping is sufficient for SLA Watch. Add ${providerLabelKey}:${selectedProviderSlug} only when dashboards, alerts, management zones, or workflows should reuse the same boundary.`,
+      evidence: `${matchedProviderServices} service${matchedProviderServices === 1 ? " is" : "s are"} mapped in SLA Watch without an explicit provider tag.`,
+      action: "Review service tags",
+      href: "/setup?view=tags&review=provider#provider-service-tags",
     });
   }
 

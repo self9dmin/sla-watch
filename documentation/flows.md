@@ -16,7 +16,7 @@ Sequence:
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
 5. The app reads active tenant SLA overrides and confirmed provider-service scope mappings from App Settings and preserves the public directory record as the fallback baseline.
 6. The UI classifies the first unresolved evidence boundary as loading, access-incomplete, telemetry-missing, service-inventory-incomplete, provider-unidentified, provider-mismatched, no-incident-in-scope, or candidate-for-human-review.
-7. Overview presents that state with one next action. Setup contains the supporting diagnostics, provider-tag workflow, and service scope map. Incidents contains the observed Problem queue and effective filing references. Provider notices remains a separate provider-owned event queue.
+7. Overview presents that state with one next action. Setup opens on the Smartscape service scope map; Service tags is a secondary view for boundaries that should be reused by other Dynatrace features. Incidents contains the observed Problem queue and effective filing references. Provider notices remains a separate provider-owned event queue.
 8. Loading or refreshing the monitor does not change a Dynatrace entity, tag, metric, Problem, SLO, custom SLA, or external ticket.
 
 Deny or degraded behavior: a missing read scope is shown as access incomplete, not as no telemetry. A failed directory request is shown as unavailable, not as a provider breach.
@@ -39,9 +39,9 @@ Actor: administrator with App Settings write access, access to the selected Cred
 1. The administrator creates a dedicated AWS identity with only `health:DescribeEvents` and `health:DescribeEventDetails`.
 2. The administrator stores JSON containing `accessKeyId`, `secretAccessKey`, and an optional `sessionToken` as a Token credential with AppEngine scope and application access limited to SLA Watch.
 3. The administrator allowlists `sts.us-east-1.amazonaws.com` and `health.us-east-1.amazonaws.com` in Dynatrace External requests.
-4. The administrator enters a 12-digit AWS account ID and Credential Vault record ID under Provider connections. More than one account connection can be saved.
+4. The administrator enters a 12-digit AWS account ID and Credential Vault record ID under Provider connections. More than one account connection can be retained.
 5. Test connection signs an STS `GetCallerIdentity` request and rejects a credential whose returned account differs from the configured account.
-6. After account verification, the function signs bounded AWS Health `DescribeEvents` and `DescribeEventDetails` requests and returns only events explicitly marked `ACCOUNT_SPECIFIC`.
+6. A new or access-modified connection can be saved only after the current fields pass Test connection. After account verification, the function signs bounded AWS Health `DescribeEvents` and `DescribeEventDetails` requests and returns only events explicitly marked `ACCOUNT_SPECIFIC`.
 
 Deny or degraded behavior: a missing support plan, inaccessible credential, invalid signature, wrong account, IAM denial, throttled endpoint, or malformed response is shown as unavailable. The app does not silently replace a selected AWS account with a public source, modify AWS, or represent an account event as proof of local impact or SLA eligibility.
 
@@ -53,8 +53,8 @@ Actor: administrator with App Settings write access, access to the selected Cred
 2. The administrator grants only `Microsoft.ResourceHealth/events/read` on the intended Azure subscription.
 3. The administrator stores JSON containing `tenantId`, `clientId`, and `clientSecret` as a Token credential with AppEngine scope and application access limited to SLA Watch.
 4. The administrator allowlists `login.microsoftonline.com` and `management.azure.com` in Dynatrace External requests.
-5. The administrator enters the Azure subscription ID and Credential Vault record ID under Provider connections. More than one subscription connection can be saved.
-6. The function exchanges the client credential for a short-lived token and reads bounded Resource Health events only for the configured subscription.
+5. The administrator enters the Azure subscription ID and Credential Vault record ID under Provider connections. More than one subscription connection can be retained.
+6. Test connection exchanges the client credential for a short-lived token and reads bounded Resource Health events only for the configured subscription. A new or access-modified connection can be saved only after this test succeeds.
 
 Deny or degraded behavior: an inaccessible or expired credential, invalid tenant, missing subscription permission, throttled endpoint, or malformed response is shown as unavailable. The app does not silently replace a selected Azure subscription with a public source, modify Azure, or represent a Service Health event as proof of local impact or SLA eligibility.
 
@@ -63,10 +63,10 @@ Deny or degraded behavior: an inaccessible or expired credential, invalid tenant
 Actor: administrator with App Settings write access, access to the selected Credential Vault record, and permission to configure Google Cloud IAM.
 
 1. The administrator enables `servicehealth.googleapis.com` in the target Google Cloud project.
-2. The administrator grants a dedicated service account only `roles/servicehealth.viewer` for that project and creates a JSON key.
+2. The administrator grants a dedicated service account `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer` for that project, then creates a JSON key.
 3. The JSON key is stored as a Token credential with AppEngine scope and application access limited to SLA Watch. The secret is never entered in SLA Watch settings.
 4. The administrator enters a Google Cloud project ID and Credential Vault record ID under Provider connections. More than one project connection can be saved.
-5. Test connection calls the personalized endpoint with fallback disabled. Save writes only the non-secret identifiers to `provider-connections`.
+5. Test connection calls the personalized endpoint with fallback disabled. A new or access-modified connection can be saved only after this test succeeds. Save writes only the non-secret identifiers to `provider-connections`.
 6. Provider notices lets the operator choose a saved project or the public source. The function exchanges a short-lived Google OAuth token at request time and returns normalized event data only.
 
 Deny or degraded behavior: a missing connection uses public Google Cloud Status and labels it non-project-specific. A failed saved connection can fall back to public status with a warning during monitoring. Test connection never hides a failure behind the fallback. No path creates a Dynatrace Problem, notification, ticket, provider mutation, or SLA claim.
@@ -90,7 +90,7 @@ Actor: administrator with App Settings write access, access to the selected Cred
 2. The administrator places the user in a group with exactly `Allow group AnnouncementListers to inspect announcements in tenancy` for summary announcement access.
 3. The administrator stores JSON containing `userOcid`, `fingerprint`, and the unencrypted RSA `privateKey` as a Token credential with AppEngine scope and application access limited to SLA Watch.
 4. The administrator enters the tenancy OCID, one commercial OCI region, and the Credential Vault record ID under Provider connections. More than one tenancy can be saved.
-5. The administrator allowlists the exact `announcements.<region>.oraclecloud.com` host in Dynatrace External requests. Test connection signs a bounded GET request and does not fall back to the public source.
+5. The administrator allowlists the exact `announcements.<region>.oraclecloud.com` host in Dynatrace External requests. Test connection signs a bounded GET request and does not fall back to the public source. A new or access-modified connection can be saved only after this test succeeds.
 6. Provider notices lets the operator choose a saved tenancy or the public OCI regional source. OCI service names are mapped to `sla.directory` candidates only through a reviewed table. Ambiguous products remain unresolved.
 
 Deny or degraded behavior: an inaccessible credential, invalid signature, missing `ANNOUNCEMENT_LIST` permission, invalid region, throttled endpoint, or malformed response is shown as unavailable. The app does not expose private key material, modify OCI, or represent an announcement as proof of local impact or SLA eligibility.
@@ -99,7 +99,7 @@ Deny or degraded behavior: an inaccessible credential, invalid signature, missin
 
 Actor: signed-in user with `app-settings:objects:write` for the app's `provider-scope-assignments` schema.
 
-1. The user opens Setup, then Scope map.
+1. The user opens Setup. Scope map is the default view.
 2. The app lists exact Smartscape service-to-runtime relationships for the active provider. Runtime type and cloud metadata may suggest a provider service only through a fixed provider-specific mapping table.
 3. The user reviews the exact Dynatrace service, runtime, location, and candidate provider service, then confirms or changes the provider service.
 4. App Settings stores the exact service and runtime IDs, display context, provider-service ID, and a concise evidence note.
@@ -138,7 +138,7 @@ Deny or degraded behavior: missing topology, scope settings, SLA settings, or Pr
 
 Actor: signed-in user with `environment-api:entities:write` in the app and the Dynatrace permission to manage entity settings.
 
-1. Setup resolves the user's effective entity-write permission and displays whether the action is available, management-zone limited, denied, or unverifiable.
+1. The user opens Setup, then Service tags. The page resolves the user's effective entity-write permission and displays whether the action is available, management-zone limited, denied, or unverifiable.
 2. The user opens the service review. The app merges the service inventory with exact service entities returned by Smartscape, then shows each service as already mapped, conflicting, an evidence-backed candidate, or unassigned. Conflicting services cannot be selected in bulk.
 3. Smartscape candidates require an exact service entity relationship to cloud-provider metadata. The user explicitly selects exact unassigned service entities. Service names are context only and never create an automatic assignment.
 4. A confirmation screen names the tag, selected service count, and common Dynatrace features that may consume tags.

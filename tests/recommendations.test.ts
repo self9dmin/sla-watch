@@ -68,6 +68,25 @@ describe("buildSetupRecommendations", () => {
     });
   });
 
+  it("treats a confirmed scope mapping as sufficient and provider tags as optional reuse", () => {
+    const recommendations = buildSetupRecommendations({
+      services: [service(["owner:checkout"])],
+      problems: [],
+      telemetrySignalsPresent: true,
+      directoryData: provider,
+      providerLabels: [],
+      selectedProviderSlug: "aws",
+      providerLabelKey: "provider",
+      matchedProviderServices: 1,
+      taggedProviderServices: 0,
+    });
+
+    expect(recommendations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "provider-tag-reuse", priority: "low" }),
+    ]));
+    expect(recommendations.some(({ id }) => id === "provider-label")).toBe(false);
+  });
+
   it("keeps the result conservative when telemetry access fails", () => {
     const recommendations = buildSetupRecommendations({
       services: [],

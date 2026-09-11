@@ -6,7 +6,7 @@ const openWatch = async (page: Page): Promise<FrameLocator> => {
   await page.goto('/ui/apps/my.sla/');
   const app = appFrame(page);
 
-  const skipSetup = app.getByRole('button', { name: /skip setup and explore/i });
+  const skipSetup = app.getByRole('button', { name: /finish later and open monitor/i });
   if (await skipSetup.isVisible().catch(() => false)) {
     await skipSetup.click();
   }
@@ -48,11 +48,13 @@ test.describe('SLA Watch deployed smoke', () => {
     const setupStages = app.getByRole('list', { name: 'SLA Watch setup stages' });
     await expect(setupStages).toBeVisible();
     await expect(setupStages.getByRole('listitem')).toHaveCount(4);
-    await expect(app.getByText(/Service names are not used as proof/i)).toBeVisible();
-    await expect(app.getByText(/No tag is added until you select exact services and confirm the change/i)).toBeVisible();
-    await app.getByRole('link', { name: 'Scope map' }).click();
+    await expect(app.getByRole('link', { name: 'Scope map' })).toHaveClass(/active/);
     await expect(app.getByText('Service scope map')).toBeVisible();
     await expect(app.getByText(/A confirmed mapping is reused in Incidents/i)).toBeVisible();
+    await app.getByRole('link', { name: 'Service tags' }).click();
+    await expect(app.getByText(/Scope map confirmations already work inside SLA Watch/i)).toBeVisible();
+    await expect(app.getByText(/No tag is added until you select exact services and confirm the change/i)).toBeVisible();
+    await app.getByRole('link', { name: 'Scope map' }).click();
     await expectNoPageScroll(app);
 
     await app.getByRole('link', { name: 'Incidents' }).click();
@@ -80,10 +82,27 @@ test.describe('SLA Watch deployed smoke', () => {
     await app.getByRole('link', { name: 'Provider connections' }).click();
     await expect(app.getByRole('heading', { name: 'Connect provider incident data.' })).toBeVisible();
     await expect(app.getByText(/AWS Health · Azure Service Health · Google Cloud Personalized Service Health · OCI Announcements/i)).toBeVisible();
-    await expect(app.getByRole('combobox', { name: 'Connection type' })).toHaveValue('aws');
+    const connectionType = app.getByRole('combobox', { name: 'Connection type' });
+    await expect(connectionType).toHaveValue('aws');
+    await expect(connectionType.locator('option')).toHaveCount(4);
     await expect(app.getByRole('option', { name: 'Add a new account' })).toBeVisible();
     await expect(app.getByText(/The Token value must be JSON with/i)).toBeVisible();
-    await expect(app.getByText(/no provider notice proves local impact or SLA eligibility/i)).toBeVisible();
+    await expect(app.getByText(/Public SLA terms work without these connections/i)).toBeVisible();
+    await expect(app.getByText(/Settings > General > External requests/i)).toBeVisible();
+    await expect(app.getByRole('button', { name: 'Test connection' })).toBeDisabled();
+    await expect(app.getByRole('button', { name: 'Save connection' })).toBeDisabled();
+
+    await connectionType.selectOption('azure');
+    await expect(app.getByRole('textbox', { name: /Azure subscription ID/i })).toBeVisible();
+    await connectionType.selectOption('gcp');
+    await expect(app.getByRole('textbox', { name: /Google Cloud project ID/i })).toBeVisible();
+    await expect(app.getByText(/roles\/serviceusage\.serviceUsageConsumer/i)).toBeVisible();
+    await connectionType.selectOption('oci');
+    await expect(app.getByRole('textbox', { name: /OCI tenancy OCID/i })).toBeVisible();
+
+    await app.getByRole('link', { name: 'Onboarding & walkthrough' }).click();
+    await expect(app.getByText(/It saves the monitored providers and active view as SLA Watch workspace settings/i)).toBeVisible();
+    await expect(app.getByText(/does not create provider credentials/i)).toBeVisible();
   });
 
   test('keeps new SLA setup in Settings and reserves the modal for edits', async ({ page }) => {

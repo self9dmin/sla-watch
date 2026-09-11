@@ -32,7 +32,7 @@ export const SetupAdvisor = ({
     ) : recommendations.length === 0 ? (
       <div className="advisor-empty">
         <strong>No setup gaps detected in this scan.</strong>
-        <span>The current provider boundary is ready for incident review.</span>
+        <span>The current provider scope is ready for incident review.</span>
       </div>
     ) : (
       <div className="advisor-list">

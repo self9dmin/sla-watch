@@ -86,13 +86,13 @@ const AppContent = () => {
     if (!preferences.onboardingComplete) setTourOpen(false);
   }, [preferences.onboardingComplete]);
 
-  const completeOnboarding = async (providerSlugs: string[], providerSlug: string) => {
-    await updatePreferences({ onboardingComplete: true, tourCompleted: false, providerSlugs, providerSlug });
-    await navigate("/");
+  const completeOnboarding = async (providerSlugs: string[], providerSlug: string, destination: "/setup" | "/settings/provider-connections") => {
+    await updatePreferences({ onboardingComplete: true, tourCompleted: true, providerSlugs, providerSlug });
+    await navigate(destination);
   };
 
   const skipOnboarding = async () => {
-    await updatePreferences({ onboardingComplete: true, tourCompleted: false });
+    await updatePreferences({ onboardingComplete: true, tourCompleted: true });
     await navigate("/");
   };
 

@@ -71,7 +71,7 @@ export const ProviderTagSetup = ({
 
   useEffect(() => {
     const review = new URLSearchParams(location.search).get("review");
-    if ((review === "provider" || location.hash === "#provider-mapping") && services.length > 0) setStep("select");
+    if ((review === "provider" || location.hash === "#provider-mapping" || location.hash === "#provider-service-tags") && services.length > 0) setStep("select");
   }, [location.hash, location.search, services.length]);
 
   const rows = useMemo(() => services.map((service) => {
@@ -171,11 +171,11 @@ export const ProviderTagSetup = ({
   };
 
   return (
-    <section className="provider-setup" id="provider-mapping" aria-labelledby="provider-mapping-title">
+    <section className="provider-setup" id="provider-service-tags" aria-labelledby="provider-service-tags-title">
       <div className="setup-section-heading">
         <div>
-          <h3 id="provider-mapping-title">Provider mapping</h3>
-          <p>Confirm only services that depend on {providerName}. Smartscape runtime metadata can suggest a provider; service names are not used as proof.</p>
+          <h3 id="provider-service-tags-title">Provider service tags</h3>
+          <p>Add a reusable <code>{tagText}</code> tag only to services that depend on {providerName}. Scope map confirmations already work inside SLA Watch.</p>
         </div>
         <span className={`status-pill ${matchedCount > 0 ? "status-pill-positive" : "status-pill-warning"}`}>
           {loading ? "Checking" : `${matchedCount} of ${services.length} mapped`}

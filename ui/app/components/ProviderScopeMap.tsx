@@ -18,7 +18,7 @@ import {
   serviceEntityIdForEdge,
 } from "../data/providerScopeAssignments";
 import { useContractOverrides } from "../hooks/useContractOverrides";
-import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
+import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAssignments";
 
 type Tone = "neutral" | "warning" | "positive";
 
@@ -27,6 +27,7 @@ type ProviderScopeMapProps = {
   topology: SmartscapeScopeEdge[];
   loading: boolean;
   error?: Error;
+  scopeSettings: ProviderScopeAssignmentsState;
 };
 
 const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode }) => <span className={`status-pill status-pill-${tone}`}>{children}</span>;
@@ -41,10 +42,9 @@ const TermsStrip = ({ terms }: { terms: EffectiveContractTerms }) => (
   </dl>
 );
 
-export const ProviderScopeMap = ({ provider, topology, loading, error }: ProviderScopeMapProps) => {
+export const ProviderScopeMap = ({ provider, topology, loading, error, scopeSettings }: ProviderScopeMapProps) => {
   const navigate = useNavigate();
   const contractSettings = useContractOverrides();
-  const scopeSettings = useProviderScopeAssignments();
   const [selectedEdgeKey, setSelectedEdgeKey] = useState<string | null>(null);
   const [selectedProviderServiceId, setSelectedProviderServiceId] = useState("");
   const [feedback, setFeedback] = useState<{ tone: Tone; message: string }>();
@@ -98,6 +98,7 @@ export const ProviderScopeMap = ({ provider, topology, loading, error }: Provide
     ? contractSettings.overrides.filter((override) => override.providerSlug === provider.provider.slug)
     : [], [contractSettings.overrides, provider]);
   const selectedProviderService = provider?.services.find((service) => service.id === selectedProviderServiceId);
+  const selectionMatchesCandidate = Boolean(candidate && selectedProviderService?.id === candidate.providerServiceId);
   const effectiveTerms = provider && selectedEdge && selectedProviderService
     ? resolveEffectiveContractTerms(provider, providerOverrides, {
         providerSlug,
@@ -230,7 +231,7 @@ export const ProviderScopeMap = ({ provider, topology, loading, error }: Provide
             })}
           </div>
           <aside className="scope-detail" aria-label="Provider service mapping for selected scope">
-            <label className="field-label">Provider service
+            <label className="field-label">Provider service for this scope
               <select value={selectedProviderServiceId} onChange={(event) => { setSelectedProviderServiceId(event.target.value); setFeedback(undefined); }}>
                 <option value="">Select a provider service</option>
                 {provider.services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
@@ -239,13 +240,14 @@ export const ProviderScopeMap = ({ provider, topology, loading, error }: Provide
             {selectedEdge ? (
               <>
                 <div className="scope-mapping-state">
-                  <StatusPill tone={selectedAssignment ? "positive" : candidate ? "warning" : "neutral"}>{selectedAssignment ? "Confirmed mapping" : candidate ? "Smartscape candidate" : "Needs review"}</StatusPill>
-                  <span>{selectedAssignment?.evidence ?? candidate?.evidence ?? "Smartscape identified the provider boundary but not a specific provider service."}</span>
+                  <StatusPill tone={selectedAssignment ? "positive" : selectionMatchesCandidate ? "warning" : "neutral"}>{selectedAssignment ? "Confirmed mapping" : selectionMatchesCandidate ? "Recommended match" : selectedProviderService ? "Manual selection" : "Needs review"}</StatusPill>
+                  {selectedProviderService ? <strong>{selectedAssignment ? "Applied provider service" : selectionMatchesCandidate ? "Smartscape recommends" : "Selected provider service"}: {selectedProviderService.name}</strong> : null}
+                  <span>{selectedAssignment?.evidence ?? (selectionMatchesCandidate ? candidate?.evidence : candidate && selectedProviderService ? `This differs from the Smartscape recommendation of ${candidate.providerServiceName}. Verify the scope before confirming.` : "Smartscape identified the provider boundary but not a specific provider service.")}</span>
                 </div>
                 <div className="scope-selection"><span>Selected Dynatrace scope</span><strong>{selectedEdge.serviceName} → {selectedEdge.targetName}</strong><small>{selectedEdge.location ?? "No location field returned"}</small></div>
                 {effectiveTerms ? <TermsStrip terms={effectiveTerms} /> : null}
                 <div className="scope-detail-actions">
-                  <Button size="condensed" variant="emphasized" disabled={!scopeSettings.canWrite || scopeSettings.mutating || !selectedProviderService} onClick={() => void saveAssignment()}>{scopeSettings.mutating ? "Saving" : selectedAssignment ? "Update mapping" : "Confirm mapping"}</Button>
+                  <Button size="condensed" variant="emphasized" disabled={!scopeSettings.canWrite || scopeSettings.mutating || !selectedProviderService} onClick={() => void saveAssignment()}>{scopeSettings.mutating ? "Saving" : selectedAssignment ? "Update confirmed mapping" : selectionMatchesCandidate ? `Confirm ${selectedProviderService?.name}` : "Confirm selected service"}</Button>
                   <Button size="condensed" disabled={!selectedProviderService} onClick={openCreateSettings}>Add SLA override</Button>
                   {selectedAssignment ? <Button size="condensed" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void removeAssignment()}>Remove mapping</Button> : null}
                 </div>

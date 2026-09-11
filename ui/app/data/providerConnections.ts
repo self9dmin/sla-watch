@@ -2,6 +2,55 @@ import type { ProviderConnectionValue } from "../types";
 
 export const PROVIDER_CONNECTIONS_SCHEMA_ID = "provider-connections";
 
+export type ConnectedProvider = "aws" | "azure" | "gcp" | "oci";
+
+export type ProviderConnectionOption = {
+  slug: ConnectedProvider;
+  label: string;
+  sourceName: string;
+  scopeNoun: "account" | "subscription" | "project" | "tenancy";
+  scopeSummary: string;
+  fallbackSummary: string;
+};
+
+export const CONNECTED_PROVIDER_OPTIONS: readonly ProviderConnectionOption[] = [
+  {
+    slug: "aws",
+    label: "AWS",
+    sourceName: "AWS Health",
+    scopeNoun: "account",
+    scopeSummary: "Account-specific events",
+    fallbackSummary: "No credential-free AWS incident source",
+  },
+  {
+    slug: "azure",
+    label: "Microsoft Azure",
+    sourceName: "Azure Service Health",
+    scopeNoun: "subscription",
+    scopeSummary: "Subscription-specific events",
+    fallbackSummary: "No credential-free Azure incident source",
+  },
+  {
+    slug: "gcp",
+    label: "Google Cloud",
+    sourceName: "Personalized Service Health",
+    scopeNoun: "project",
+    scopeSummary: "Project-relevant events",
+    fallbackSummary: "Public Google Cloud status remains available",
+  },
+  {
+    slug: "oci",
+    label: "Oracle Cloud Infrastructure",
+    sourceName: "OCI Announcements",
+    scopeNoun: "tenancy",
+    scopeSummary: "Tenancy announcements",
+    fallbackSummary: "Public OCI regional status remains available",
+  },
+];
+
+export const supportsProviderConnection = (providerSlug: string): providerSlug is ConnectedProvider =>
+  CONNECTED_PROVIDER_OPTIONS.some((provider) => provider.slug === providerSlug);
+
 const PROJECT_ID_PATTERN = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const AWS_ACCOUNT_ID_PATTERN = /^\d{12}$/;
 const AZURE_SUBSCRIPTION_ID_PATTERN = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
@@ -24,6 +73,14 @@ export const providerConnectionScopeId = (value: Pick<ProviderConnectionValue, "
 
 export const providerConnectionScopeLabel = (value: Pick<ProviderConnectionValue, "providerSlug" | "accountId" | "subscriptionId" | "projectId" | "tenancyId" | "region">): string =>
   value.providerSlug === "oci" ? `${value.tenancyId} · ${value.region}` : providerConnectionScopeId(value);
+
+export const providerConnectionVerificationKey = (value: Pick<ProviderConnectionValue, "providerSlug" | "accountId" | "subscriptionId" | "projectId" | "tenancyId" | "region" | "credentialId">): string =>
+  [
+    value.providerSlug.trim().toLowerCase(),
+    providerConnectionScopeId(value).trim().toLowerCase(),
+    value.providerSlug === "oci" ? value.region.trim().toLowerCase() : "",
+    value.credentialId.trim().toUpperCase(),
+  ].join("|");
 
 export const normalizeProviderConnection = (value: unknown): ProviderConnectionValue | null => {
   if (typeof value !== "object" || value === null) return null;

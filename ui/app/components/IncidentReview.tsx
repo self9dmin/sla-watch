@@ -193,7 +193,7 @@ const IncidentDetail = ({
           {mappingSource === "contract" ? "SLA scope match" : mappingSource === "confirmed" ? "Confirmed mapping" : mappingSource === "candidate" ? "Smartscape candidate" : mappingSource === "manual" ? "Manual selection" : "No service match"}
         </StatusPill>
         <span>{mappingDetail}</span>
-        <Link to="/setup?view=scope">Review scope map</Link>
+        <Link to="/setup">Review scope map</Link>
       </div>
 
       <dl className="incident-facts">

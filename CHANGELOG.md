@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.37
+
+- Reworked first-run onboarding to distinguish automatic public SLA terms, Dynatrace evidence, and optional provider-reported incident connections.
+- Added a direct onboarding path to Provider connections and documented per-tenant setup for AWS, Microsoft Azure, Google Cloud, and OCI.
+- Required new or access-modified provider connections to pass Test connection before they can be saved.
+- Made the Smartscape scope map the Setup landing view, promoted its recommended mapping action, and moved optional reusable provider tags to a secondary view.
+- Added shared provider metadata for consistent scope and fallback language across onboarding and settings.
+- Clarified Google Cloud IAM, External requests, Credential Vault, multi-account, and secret-lifecycle requirements.
+- Shortened the responder walkthrough and prevented it from opening automatically after onboarding or Finish later.
+
 ## 0.0.36
 
 - Established AWS, Microsoft Azure, Google Cloud, and OCI as four peer core providers. Fresh workspaces include all four, with AWS used only as the initial focused view.
@@ -143,4 +153,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.36` release candidate.
+- Reserved for changes after the `0.0.37` release candidate.
