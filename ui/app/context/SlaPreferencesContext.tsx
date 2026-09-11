@@ -187,7 +187,7 @@ export const SlaPreferencesProvider = ({ children }: { children: React.ReactNode
           : Promise.resolve(),
       ]);
     } catch (error: unknown) {
-      console.error("Failed to persist SLA Watch state:", error);
+      console.error("Failed to persist SLA Review state:", error);
       setSaveError("Saved in this browser. Shared app state is unavailable right now.");
     }
   }, [setUserState, setWorkspaceState]);

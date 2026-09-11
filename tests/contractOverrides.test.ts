@@ -132,7 +132,7 @@ describe("contract override precedence", () => {
     expect(result.availabilityTarget).toBe(99.99);
   });
 
-  it("applies one SLA override to any explicitly assigned service", () => {
+  it("applies one custom terms record to any explicitly assigned service", () => {
     const sharedServiceOverride = baseOverride({
       objectId: "shared-services",
       overrideKey: "aws|ec2|service|set",

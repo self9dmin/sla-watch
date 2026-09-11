@@ -1,13 +1,13 @@
-# SLA Watch
+# SLA Review
 
-SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attribution. It puts a provider contract beside the service boundary and telemetry needed to decide whether an SRE has enough evidence for a human review.
+SLA Review is a Dynatrace AppEngine app for evidence-first provider attribution. It puts provider terms beside the service boundary and telemetry needed to decide whether an SRE has enough evidence for a human review.
 
 ## Current capability
 
 - Reads the tenant service inventory with DQL.
 - Reads Davis Problems, logs, spans, and service-request telemetry for a selectable 24-hour to 90-day window.
 - Retrieves provider and service contract data from the versioned `sla.directory` JSON API through an AppEngine function.
-- Presents the active provider's published SLA terms, credit policy, claim process, exclusions, service catalog, support plans, support-response boundary, source metadata, and tenant overrides in one read-only Directory workspace.
+- Presents the active provider's published terms, credit policy, claim process, exclusions, service catalog, support plans, support-response boundary, source metadata, and tenant overrides in one read-only Directory workspace.
 - Treats AWS, Microsoft Azure, Google Cloud, and Oracle Cloud Infrastructure as four peer cloud providers. A fresh workspace monitors all four and opens AWS first only as the initial focused view.
 - Monitors more than one provider at a time and keeps the active provider as a focused view rather than a tenant-wide replacement.
 - Lets administrators add multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies for customer-scoped provider notices. Credentials remain in Dynatrace Credential Vault.
@@ -20,8 +20,8 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 - Provides an Incidents view with an observed Problem queue, provider-published credit terms, filing guidance, required evidence, and exclusions.
 - Provides a separate Provider notices view so provider-reported events are never presented as Dynatrace Problems or proof of local impact.
 - Keeps the operating sequence inside one shell: Overview, Setup, Incidents, Provider notices, then Directory. The global header is reserved for the app identity and utility actions.
-- Stores tenant-owned custom SLA terms in Dynatrace App Settings while retaining the public `sla.directory` record as the comparison baseline.
-- Assigns one custom SLA to one or more exact Dynatrace services, hosts, runtimes, or observed locations. Smartscape relationships supply service-to-runtime context, and entity IDs establish the boundary.
+- Stores tenant-owned custom terms in Dynatrace App Settings while retaining the public `sla.directory` record as the comparison baseline.
+- Assigns one custom terms record to one or more exact Dynatrace services, hosts, runtimes, or observed locations. Smartscape relationships supply service-to-runtime context, and entity IDs establish the boundary.
 - Applies custom terms in the order host, location, service, provider-wide fallback, then public directory baseline.
 - Separates missing telemetry, incomplete entity access, missing provider tags, and tags that do not match the selected provider.
 - Recommends setup actions for provider boundaries, ownership metadata, service naming, and native SLO follow-up.
@@ -30,21 +30,21 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 
 ## Deliberate boundaries
 
-SLA Watch does not issue credits, prove provider fault, create SLOs, or silently infer ownership from a service name. It changes a provider tag only after an authorized user reviews and confirms exact service entities in Setup. A matching tag, Smartscape relationship, SLA assignment, provider notice, and active Problem are only inputs to a human review. Provider terms and filing dates are planning references, not an automated eligibility or approval decision.
+SLA Review does not issue credits, prove provider fault, create SLOs, or silently infer ownership from a service name. It changes a provider tag only after an authorized user reviews and confirms exact service entities in Setup. A matching tag, Smartscape relationship, contract assignment, provider notice, and active Problem are only inputs to a human review. Provider terms and filing dates are planning references, not an automated eligibility or approval decision.
 
-Provider incident integrations are intentionally optional and read-only. Administrators may configure more than one AWS account, Azure subscription, Google Cloud project, or OCI tenancy. AWS Health events are account-specific, Azure Service Health events are subscription-specific, Google Personalized Service Health is project-relevant, and OCI Announcements are tenancy-specific. Google Cloud and OCI also have deliberately selected public-status views that the app labels non-customer-specific. No provider source establishes local impact. The app still requires Dynatrace telemetry and an explicit service boundary before an SRE can assess an incident. This release does not create notifications, tickets, Problems, or SLA claims.
+Provider incident integrations are intentionally optional and read-only. Administrators may configure more than one AWS account, Azure subscription, Google Cloud project, or OCI tenancy. AWS Health events are account-specific, Azure Service Health events are subscription-specific, Google Personalized Service Health is project-relevant, and OCI Announcements are tenancy-specific. Google Cloud and OCI also have deliberately selected public-status views that the app labels non-customer-specific. No provider source establishes local impact. The app still requires Dynatrace telemetry and an explicit service boundary before an SRE can assess an incident. This release does not create notifications, tickets, Problems, or claims.
 
-Custom SLA assignments are explicit. An SRE selects the provider service and exact Dynatrace entity IDs that the private terms cover. When a Problem includes an assigned service, or Smartscape links it to an assigned runtime or location, the app can apply the matching terms. If more than one equally specific assignment matches, the operator chooses the boundary. The app never uses a similar service name to create that relationship.
+Custom-term assignments are explicit. An SRE selects the provider service and exact Dynatrace entity IDs that the private terms cover. When a Problem includes an assigned service, or Smartscape links it to an assigned runtime or location, the app can apply the matching terms. If more than one equally specific assignment matches, the operator chooses the boundary. The app never uses a similar service name to create that relationship.
 
 The runtime data path does not require an MCP server or a user-supplied `sla.directory` credential. The installed app calls the public versioned JSON API automatically through its AppEngine function. `sla.directory` MCP remains useful for agent-assisted research and contract discovery.
 
 ## First-run setup
 
-1. Install SLA Watch and open it from the Dynatrace Apps page.
+1. Install SLA Review and open it from the Dynatrace Apps page.
 2. Use onboarding to choose the providers monitored by the workspace. A fresh workspace includes AWS, Azure, GCP, and OCI, with AWS only as the initial focused view.
 3. Continue to **Setup > Scope map** to review Smartscape recommendations and confirm the exact service-to-provider-service relationships used by incident review.
 4. Add provider service tags only when other Dynatrace dashboards, alerts, management zones, or workflows should reuse the same provider boundary.
-5. Optionally open **Settings > Provider connections**. For each account, subscription, project, or tenancy, create a least-privilege provider identity and store its secret in Dynatrace Credential Vault. SLA Watch receives only the credential record ID.
+5. Optionally open **Settings > Provider connections**. For each account, subscription, project, or tenancy, create a least-privilege provider identity and store its secret in Dynatrace Credential Vault. SLA Review receives only the credential record ID.
 6. Add the exact provider hosts to Dynatrace External requests, test the connection, and save it only after verification succeeds. A provider connection does not assign services or prove provider fault.
 7. Use **Directory** to review the complete published provider record, service-level coverage, support options, and any tenant overrides before assessing an incident.
 
@@ -55,13 +55,13 @@ Provider connections are configured independently in every installing Dynatrace 
 - Dynatrace AppEngine enabled in the target environment.
 - A user or deployment identity with the app's declared scopes in `app.config.json`.
 - `sla.directory` added as an allowed external host for AppEngine functions. The host entry is `sla.directory`, without a protocol or path.
-- For AWS account notices, allow `sts.us-east-1.amazonaws.com` and `health.us-east-1.amazonaws.com`. The selected AWS account must have a supported AWS Health API plan. Grant a dedicated identity only `health:DescribeEvents` and `health:DescribeEventDetails`, then store JSON containing `accessKeyId`, `secretAccessKey`, and an optional `sessionToken` as an AppEngine-scoped Token credential restricted to SLA Watch.
-- For Azure subscription notices, allow `login.microsoftonline.com` and `management.azure.com`. Use a dedicated Microsoft Entra application with `Microsoft.ResourceHealth/events/read` on the selected subscription, then store JSON containing `tenantId`, `clientId`, and `clientSecret` as an AppEngine-scoped Token credential restricted to SLA Watch.
+- For AWS account notices, allow `sts.us-east-1.amazonaws.com` and `health.us-east-1.amazonaws.com`. The selected AWS account must have a supported AWS Health API plan. Grant a dedicated identity only `health:DescribeEvents` and `health:DescribeEventDetails`, then store JSON containing `accessKeyId`, `secretAccessKey`, and an optional `sessionToken` as an AppEngine-scoped Token credential restricted to SLA Review.
+- For Azure subscription notices, allow `login.microsoftonline.com` and `management.azure.com`. Use a dedicated Microsoft Entra application with `Microsoft.ResourceHealth/events/read` on the selected subscription, then store JSON containing `tenantId`, `clientId`, and `clientSecret` as an AppEngine-scoped Token credential restricted to SLA Review.
 - For Google Cloud provider notices, add `status.cloud.google.com`, `oauth2.googleapis.com`, and `servicehealth.googleapis.com` under Settings > General > External requests. Enable the Service Health API and grant the dedicated service account both `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer`. Do not disable external-request enforcement.
 - For credential-free public provider status, allow `status.openai.com`, `status.claude.com`, `status.elevenlabs.io`, and `ocistatus.oraclecloud.com`.
 - For each OCI tenancy connection, allow the exact regional host `announcements.<region>.oraclecloud.com`. Dynatrace supports a wildcard host pattern such as `*.oraclecloud.com`, but the exact hostname is the least-privilege default.
-- For OCI tenancy notices, create a dedicated API-signing user, grant its group `Allow group AnnouncementListers to inspect announcements in tenancy`, and store JSON containing only `userOcid`, `fingerprint`, and the unencrypted RSA `privateKey` as a Token credential. Give the credential AppEngine scope, restrict application access to SLA Watch, and grant only the intended users access.
-- For personalized Google Cloud notices, enable the Service Health API, grant a dedicated service account both `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer` on the selected project, and store its JSON key as a Token credential with AppEngine scope. Restrict application access to SLA Watch and grant only the intended users access.
+- For OCI tenancy notices, create a dedicated API-signing user, grant its group `Allow group AnnouncementListers to inspect announcements in tenancy`, and store JSON containing only `userOcid`, `fingerprint`, and the unencrypted RSA `privateKey` as a Token credential. Give the credential AppEngine scope, restrict application access to SLA Review, and grant only the intended users access.
+- For personalized Google Cloud notices, enable the Service Health API, grant a dedicated service account both `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer` on the selected project, and store its JSON key as a Token credential with AppEngine scope. Restrict application access to SLA Review and grant only the intended users access.
 - Users who apply or undo provider tags need the Dynatrace permission to manage entity settings. Users without it keep a read-only Setup experience.
 - Users who create or edit custom SLAs need App Settings write access for the `contract-overrides` schema. Users who confirm provider-service scope mappings need write access for `provider-scope-assignments`. All authenticated app users can read these settings, so records must contain operational values and concise evidence references, not private contract text or credentials.
 - Node.js 24 for the supported local and CI toolchain.
@@ -120,11 +120,11 @@ Every change to `app.config.json` requires a new app version before deployment. 
 
 User theme and walkthrough state use user app state. Provider selection, tag convention, and lookback use shared app state when the workspace scope is available. The browser fallback is local storage and is clearly surfaced when shared state cannot be written. App-state records expire within the platform's 90-day limit.
 
-Custom SLA terms use the `contract-overrides` App Settings schema so they are shared and auditable in the Dynatrace environment. The app stores exact target IDs, display names, operational SLA values, effective dates, and a source reference. App Settings are readable by all authenticated users of the app and persist until changed or removed.
+Custom terms use the `contract-overrides` App Settings schema so they are shared and auditable in the Dynatrace environment. The app stores exact target IDs, display names, operational targets, effective dates, and a source reference. App Settings are readable by all authenticated users of the app and persist until changed or removed.
 
 Provider connection metadata uses the `provider-connections` App Settings schema. It stores the provider, the applicable account, subscription, project, or tenancy identifier, an OCI region when required, and the Credential Vault record ID. It never stores an AWS secret access key, Azure client secret, Google service-account key, OCI private key, or access token. The AppEngine functions read the selected secret at request time, authenticate only to fixed provider endpoints, and return normalized provider notices to the browser.
 
-Confirmed service-to-provider-service mappings use the `provider-scope-assignments` App Settings schema. Each record contains exact Dynatrace service and runtime IDs, display context, the selected provider-service ID, and a short evidence note. The Setup landing page is Scope map. Incident review checks exact tenant SLA scopes first, then confirmed scope mappings, then a unique Smartscape candidate. Any candidate remains visibly unconfirmed until an operator saves it in Setup. Provider tags are optional for SLA Watch after that confirmation and remain available in the secondary Service tags view for wider Dynatrace reuse.
+Confirmed service-to-provider-service mappings use the `provider-scope-assignments` App Settings schema. Each record contains exact Dynatrace service and runtime IDs, display context, the selected provider-service ID, and a short evidence note. The Setup landing page is Scope map. Incident review checks exact tenant contract scopes first, then confirmed scope mappings, then a unique Smartscape candidate. Any candidate remains visibly unconfirmed until an operator saves it in Setup. Provider tags are optional after that confirmation and remain available in the secondary Service tags view for wider Dynatrace reuse.
 
 Do not enter secrets, credentials, or unnecessary personal data into app state. No secret is bundled in the app or stored in this repository.
 

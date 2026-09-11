@@ -14,7 +14,7 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | `storage:smartscape:read` | Read service-to-runtime and location relationships used for evidence-boundary selection | Hide unavailable topology choices; never infer them from entity names |
 | `environment-api:entities:write` | Add or remove the configured provider tag on explicitly selected service entities | Keep Setup read-only and explain that entity-settings permission is required |
 | `environment-api:credentials:read` | Read the administrator-selected AppEngine Token credential inside the provider AppEngine function | Keep customer-scoped provider notices unavailable; a supported public status source can remain available |
-| `app-settings:objects:read` | Read shared tenant SLA overrides, provider connections, and confirmed provider-service scope mappings | Use public sources where possible and identify shared tenant configuration as unavailable |
+| `app-settings:objects:read` | Read shared tenant custom terms, provider connections, and confirmed provider-service scope mappings | Use public sources where possible and identify shared tenant configuration as unavailable |
 | `app-settings:objects:write` | Create, update, disable, or remove explicitly confirmed tenant SLA settings and scope mappings | Keep the corresponding Settings and Setup actions read-only |
 | `state:user-app-states:read` | Restore theme, onboarding, and walkthrough state | Use browser fallback |
 | `state:user-app-states:write` | Persist personal display and onboarding state | Keep the change in local browser state and show the fallback |
@@ -37,7 +37,7 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | Provider connection metadata | Authenticated app users with App Settings read access | Users with App Settings write access for `provider-connections` | Provider secrets remain in Credential Vault; settings contain only provider, scope, region, and credential IDs |
 | Confirmed provider-service mappings | Authenticated app users with App Settings read access | Users with App Settings write access for `provider-scope-assignments` | Exact Smartscape service/runtime IDs are retained; candidates stay unconfirmed until saved in Setup |
 | Credential Vault | Selected AppEngine credential only | None | The app cannot create, edit, list, rotate, or delete provider credentials |
-| Tenant SLA overrides | All authenticated users of the app with App Settings read access | Users with App Settings write access for `contract-overrides` | Public terms remain unchanged; unavailable or denied settings fall back conservatively to the public record |
+| Tenant custom terms | All authenticated users of the app with App Settings read access | Users with App Settings write access for `contract-overrides` | Public terms remain unchanged; unavailable or denied settings fall back conservatively to the public record |
 | User app state | User state read | User state write | Personal preferences remain local when denied |
 | Shared app state | App state read | App state write | Workspace configuration remains local when denied |
 | Dynatrace entity tags | Read through the service inventory | Add or remove one configured key/value through the custom-tag API | Existing tags remain; conflicts require review; a partial management-zone result is reported |
@@ -54,7 +54,7 @@ The provider-tag operation also requires the signed-in user to have Dynatrace en
 - Verify the target tenant's IAM policies for every declared scope with a least-privilege test user.
 - Verify a user missing each scope receives the documented conservative state.
 - Verify granted, denied, management-zone-limited, partial-match, and undo outcomes for the provider-tag workflow.
-- Verify App Settings read/write separation with a read-only user and confirm that tenant SLA records and provider-service mappings remain visible but immutable.
+- Verify App Settings read/write separation with a read-only user and confirm that tenant custom records and provider-service mappings remain visible but immutable.
 - Verify multiple Provider connections with least-privilege AWS identities, Azure service principals, Google service accounts, and OCI API users. Cover inaccessible credentials, wrong account or subscription scope, invalid IAM grants, duplicate validation, unavailable external hosts, deliberate public-source selection, Google public fallback, and the rule that new or access-modified connections cannot be saved before a successful test.
 - Verify every fixed public provider endpoint with success, empty, malformed, timeout, and non-success responses.
 - Confirm the Hub Technical information discloses the Credential Vault read scope and the administrator-owned lifecycle for provider credentials.

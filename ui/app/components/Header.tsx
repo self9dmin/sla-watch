@@ -33,13 +33,13 @@ export const Header = ({
   const isChanges = location.pathname.startsWith("/changes");
   const communityLive = isCommunityLive();
   const themeActionLabel = `Switch to ${theme === "dark" ? "light" : "dark"} theme`;
-  const guideActionLabel = `${helpOpen ? "Close" : "Open"} SLA Watch guide`;
+  const guideActionLabel = `${helpOpen ? "Close" : "Open"} review guide`;
 
   return (
     <>
       <AppHeader>
         <AppHeader.Navigation>
-          <AppHeader.Logo as={Link} to="/" appName="SLA Watch" />
+          <AppHeader.Logo as={Link} to="/" appName="SLA Review" />
         </AppHeader.Navigation>
         <AppHeader.ActionItems>
           <Tooltip
@@ -81,7 +81,7 @@ export const Header = ({
           >
             <AppHeader.ActionButton
               onClick={onStartTour}
-              aria-label="Start or replay SLA Watch walkthrough"
+              aria-label="Start or replay product walkthrough"
               data-tour="tour"
             >
               <Button.Prefix>
@@ -163,10 +163,10 @@ export const Header = ({
         </AppHeader.ActionItems>
       </AppHeader>
       {helpOpen ? (
-        <aside className="help-drawer" aria-label="SLA Watch guide">
+        <aside className="help-drawer" aria-label="Review guide">
           <div className="help-drawer-header">
             <div>
-              <div className="eyebrow">SLA Watch guide</div>
+              <div className="eyebrow">Review guide</div>
               <h2>Provider attribution guidance</h2>
             </div>
             <button

@@ -190,7 +190,7 @@ const IncidentDetail = ({
       </div>
       <div className={`incident-mapping-note incident-mapping-${mappingSource}`}>
         <StatusPill tone={mappingSource === "confirmed" || mappingSource === "contract" ? "positive" : mappingSource === "candidate" ? "warning" : "neutral"}>
-          {mappingSource === "contract" ? "SLA scope match" : mappingSource === "confirmed" ? "Confirmed mapping" : mappingSource === "candidate" ? "Smartscape candidate" : mappingSource === "manual" ? "Manual selection" : "No service match"}
+          {mappingSource === "contract" ? "Contract scope match" : mappingSource === "confirmed" ? "Confirmed mapping" : mappingSource === "candidate" ? "Smartscape candidate" : mappingSource === "manual" ? "Manual selection" : "No service match"}
         </StatusPill>
         <span>{mappingDetail}</span>
         <Link to="/setup">Review scope map</Link>
@@ -387,7 +387,7 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
   }, [confirmedDecision, contractSettings.loading, matchingAssignments, provider?.provider.slug, scopeSettings.loading, selectedProblem, topologyDecision, topologyLoading]);
 
   const mappingDetail = mappingSource === "contract"
-    ? "A matching tenant SLA scope selected this provider service and Dynatrace scope."
+    ? "A matching tenant scope selected this provider service and Dynatrace scope."
     : mappingSource === "confirmed"
       ? confirmedDecision?.evidence ?? "A mapping confirmed in Setup was reused for this incident."
       : mappingSource === "candidate"

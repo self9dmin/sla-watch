@@ -344,7 +344,7 @@ export type SlaDirectoryConnection = {
 export const slaDirectoryConnection: SlaDirectoryConnection = {
   source: "sla.directory API",
   message:
-    "Provider and service SLA records are loaded from the versioned sla.directory API.",
+    "Provider terms and service coverage are loaded from the versioned sla.directory API.",
 };
 
 export const DEFAULT_SLA_PREFERENCES: SlaPreferences = {

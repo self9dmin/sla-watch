@@ -152,7 +152,7 @@ const WATCH_LINKS: ReadonlyArray<{
 ];
 
 const WatchNavigation = ({ section }: { section: WatchSection }) => (
-  <nav className="section-tabs" aria-label="SLA Watch sections">
+  <nav className="section-tabs" aria-label="Review sections">
     {WATCH_LINKS.map((item) => (
       <Link
         key={item.section}
@@ -723,9 +723,9 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     <div className="dashboard-shell">
       <section className="hero-row">
         <div className="hero-copy-block">
-          <Heading level={1}>Provider SLA monitor</Heading>
+          <Heading level={1}>Provider review</Heading>
           <Paragraph className="hero-copy">
-            Monitor provider mapping, Dynatrace Problems, and filing windows for
+            Review provider mapping, Dynatrace Problems, and filing windows for
             this environment.
           </Paragraph>
         </div>
@@ -901,7 +901,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
             <div
               className="evidence-ladder"
               role="list"
-              aria-label="SLA Watch setup stages"
+              aria-label="Setup stages"
             >
               <EvidenceStep
                 number={1}

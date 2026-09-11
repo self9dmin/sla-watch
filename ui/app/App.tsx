@@ -16,7 +16,7 @@ type AppTheme = "light" | "dark";
 
 const LoadingScreen = () => (
   <div className="sla-loading-screen">
-    <ProgressCircle aria-label="Loading SLA Watch" />
+    <ProgressCircle aria-label="Loading SLA Review" />
     <div>
       <Heading level={3}>Loading your monitor setup</Heading>
       <Paragraph>Restoring provider, theme, and workflow preferences.</Paragraph>

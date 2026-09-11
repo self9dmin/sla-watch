@@ -4,7 +4,7 @@ import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import { CONNECTED_PROVIDER_OPTIONS } from "../data/providerConnections";
 import { providerDisplayName } from "../data/providers";
 
-const SlaWatchMark = () => (
+const AppMark = () => (
   <svg className="sla-brand-logo" viewBox="0 0 64 64" aria-hidden="true">
     <rect width="64" height="64" rx="14" fill="#11323a" />
     <path
@@ -118,8 +118,8 @@ export const OnboardingWizard = ({
       <div className="onboarding-glow onboarding-glow-two" />
       <section className="onboarding-card" aria-labelledby="onboarding-title">
         <div className="onboarding-brand">
-          <SlaWatchMark />
-          <span>SLA Watch</span>
+          <AppMark />
+          <span>SLA Review</span>
         </div>
         <StepIndicator step={step} />
 
@@ -127,19 +127,19 @@ export const OnboardingWizard = ({
           <div className="onboarding-hero">
             <div>
               <Heading level={1} id="onboarding-title">
-                Set up provider SLA review.
+                Set up provider review.
               </Heading>
               <Paragraph>
                 Select providers, confirm their service scope, and compare
-                incidents with published or custom SLA terms.
+                incidents with published or custom terms.
               </Paragraph>
             </div>
             <div
               className="onboarding-proof-grid"
-              aria-label="Checks performed by SLA Watch"
+              aria-label="Setup summary"
             >
               <div>
-                <strong>Public SLA terms</strong>
+                <strong>Published terms</strong>
                 <small>No sla.directory credential is required.</small>
               </div>
               <div>
@@ -265,14 +265,14 @@ export const OnboardingWizard = ({
                   No account-specific adapter applies to the current selection.
                 </strong>
                 <span>
-                  You can continue with public SLA terms and Dynatrace evidence.
+                  You can continue with published terms and Dynatrace evidence.
                 </span>
               </div>
             )}
             <div className="onboarding-connection-boundary">
               <strong>Credential boundary</strong>
               <span>
-                SLA Watch stores the provider scope and Credential Vault record
+                The app stores the provider scope and Credential Vault record
                 ID. It cannot create, display, rotate, or delete provider
                 credentials.
               </span>

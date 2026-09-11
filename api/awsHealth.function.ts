@@ -93,7 +93,7 @@ const readCredential = async (credentialId: string): Promise<AwsSigningCredentia
   try {
     result = await credentialVaultClient.getCredentialsDetails({ id: credentialId });
   } catch {
-    throw new Error("The Credential Vault entry could not be read. Verify its AppEngine scope, SLA Watch access, and user access.");
+    throw new Error("The Credential Vault entry could not be read. Verify its AppEngine scope, SLA Review access, and user access.");
   }
   if (result.type !== "TOKEN") throw new Error("The Credential Vault entry must use the Token credential type.");
   const token = optionalText((result as CredentialsDetailsTokenResponseElement).token);
@@ -293,7 +293,7 @@ export default async function (payload: RequestPayload = {}) {
     connectionState: "connected" as const,
     scopeLabel: request.accountId,
     message: `AWS returned ${notices.length} account-specific Health event${notices.length === 1 ? "" : "s"} in the selected window.`,
-    warning: "AWS Health account events are provider-owned evidence. They do not prove local Dynatrace impact, provider fault, or SLA credit eligibility.",
+    warning: "AWS Health account events are provider-owned evidence. They do not prove local Dynatrace impact, provider fault, or service credit eligibility.",
     notices,
   };
 }

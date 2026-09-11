@@ -227,6 +227,6 @@ export const validateContractOverride = (value: ContractOverrideValue): string[]
   if (value.maxCreditPercent !== null && value.maxCreditPercent !== undefined && (value.maxCreditPercent < 0 || value.maxCreditPercent > 100)) errors.push("Maximum credit must be between 0 and 100 percent.");
   if (value.filingDeadlineDays !== null && value.filingDeadlineDays !== undefined && (value.filingDeadlineDays < 0 || value.filingDeadlineDays > 365)) errors.push("The filing deadline must be between 0 and 365 days.");
   if (value.scopeKind !== "provider" && scopeIds.length === 0) errors.push("Select at least one Dynatrace evidence target.");
-  if (scopeIds.length > 100) errors.push("Select no more than 100 Dynatrace evidence targets for one SLA override.");
+  if (scopeIds.length > 100) errors.push("Select no more than 100 Dynatrace evidence targets for one custom terms record.");
   return errors;
 };

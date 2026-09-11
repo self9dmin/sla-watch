@@ -175,7 +175,7 @@ export const ProviderTagSetup = ({
       <div className="setup-section-heading">
         <div>
           <h3 id="provider-service-tags-title">Provider service tags</h3>
-          <p>Add a reusable <code>{tagText}</code> tag only to services that depend on {providerName}. Scope map confirmations already work inside SLA Watch.</p>
+          <p>Add a reusable <code>{tagText}</code> tag only to services that depend on {providerName}. Scope map confirmations already work inside the app.</p>
         </div>
         <span className={`status-pill ${matchedCount > 0 ? "status-pill-positive" : "status-pill-warning"}`}>
           {loading ? "Checking" : `${matchedCount} of ${services.length} mapped`}
@@ -232,7 +232,7 @@ export const ProviderTagSetup = ({
       {step === "confirm" ? (
         <div className="provider-confirmation" role="region" aria-label="Confirm provider tag change">
           <strong>Add <code>{tagText}</code> to {selectedRows.length} selected service{selectedRows.length === 1 ? "" : "s"}?</strong>
-          <p>{selectedSuggestedCount > 0 ? `${selectedSuggestedCount} selection${selectedSuggestedCount === 1 ? " has" : "s have"} supporting Smartscape runtime metadata. ` : ""}Review remains required because topology identifies hosting context, not provider fault or SLA eligibility.</p>
+          <p>{selectedSuggestedCount > 0 ? `${selectedSuggestedCount} selection${selectedSuggestedCount === 1 ? " has" : "s have"} supporting Smartscape runtime metadata. ` : ""}Review remains required because topology identifies hosting context, not provider fault or credit eligibility.</p>
           <p>Existing tags remain in place. The new tag can be used by Dynatrace dashboards, alerts, maintenance windows, management zones, and workflows.</p>
           {permission === "granted" ? <p>The role check passed. Dynatrace still validates the app scope and Manage monitoring settings permission when the change is submitted.</p> : null}
           {permission === "conditional" ? <p>Your permission is limited by management zone. Dynatrace may update fewer services than selected.</p> : null}

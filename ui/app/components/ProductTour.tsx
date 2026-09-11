@@ -32,12 +32,12 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="directory"]',
     title: "Review provider records",
-    body: "Directory contains the public SLA, service coverage, claim requirements, support options, and tenant overrides for the active provider.",
+    body: "Directory contains published terms, service coverage, claim requirements, support options, and tenant overrides for the active provider.",
   },
   {
     target: '[data-tour="settings"]',
     title: "Configure the workspace",
-    body: "Settings controls monitored providers, optional provider incident connections, SLA overrides, the tag key, and the lookback window. Provider connections can be added for more than one account scope.",
+    body: "Settings controls monitored providers, optional incident connections, custom terms, the tag key, and the lookback window. Provider connections can be added for more than one account scope.",
   },
 ];
 
@@ -87,7 +87,7 @@ export const ProductTour = ({ onComplete }: { onComplete: () => void }) => {
     <div
       className="product-tour"
       role="dialog"
-      aria-label="SLA Watch walkthrough"
+      aria-label="Product walkthrough"
     >
       {rect ? (
         <>
@@ -132,7 +132,7 @@ export const ProductTour = ({ onComplete }: { onComplete: () => void }) => {
       )}
       <div className="tour-panel" style={{ top, left, width: panelWidth }}>
         <div className="eyebrow">
-          SLA Watch walkthrough · {index + 1}/{STEPS.length}
+          Product walkthrough · {index + 1}/{STEPS.length}
         </div>
         <button
           type="button"

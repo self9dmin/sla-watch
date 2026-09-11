@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-SLA Watch is a read-mostly Dynatrace AppEngine application with four explicit configuration write paths: confirmed provider-tag changes, operator-confirmed provider-service scope mappings, tenant-owned SLA overrides, and optional provider-connection metadata. It monitors a collection of provider contracts from `sla.directory` while one active provider controls each focused review. It compares those records with custom terms, the live service inventory, Smartscape topology, recent telemetry, and separately labeled provider notices. Its output is an evidence posture for human review, not an automated credit decision.
+SLA Review is a read-mostly Dynatrace AppEngine application with four explicit configuration write paths: confirmed provider-tag changes, operator-confirmed provider-service scope mappings, tenant-owned custom terms, and optional provider-connection metadata. It monitors a collection of provider contracts from `sla.directory` while one active provider controls each focused review. It compares those records with custom terms, the live service inventory, Smartscape topology, recent telemetry, and separately labeled provider notices. Its output is an evidence posture for human review, not an automated credit decision.
 
 The application has no database of its own, no scheduled work, no webhook receiver, no email sender, and no embedded agent. There is no `cron.md`, `emails.md`, `seo.md`, or `automation.md` because those capabilities do not exist in this release.
 
@@ -14,7 +14,7 @@ The application has no database of its own, no scheduled work, no webhook receiv
 - Dynatrace Environment API custom-tag and effective-permission clients for the explicit service-tag workflow.
 - Six AppEngine functions: `api/slaDirectory.function.ts` for public contract data; `api/awsHealth.function.ts`, `api/azureServiceHealth.function.ts`, `api/gcpServiceHealth.function.ts`, and `api/ociAnnouncements.function.ts` for customer-scoped provider notices; and `api/providerPublicStatus.function.ts` for credential-free public OCI, OpenAI, Anthropic, and ElevenLabs status.
 - App state services for user preferences and shared watch configuration.
-- App Settings V2 for shared, versioned tenant SLA overrides, confirmed provider-service scope mappings, and non-secret provider connection metadata.
+- App Settings V2 for shared, versioned tenant custom terms, confirmed provider-service scope mappings, and non-secret provider connection metadata.
 - `dt-app` for build, analysis, local development, and deployment.
 
 The browser entry point is `ui/main.tsx`. Application routing is in `ui/app/App.tsx`. The primary read path is:
@@ -35,7 +35,7 @@ Setup -> explicit service selection -> confirmation -> effective permission chec
 Setup -> Smartscape service-to-runtime scope -> provider-service suggestion -> operator confirmation
       -> App Settings V2 -> exact service and runtime mapping reused by Incident review
 
-Settings -> explicit SLA terms and evidence targets -> validation -> App Settings V2
+Settings -> explicit custom terms and evidence targets -> validation -> App Settings V2
          -> shared contract override using exact service, runtime, or location identifiers
 
 Settings -> provider account scope and Credential Vault ID -> successful connection test -> App Settings V2
@@ -61,7 +61,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 
 - Tenant services and telemetry: Dynatrace Grail, queried at runtime.
 - Provider contract and directory metadata: the selected `sla.directory` API response.
-- Tenant-specific operational SLA terms: the `contract-overrides` App Settings schema.
+- Tenant-specific operational terms: the `contract-overrides` App Settings schema.
 - Confirmed provider-service mappings: the `provider-scope-assignments` App Settings schema. Smartscape supplies candidate evidence, and an operator supplies the confirmation.
 - Provider connection metadata: the `provider-connections` App Settings schema. Provider secrets: Dynatrace Credential Vault.
 - AWS provider notices: account-specific AWS Health events after STS account verification. There is no credential-free AWS source in this release.
@@ -75,7 +75,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 
 The monitored-provider collection determines which contracts can be reviewed. The active provider controls the focused Overview, Setup, Incidents, Provider notices, and Directory views inside the shared operating shell. Changing it does not remove another monitored provider, modify service tags, or change a provider connection.
 
-Directory is the normalized presentation of the complete supported `sla.directory` provider response. It keeps published SLA terms, credit policy, claim requirements, exclusions, service-specific coverage, support plans, support-response status, and record provenance visibly separate from tenant-owned overrides. The parser rejects malformed nested support and tier records before they reach this surface.
+Directory is the normalized presentation of the complete supported `sla.directory` provider response. It keeps published terms, credit policy, claim requirements, exclusions, service-specific coverage, support plans, support-response status, and record provenance visibly separate from tenant-owned overrides. The parser rejects malformed nested support and tier records before they reach this surface.
 
 The app does not alter or copy the public provider record. A tenant override is stored separately, remains traceable to its source reference, and takes precedence only inside its effective date and explicit evidence boundary.
 
@@ -86,7 +86,7 @@ The app does not alter or copy the public provider record. A tenant override is 
 - Logs and spans are counted at the tenant level rather than joined to a selected service. This is intentionally described as environment signal presence and is not sufficient for provider attribution (`ui/app/data/queries.ts`).
 - `sla.directory` is an external availability dependency. The UI reports unavailable or unknown states and never converts a failed request into a healthy result (`api/slaDirectory.function.ts`, `ui/app/pages/Dashboard.tsx`).
 - Shared app-state writes are workspace-wide and scope-controlled. A user with write permission can change shared provider configuration (`documentation/permissions.md`).
-- SLA override writes are environment-shared App Settings and do not inherit the 90-day app-state expiry. Users with schema write access can change or remove them, and all authenticated app users can read them.
+- Custom-term writes are environment-shared App Settings and do not inherit the 90-day app-state expiry. Users with schema write access can change or remove them, and all authenticated app users can read them.
 - Applying a custom tag can affect other Dynatrace configurations that select entities by tag. Setup names those consumers before confirmation, requires exact service selection, and offers a last-action undo. Undo is a compensating action, not a transactional rollback, so concurrent edits still require operator review.
 - AppEngine external-request allowlisting is environment configuration, not repository configuration. The target environment must retain `sla.directory`, the fixed AWS and Azure hosts, the Google hosts used by any enabled provider connection, each configured OCI Announcements regional host, and the four fixed public-status hosts documented in `variables.md`.
 - Personalized Service Health is provider evidence, not tenant impact evidence. An `IMPACTED` relevance value is reported as Google's project assessment and is not converted into a Dynatrace root-cause or credit decision.
