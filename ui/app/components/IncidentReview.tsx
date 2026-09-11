@@ -5,7 +5,7 @@ import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import type { ContractContext, ContractOverrideRecord, EffectiveContractTerms, EvidenceLookbackHours, ProblemRecord, ServiceRecord, SlaClaimProcess, SlaProviderResponse, SmartscapeScopeEdge } from "../types";
 import { overrideMatchesContext, resolveEffectiveContractTerms } from "../data/contractOverrides";
 import { EVIDENCE_LOOKBACK_OPTIONS, formatEvidenceLookback } from "../data/lookback";
-import { inferProviderServiceCandidate, resolveUniqueProviderServiceCandidate, runtimeEntityIdForEdge, serviceEntityIdForEdge, type IncidentProviderServiceCandidate } from "../data/providerScopeAssignments";
+import { inferProviderServiceCandidate, isServiceScopeAssignment, resolveUniqueProviderServiceCandidate, runtimeEntityIdForEdge, serviceEntityIdForEdge, type IncidentProviderServiceCandidate } from "../data/providerScopeAssignments";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
 
@@ -340,7 +340,9 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
       assignment.providerSlug === provider.provider.slug &&
       affected.has(assignment.serviceEntityId)
     )).flatMap((assignment) => {
-      const candidateScopeKey = `host:${assignment.serviceEntityId}:${assignment.runtimeEntityId}`;
+      const candidateScopeKey = isServiceScopeAssignment(assignment)
+        ? `service:${assignment.serviceEntityId}`
+        : `host:${assignment.serviceEntityId}:${assignment.runtimeEntityId}`;
       return scopeChoices.some((choice) => choice.key === candidateScopeKey)
         ? [{ providerServiceId: assignment.providerServiceId, scopeKey: candidateScopeKey, serviceEntityId: assignment.serviceEntityId, evidence: assignment.evidence }]
         : [];

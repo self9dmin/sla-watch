@@ -3,13 +3,12 @@
   "environmentUrl": "https://your-environment.apps.dynatrace.com/",
   "app": {
     "name": "SLA Review",
-    "version": "0.0.41",
+    "version": "0.0.42",
     "icon": "ui/assets/sla-watch-icon.svg",
     "description": "Review provider terms against Dynatrace evidence and service ownership",
     "id": "my.sla",
     "scopes": [
       { "name": "storage:entities:read", "comment": "Read services and managed entities for provider review" },
-      { "name": "environment-api:entities:write", "comment": "Add or remove an explicitly confirmed provider tag on selected service entities" },
       { "name": "environment-api:credentials:read", "comment": "Read an administrator-selected AppEngine credential for an optional provider incident connection" },
       { "name": "storage:events:read", "comment": "Read problem events that can affect SLA posture" },
       { "name": "storage:metrics:read", "comment": "Read service health signals for SLA evaluation" },

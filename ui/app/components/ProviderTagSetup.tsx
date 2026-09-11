@@ -1,72 +1,47 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { monitoredEntitiesCustomTagsClient } from "@dynatrace-sdk/client-classic-environment-v2";
-import { effectivePermissionsClient } from "@dynatrace-sdk/client-platform-management-service";
 import { Button } from "@dynatrace/strato-components/buttons";
-import type { ProviderCandidate, ServiceRecord } from "../types";
-import { buildEntityIdSelector, providerTagValues, providerTagWriteIssue } from "../data/providerTags";
+import type { ServiceRecord, SlaProviderResponse } from "../types";
+import { providerTagValues } from "../data/providerTags";
+import {
+  createServiceScopeAssignment,
+  createServiceScopeAssignmentKey,
+  isServiceScopeAssignment,
+} from "../data/providerScopeAssignments";
+import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAssignments";
 
-type PermissionState = "checking" | "granted" | "conditional" | "denied" | "unavailable";
-type ReviewStep = "summary" | "select" | "confirm";
-type LastChange = { ids: string[]; count: number; key: string; value: string };
-type WriteFeedback = { tone: "positive" | "warning"; title: string; detail: string; code?: number };
-
-const permissionCopy: Record<PermissionState, string> = {
-  checking: "Checking role access",
-  granted: "Role check passed",
-  conditional: "Role check is management-zone limited",
-  denied: "Read-only for your role",
-  unavailable: "Write access is unverified",
-};
+type ReviewStep = "summary" | "select";
+type WriteFeedback = { tone: "positive" | "warning" | "neutral"; title: string; detail: string };
 
 export const ProviderTagSetup = ({
   services,
-  providerName,
+  provider,
   providerSlug,
   providerTagKey,
-  providerCandidates,
-  topologyLoading,
-  topologyError,
+  topologyServiceIds,
   loading,
-  onRefresh,
+  scopeSettings,
 }: {
   services: ServiceRecord[];
-  providerName: string;
+  provider?: SlaProviderResponse;
   providerSlug: string;
   providerTagKey: string;
-  providerCandidates: ProviderCandidate[];
-  topologyLoading: boolean;
-  topologyError?: Error;
+  topologyServiceIds: string[];
   loading: boolean;
-  onRefresh: () => void | Promise<unknown>;
+  scopeSettings: ProviderScopeAssignmentsState;
 }) => {
   const location = useLocation();
-  const [permission, setPermission] = useState<PermissionState>("checking");
   const [step, setStep] = useState<ReviewStep>("summary");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [writing, setWriting] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [selectedProviderServiceId, setSelectedProviderServiceId] = useState("*");
   const [feedback, setFeedback] = useState<WriteFeedback | null>(null);
-  const [lastChange, setLastChange] = useState<LastChange | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    void effectivePermissionsClient.resolveEffectivePermissions({
-      body: { permissions: [{ permission: "environment-api:entities:write" }] },
-    }).then((result) => {
-      if (!mounted) return;
-      const granted = result[0]?.granted;
-      setPermission(granted === "true" ? "granted" : granted === "condition" ? "conditional" : "denied");
-    }).catch(() => {
-      if (mounted) setPermission("unavailable");
-    });
-    return () => { mounted = false; };
-  }, []);
+  const providerName = provider?.provider.name ?? providerSlug;
 
   useEffect(() => {
     setStep("summary");
-    setSelectedIds([]);
+    setSelectedServiceId("");
+    setSelectedProviderServiceId("*");
     setFeedback(null);
-    setLastChange(null);
   }, [providerSlug, providerTagKey]);
 
   useEffect(() => {
@@ -74,99 +49,76 @@ export const ProviderTagSetup = ({
     if ((review === "provider" || location.hash === "#provider-mapping" || location.hash === "#provider-service-tags") && services.length > 0) setStep("select");
   }, [location.hash, location.search, services.length]);
 
-  const rows = useMemo(() => services.map((service) => {
-    const values = providerTagValues(service.tags, providerTagKey, providerSlug);
-    const matched = values.includes(providerSlug.toLowerCase());
-    const conflicting = values.length > 0 && !matched;
-    const candidate = providerCandidates.find((item) => item.serviceId === service.id);
-    return { service, values, matched, conflicting, candidate, selectable: !matched && !conflicting };
-  }), [providerCandidates, providerSlug, providerTagKey, services]);
+  const topologyIds = useMemo(() => new Set(topologyServiceIds), [topologyServiceIds]);
+  const rows = useMemo(() => services
+    .filter((service) => !topologyIds.has(service.id))
+    .map((service) => {
+      const values = providerTagValues(service.tags, providerTagKey, providerSlug);
+      const sourceTag = values.includes(providerSlug.toLowerCase());
+      const conflicting = values.length > 0 && !sourceTag;
+      const assignmentKey = createServiceScopeAssignmentKey(providerSlug, service.id);
+      const assignment = scopeSettings.assignments.find((item) =>
+        item.enabled &&
+        item.providerSlug === providerSlug &&
+        item.assignmentKey === assignmentKey &&
+        isServiceScopeAssignment(item),
+      );
+      return { service, values, sourceTag, conflicting, assignment };
+    }), [providerSlug, providerTagKey, scopeSettings.assignments, services, topologyIds]);
 
-  const matchedCount = rows.filter((row) => row.matched).length;
-  const suggestedRows = rows.filter((row) => row.selectable && row.candidate);
-  const selectedRows = rows.filter((row) => selectedIds.includes(row.service.id));
-  const selectedSuggestedCount = selectedRows.filter((row) => row.candidate).length;
-  const canWrite = permission === "granted" || permission === "conditional";
-  const tagText = `${providerTagKey}:${providerSlug}`;
+  const selectedRow = rows.find((row) => row.service.id === selectedServiceId);
+  const appMappedCount = rows.filter((row) => row.assignment).length;
+  const sourceTagCount = rows.filter((row) => row.sourceTag).length;
+  const coveredCount = rows.filter((row) => row.assignment || row.sourceTag).length;
+  const canWrite = scopeSettings.canWrite && Boolean(provider);
 
-  const toggleService = (serviceId: string) => {
-    setSelectedIds((current) => current.includes(serviceId) ? current.filter((id) => id !== serviceId) : [...current, serviceId]);
-    setFeedback(null);
-  };
-
-  const toggleAll = () => {
-    const suggestedIds = suggestedRows.map((row) => row.service.id);
-    setSelectedIds(suggestedIds.length > 0 && suggestedIds.every((id) => selectedIds.includes(id)) ? selectedIds.filter((id) => !suggestedIds.includes(id)) : Array.from(new Set([...selectedIds, ...suggestedIds])));
-    setFeedback(null);
-  };
-
-  const applyTag = async () => {
-    if (!canWrite || selectedRows.length === 0 || writing) return;
-    const ids = selectedRows.map((row) => row.service.id);
-    setWriting(true);
+  const saveCoverage = async () => {
+    if (!selectedRow || !provider || !canWrite || scopeSettings.mutating) return;
+    const providerService = selectedProviderServiceId === "*"
+      ? { id: "*", name: "Provider-level terms" }
+      : provider.services.find((service) => service.id === selectedProviderServiceId);
+    if (!providerService) return;
+    const value = createServiceScopeAssignment({
+      providerSlug,
+      providerServiceId: providerService.id,
+      providerServiceName: providerService.name,
+      serviceEntityId: selectedRow.service.id,
+      serviceEntityName: selectedRow.service.name,
+    });
     setFeedback(null);
     try {
-      const result = await monitoredEntitiesCustomTagsClient.postTags({
-        entitySelector: buildEntityIdSelector(ids),
-        body: { tags: [{ key: providerTagKey.trim(), value: providerSlug.trim() }] },
+      if (selectedRow.assignment) await scopeSettings.updateAssignment(selectedRow.assignment, value);
+      else await scopeSettings.createAssignment(value);
+      setFeedback({
+        tone: "positive",
+        title: "Coverage saved",
+        detail: `${selectedRow.service.name} will be matched to ${providerName} in Incidents and Evidence.`,
       });
-      const count = result.matchedEntitiesCount;
-      if (count === undefined) {
-        setFeedback({
-          tone: "warning",
-          title: "Tag request accepted without a confirmed result",
-          detail: "Dynatrace did not report how many services changed. Refresh the inventory and verify the selected services before trying again.",
-        });
-        await onRefresh();
-        return;
-      }
-      if (count === 0) {
-        setFeedback({
-          tone: "warning",
-          title: "No services were updated",
-          detail: "The selected service entities no longer matched the Dynatrace request. Refresh the inventory and review the selection.",
-        });
-        await onRefresh();
-        return;
-      }
-      setLastChange({ ids, count, key: providerTagKey.trim(), value: providerSlug.trim() });
-      setFeedback(count === ids.length
-        ? { tone: "positive", title: "Provider tag applied", detail: `${tagText} was added to ${count} service${count === 1 ? "" : "s"}.` }
-        : { tone: "warning", title: "Provider tag applied to part of the selection", detail: `${tagText} was added to ${count} of ${ids.length} selected services. Management-zone access may have limited the result.` });
-      setSelectedIds([]);
-      setStep("summary");
-      await onRefresh();
-    } catch (error) {
-      const issue = providerTagWriteIssue(error);
-      setFeedback({ tone: "warning", ...issue });
-    } finally {
-      setWriting(false);
+    } catch {
+      setFeedback({
+        tone: "warning",
+        title: "Coverage could not be saved",
+        detail: "Check App Settings write access and try again. The Dynatrace service was not changed.",
+      });
     }
   };
 
-  const undoLastChange = async () => {
-    if (!lastChange || writing) return;
-    setWriting(true);
+  const removeCoverage = async () => {
+    if (!selectedRow?.assignment || scopeSettings.mutating || !window.confirm(`Remove ${providerName} coverage for ${selectedRow.service.name}?`)) return;
     setFeedback(null);
     try {
-      await monitoredEntitiesCustomTagsClient.deleteTags({
-        entitySelector: buildEntityIdSelector(lastChange.ids),
-        key: lastChange.key,
-        value: lastChange.value,
-        deleteAllWithKey: false,
-      });
+      await scopeSettings.deleteAssignment(selectedRow.assignment);
       setFeedback({
-        tone: "positive",
-        title: "Last provider tag change removed",
-        detail: `${lastChange.key}:${lastChange.value} was removed from the services changed in the last action.`,
+        tone: "neutral",
+        title: "Coverage removed",
+        detail: `${selectedRow.service.name} is no longer assigned to ${providerName} by SLA Review.`,
       });
-      setLastChange(null);
-      await onRefresh();
-    } catch (error) {
-      const issue = providerTagWriteIssue(error);
-      setFeedback({ tone: "warning", ...issue });
-    } finally {
-      setWriting(false);
+    } catch {
+      setFeedback({
+        tone: "warning",
+        title: "Coverage could not be removed",
+        detail: "Check App Settings write access and try again.",
+      });
     }
   };
 
@@ -174,82 +126,88 @@ export const ProviderTagSetup = ({
     <section className="provider-setup" id="provider-service-tags" aria-labelledby="provider-service-tags-title">
       <div className="setup-section-heading">
         <div>
-          <h3 id="provider-service-tags-title">Provider service tags</h3>
-          <p>Add a reusable <code>{tagText}</code> tag only to services that depend on {providerName}. Scope map confirmations already work inside the app.</p>
+          <h3 id="provider-service-tags-title">Manual coverage</h3>
+          <p>Confirm services that Smartscape does not place in the scope map. The mapping stays in SLA Review.</p>
         </div>
-        <span className={`status-pill ${matchedCount > 0 ? "status-pill-positive" : "status-pill-warning"}`}>
-          {loading ? "Checking" : `${matchedCount} of ${services.length} mapped`}
+        <span className={`status-pill ${coveredCount > 0 ? "status-pill-positive" : "status-pill-warning"}`}>
+          {loading || scopeSettings.loading ? "Checking" : `${coveredCount} of ${rows.length} covered`}
         </span>
       </div>
 
       <dl className="provider-rule-summary">
-        <div><dt>Dynatrace tag</dt><dd><code>{tagText}</code></dd></div>
-        <div><dt>Smartscape candidates</dt><dd>{topologyLoading ? "Checking" : `${suggestedRows.length} found`}</dd></div>
-        <div><dt>Write access</dt><dd>{permissionCopy[permission]}</dd></div>
+        <div><dt>Other services</dt><dd>{rows.length}</dd></div>
+        <div><dt>App mappings</dt><dd>{appMappedCount}</dd></div>
+        <div><dt>Source tags</dt><dd>{sourceTagCount}</dd></div>
       </dl>
 
       {step === "summary" ? (
         <div className="provider-setup-actions">
-          <Button size="condensed" variant="emphasized" disabled={loading || services.length === 0} onClick={() => setStep("select")}>{suggestedRows.length > 0 ? `Review ${suggestedRows.length} candidate${suggestedRows.length === 1 ? "" : "s"}` : "Review services"}</Button>
-          <Link className="text-action" to="/settings/watch">Change matching rule</Link>
-          <span>{topologyError ? "Smartscape suggestions are unavailable. Manual assignment remains available." : "No tag is added until you select exact services and confirm the change."}</span>
+          <Button size="condensed" variant="emphasized" disabled={loading || rows.length === 0} onClick={() => setStep("select")}>Review other services</Button>
+          <Link className="text-action" to="/settings/watch">Review matching rules</Link>
+          <span>This does not change service names, tags, telemetry, or cloud resources.</span>
         </div>
       ) : null}
 
       {step === "select" ? (
         <div className="provider-service-review">
           <div className="provider-service-toolbar">
-            <label>
-              <input
-                type="checkbox"
-                checked={suggestedRows.length > 0 && suggestedRows.every((row) => selectedIds.includes(row.service.id))}
-                onChange={toggleAll}
-                disabled={suggestedRows.length === 0}
-              />
-              {suggestedRows.length > 0 ? `Select ${suggestedRows.length} Smartscape candidate${suggestedRows.length === 1 ? "" : "s"}` : "No Smartscape candidates"}
-            </label>
-            <span>{selectedIds.length} selected</span>
+            <strong>Select one service</strong>
+            <span>{rows.length} outside Scope map</span>
           </div>
-          <div className="provider-service-list" role="list" aria-label={`Services available for ${providerName} mapping`}>
-            {rows.map(({ service, values, matched, conflicting, candidate, selectable }) => (
-              <label className={`provider-service-row${selectable ? "" : " provider-service-row-disabled"}`} key={service.id}>
-                <input type="checkbox" checked={selectedIds.includes(service.id)} disabled={!selectable} onChange={() => toggleService(service.id)} />
-                <span className="provider-service-name"><strong>{service.name}</strong><small>{service.id}</small></span>
-                <span className={`provider-service-state ${matched ? "positive" : conflicting ? "warning" : candidate ? "candidate" : "neutral"}`}>
-                  <strong>{matched ? `Confirmed ${providerName}` : conflicting ? `Review ${values.join(", ")}` : candidate ? `${providerName} candidate` : "Unassigned"}</strong>
-                  {candidate ? <small title={candidate.evidence.join("; ")}>{candidate.runtimeNames.slice(0, 2).join(", ")}</small> : null}
-                </span>
+          <div className="provider-service-list" role="radiogroup" aria-label={`Services available for ${providerName} coverage`}>
+            {rows.map(({ service, values, sourceTag, conflicting, assignment }) => {
+              const selectable = !sourceTag && !conflicting;
+              return (
+                <label className={`provider-service-row${selectable ? "" : " provider-service-row-disabled"}`} key={service.id}>
+                  <input type="radio" name="manual-coverage-service" checked={selectedServiceId === service.id} disabled={!selectable} onChange={() => {
+                    setSelectedServiceId(service.id);
+                    setSelectedProviderServiceId(assignment?.providerServiceId ?? "*");
+                    setFeedback(null);
+                  }} />
+                  <span className="provider-service-name"><strong>{service.name}</strong><small>{service.id}</small></span>
+                  <span className={`provider-service-state ${assignment || sourceTag ? "positive" : conflicting ? "warning" : "neutral"}`}>
+                    <strong>{assignment ? "Covered in app" : sourceTag ? "Covered by source tag" : conflicting ? "Tag points elsewhere" : "Needs review"}</strong>
+                    {assignment ? <small>{assignment.providerServiceName}</small> : conflicting ? <small>{values.join(", ")}</small> : null}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+
+          {selectedRow ? (
+            <div className="provider-confirmation" role="region" aria-label="Confirm service coverage">
+              <strong>{selectedRow.service.name}</strong>
+              <label className="field-label">Terms to use
+                <select value={selectedProviderServiceId} onChange={(event) => setSelectedProviderServiceId(event.target.value)} disabled={!canWrite || scopeSettings.mutating}>
+                  <option value="*">Provider-level terms</option>
+                  {provider?.services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
+                </select>
               </label>
-            ))}
-          </div>
+              <p>This records an operator-confirmed boundary for Incidents and Evidence. It does not modify the Dynatrace service or prove provider fault.</p>
+              <div className="provider-review-actions">
+                {selectedRow.assignment ? <Button size="condensed" disabled={!canWrite || scopeSettings.mutating} onClick={() => void removeCoverage()}>Remove coverage</Button> : null}
+                <Button size="condensed" variant="emphasized" disabled={!canWrite || scopeSettings.mutating} onClick={() => void saveCoverage()}>{scopeSettings.mutating ? "Saving" : selectedRow.assignment ? "Update coverage" : "Confirm coverage"}</Button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="provider-review-actions">
-            <Button size="condensed" onClick={() => { setStep("summary"); setSelectedIds([]); }}>Cancel</Button>
-            <Button size="condensed" variant="emphasized" disabled={selectedIds.length === 0} onClick={() => setStep("confirm")}>Review change</Button>
+            <Button size="condensed" onClick={() => { setStep("summary"); setSelectedServiceId(""); setFeedback(null); }}>Done</Button>
           </div>
         </div>
       ) : null}
 
-      {step === "confirm" ? (
-        <div className="provider-confirmation" role="region" aria-label="Confirm provider tag change">
-          <strong>Add <code>{tagText}</code> to {selectedRows.length} selected service{selectedRows.length === 1 ? "" : "s"}?</strong>
-          <p>{selectedSuggestedCount > 0 ? `${selectedSuggestedCount} selection${selectedSuggestedCount === 1 ? " has" : "s have"} supporting Smartscape runtime metadata. ` : ""}Review remains required because topology identifies hosting context, not provider fault or credit eligibility.</p>
-          <p>Existing tags remain in place. The new tag can be used by Dynatrace dashboards, alerts, maintenance windows, management zones, and workflows.</p>
-          {permission === "granted" ? <p>The role check passed. Dynatrace still validates the app scope and Manage monitoring settings permission when the change is submitted.</p> : null}
-          {permission === "conditional" ? <p>Your permission is limited by management zone. Dynatrace may update fewer services than selected.</p> : null}
-          {!canWrite ? <p>Your current role cannot apply this change. Ask a tenant administrator for entity-settings permission.</p> : null}
-          <div className="provider-review-actions">
-            <Button size="condensed" onClick={() => setStep("select")}>Back</Button>
-            <Button size="condensed" variant="emphasized" disabled={!canWrite || writing} onClick={() => void applyTag()}>{writing ? "Applying tag" : "Apply provider tag"}</Button>
-          </div>
+      {scopeSettings.error ? (
+        <div className="provider-write-message provider-write-message-warning" role="status">
+          <div><strong>Coverage settings are unavailable</strong><span>Check App Settings read access. Existing source tags remain visible.</span></div>
         </div>
       ) : null}
-
       {feedback ? (
         <div className={`provider-write-message provider-write-message-${feedback.tone}`} role={feedback.tone === "warning" ? "alert" : "status"}>
-          <div><strong>{feedback.title}{feedback.code ? ` (${feedback.code})` : ""}</strong><span>{feedback.detail}</span></div>
-          {lastChange ? <Button size="condensed" disabled={writing} onClick={() => void undoLastChange()}>Undo last change</Button> : null}
+          <div><strong>{feedback.title}</strong><span>{feedback.detail}</span></div>
         </div>
       ) : null}
+      {!scopeSettings.loading && !scopeSettings.canWrite ? <div className="provider-write-message" role="status"><div><strong>Read-only</strong><span>App Settings write access is required to save manual coverage.</span></div></div> : null}
     </section>
   );
 };

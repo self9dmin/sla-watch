@@ -72,6 +72,51 @@ export const createProviderScopeAssignmentKey = (
   .map((value) => value.trim().toLowerCase())
   .join("|");
 
+export const SERVICE_LEVEL_SCOPE_TYPE = "SERVICE_SCOPE";
+
+export const createServiceScopeAssignmentKey = (
+  providerSlug: string,
+  serviceEntityId: string,
+): string => createProviderScopeAssignmentKey(
+  providerSlug,
+  serviceEntityId,
+  serviceEntityId,
+);
+
+export const isServiceScopeAssignment = (
+  assignment: Pick<ProviderScopeAssignmentValue, "serviceEntityId" | "runtimeEntityId" | "runtimeType">,
+): boolean => assignment.runtimeType === SERVICE_LEVEL_SCOPE_TYPE &&
+  assignment.runtimeEntityId === assignment.serviceEntityId;
+
+export const createServiceScopeAssignment = ({
+  providerSlug,
+  providerServiceId,
+  providerServiceName,
+  serviceEntityId,
+  serviceEntityName,
+}: {
+  providerSlug: string;
+  providerServiceId: string;
+  providerServiceName: string;
+  serviceEntityId: string;
+  serviceEntityName: string;
+}): ProviderScopeAssignmentValue => ({
+  assignmentKey: createServiceScopeAssignmentKey(providerSlug, serviceEntityId),
+  providerSlug: providerSlug.trim().toLowerCase(),
+  providerServiceId,
+  providerServiceName,
+  serviceEntityId,
+  serviceEntityName,
+  runtimeEntityId: serviceEntityId,
+  runtimeEntityName: serviceEntityName,
+  runtimeType: SERVICE_LEVEL_SCOPE_TYPE,
+  location: null,
+  evidence: providerServiceId === "*"
+    ? `Operator confirmed ${serviceEntityName} uses this provider.`
+    : `Operator confirmed ${providerServiceName} terms for ${serviceEntityName}.`,
+  enabled: true,
+});
+
 export const resolveUniqueProviderServiceCandidate = (
   items: IncidentProviderServiceCandidate[],
 ): IncidentProviderServiceCandidate | undefined => {

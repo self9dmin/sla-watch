@@ -123,33 +123,33 @@ export const buildSetupRecommendations = ({
       priority: "high",
       title: providerCandidateServices > 0 ? `Confirm ${directoryData.provider.name} service candidates` : "Identify services that use this provider",
       detail: providerCandidateServices > 0
-        ? `Smartscape links ${providerCandidateServices} service${providerCandidateServices === 1 ? "" : "s"} to ${directoryData.provider.name} runtime metadata. Confirm the exact services before adding ${providerLabelKey}:${selectedProviderSlug}.`
-        : `Add ${providerLabelKey}:${selectedProviderSlug} (or a documented equivalent) to the services that depend on ${directoryData.provider.name}. Names alone are not enough for a provider review.`,
+        ? `Smartscape links ${providerCandidateServices} service${providerCandidateServices === 1 ? "" : "s"} to ${directoryData.provider.name} runtime metadata. Confirm the exact service and provider terms before review.`
+        : `Confirm the services that depend on ${directoryData.provider.name} in Coverage. Names alone are not enough for a provider review.`,
       evidence: providerCandidateServices > 0
         ? `${providerCandidateServices} topology candidate${providerCandidateServices === 1 ? "" : "s"}; ${services.length - providerCandidateServices} service${services.length - providerCandidateServices === 1 ? " has" : "s have"} no matching ${directoryData.provider.name} runtime evidence.`
-        : `${services.length} service${services.length === 1 ? "" : "s"} returned, but no provider tags were found.`,
-      action: providerCandidateServices > 0 ? "Open scope map" : "Review service tags",
+        : `${services.length} service${services.length === 1 ? "" : "s"} returned, but none has confirmed coverage or a matching source tag.`,
+      action: providerCandidateServices > 0 ? "Open scope map" : "Open manual coverage",
       href: providerCandidateServices > 0 ? "/" : "/?view=tags&review=provider#provider-service-tags",
     });
   } else if (directoryData && providerLabels.length > 0 && matchedProviderServices === 0) {
     add(recommendations, {
       id: "provider-mapping",
       priority: "high",
-      title: "Resolve provider tags to the selected contract",
-      detail: `Dynatrace has provider tags, but none resolve to ${directoryData.provider.name}. Confirm the intended provider before reviewing the contract.`,
+      title: "Resolve source tags to the selected provider",
+      detail: `Dynatrace has source-owned provider tags, but none resolve to ${directoryData.provider.name}. Confirm the intended provider before review.`,
       evidence: `Detected tags: ${providerLabels.slice(0, 3).join(", ")}. Selected contract: ${directoryData.provider.name}.`,
-      action: "Review service tags",
-      href: "/?view=tags&review=provider#provider-service-tags",
+      action: "Review matching rules",
+      href: "/settings/watch",
     });
   } else if (directoryData && matchedProviderServices > 0 && taggedProviderServices === 0) {
     add(recommendations, {
       id: "provider-tag-reuse",
       priority: "low",
-      title: "Add provider tags for wider Dynatrace reuse",
-      detail: `The confirmed scope mapping is sufficient for this review. Add ${providerLabelKey}:${selectedProviderSlug} only when dashboards, alerts, management zones, or workflows should reuse the same boundary.`,
+      title: "Reuse coverage outside SLA Review",
+      detail: `The confirmed app mapping is sufficient here. If other Dynatrace features need the same boundary, maintain ${providerLabelKey}:${selectedProviderSlug} in the service's telemetry or cloud metadata source.`,
       evidence: `${matchedProviderServices} service${matchedProviderServices === 1 ? " is" : "s are"} mapped without an explicit provider tag.`,
-      action: "Review service tags",
-      href: "/?view=tags&review=provider#provider-service-tags",
+      action: "Review matching rules",
+      href: "/settings/watch",
     });
   }
 

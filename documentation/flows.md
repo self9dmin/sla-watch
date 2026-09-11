@@ -16,7 +16,7 @@ Sequence:
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
 5. The app reads active tenant custom terms, confirmed provider-service scope mappings, and prior human evidence decisions from App Settings. It preserves the public directory record as the fallback baseline.
 6. Coverage classifies the current provider boundary as loading, access-incomplete, contract-unavailable, action-required, boundary-ready, or review-available.
-7. The operating shell presents Coverage, Incidents, and Evidence. Coverage is the landing workspace and places provider, service, incident, and filing facts above Scope map. Service tags is its secondary view. Incidents contains the observed Problem queue and effective filing references. Evidence combines Dynatrace-derived review candidates with a separate provider-reports view. Review terms exposes the complete normalized public provider record and tenant overrides.
+7. The operating shell presents Coverage, Incidents, and Evidence. Coverage is the landing workspace and places provider, service, incident, and filing facts above Scope map. Manual coverage is its secondary view for services outside the Scope map. Incidents contains the observed Problem queue and effective filing references. Evidence combines Dynatrace-derived review candidates with a separate provider-reports view. Review terms exposes the complete normalized public provider record and tenant overrides.
 8. Loading the workspace does not change a Dynatrace entity, tag, metric, Problem, SLO, custom terms record, evidence decision, or external ticket.
 
 Deny or degraded behavior: a missing read scope is shown as access incomplete, not as no telemetry. A failed directory request is shown as unavailable, not as a provider breach.
@@ -148,18 +148,17 @@ Actor: signed-in user with `app-settings:objects:read`; saving a decision also r
 
 Deny or degraded behavior: a failed Problem, topology, directory, or decision-store read is shown as incomplete rather than empty. A read-only user can inspect candidates and saved decisions but cannot validate or dismiss. A decision does not establish provider fault, SLA eligibility, credit approval, or claim submission.
 
-## Apply a provider tag
+## Confirm manual service coverage
 
-Actor: signed-in user with `environment-api:entities:write` in the app and the Dynatrace permission to manage entity settings.
+Actor: signed-in user with `app-settings:objects:write` for the app's `provider-scope-assignments` schema.
 
-1. The user opens Coverage, then Service tags. The page resolves the user's effective entity-write permission and displays whether the action is available, management-zone limited, denied, or unverifiable.
-2. The user opens the service review. The app merges the service inventory with exact service entities returned by Smartscape, then shows each service as already mapped, conflicting, an evidence-backed candidate, or unassigned. Conflicting services cannot be selected in bulk.
-3. Smartscape candidates require an exact service entity relationship to cloud-provider metadata. The user explicitly selects exact unassigned service entities. Service names are context only and never create an automatic assignment.
-4. A confirmation screen names the tag, selected service count, and common Dynatrace features that may consume tags.
-5. On confirmation, the app calls the custom-tag API with an entity selector built only from the selected entity IDs. Existing tags remain in place.
-6. The app reports the matched entity count, refreshes inventory, and retains the exact last action for an optional undo. Undo removes only that key/value pair from those exact entity IDs.
+1. The user opens Coverage, then Manual coverage.
+2. The app lists exact service entities that are not already represented by the active provider's Scope map. Existing provider tags are displayed only as source evidence.
+3. The user selects one exact service and chooses provider-level terms or one provider service. Service names are context only and never create an automatic assignment.
+4. A confirmation screen names the service, provider, and terms boundary. Saving writes an app-owned assignment to App Settings and does not modify Dynatrace entity metadata.
+5. The saved mapping is reused by Incidents and Evidence. The operator can update its provider-service selection or remove it to restore the unconfirmed state.
 
-Deny or degraded behavior: no selection or confirmation means no write. A missing or ambiguous cloud relationship remains unassigned instead of being guessed. Denied permission keeps the action read-only. Management-zone restrictions can yield a partial result, which is reported rather than represented as complete. A conflicting provider tag requires manual review. Undo is a compensating action and cannot reverse unrelated concurrent changes.
+Deny or degraded behavior: no selection or confirmation means no write. Services with usable active-provider Smartscape relationships remain in Scope map instead of being duplicated here. A read-only user can inspect current coverage but cannot save, update, or remove it. Existing source tags are never changed.
 
 ## Review the change log or get support
 

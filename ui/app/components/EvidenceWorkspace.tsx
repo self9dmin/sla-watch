@@ -135,6 +135,22 @@ const CandidateDetail = ({
     }
   };
 
+  const resetDecision = async () => {
+    if (!decision || settings.mutating || !window.confirm(`Reset the saved decision for ${candidate.problem.id}?`)) return;
+    setSaveError(undefined);
+    try {
+      await settings.deleteDecision(decision);
+      setNote("");
+      setAcknowledged(false);
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "The evidence decision could not be reset.",
+      );
+    }
+  };
+
   const affectedServices = candidate.affectedServices.length > 0
     ? candidate.affectedServices.map((service) => service.name).join(", ")
     : `${candidate.problem.affectedEntityIds.length} affected entity ID${candidate.problem.affectedEntityIds.length === 1 ? "" : "s"}`;
@@ -249,6 +265,15 @@ const CandidateDetail = ({
           >
             Dismiss
           </Button>
+          {decision ? (
+            <Button
+              size="condensed"
+              disabled={!settings.canWrite || settings.mutating}
+              onClick={() => void resetDecision()}
+            >
+              Reset decision
+            </Button>
+          ) : null}
           {!settings.loading && !settings.canWrite ? (
             <span>Read-only. App Settings write access is required.</span>
           ) : null}
