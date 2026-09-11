@@ -1,6 +1,21 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.38`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.39`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.39 verified scenarios
+
+The `0.0.39` artifact from source commit `a6c025e` was deployed to the designated Dynatrace target environment on 2026-09-10 and exercised through the installed application. No provider configuration, provider credential, Credential Vault record, tag, scope mapping, or custom terms record was created or changed.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.39` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `a6c025e` |
+| Release gate | Type checks, lint, 16 test suites with 93 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24 | `npm run verify:release`; production dependency audit reported zero vulnerabilities |
+| Product identity | The Dynatrace Apps list, browser title, AppHeader, and application frame identify the installed app as `SLA Review` | Installed production navigation and accessibility-tree smoke |
+| Operational language | The operating heading is `Provider review`; navigation and accessibility labels use review language without changing evidence behavior | Installed production Overview smoke |
+| Directory language | Directory displays `AWS terms` with Published terms, Services, Support, and Custom terms. The provider-owned `Official SLA` link remains explicit | Installed production Directory smoke against the live `sla.directory` response |
+| Custom terms | Settings exposes `Custom terms`, the full-page editor uses terms language, and the public baseline remains visibly separate | Installed production settings smoke; no value was entered or saved |
+| First run | The tenant-hosted local preview displayed the maintained mark, `SLA Review`, the one-line `Set up provider review.` heading, and a concise published-terms explanation | Chrome visual smoke against the authenticated target environment |
+| UI quality | The required UI detector returned no findings, and both the production dark view and local light view remained compact and readable | Impeccable detector plus Chrome visual smoke |
 
 ## 0.0.38 verified scenarios
 
