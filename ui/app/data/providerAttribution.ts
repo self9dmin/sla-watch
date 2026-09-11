@@ -1,4 +1,27 @@
-import type { ProviderCandidate, ServiceRecord, SmartscapeScopeEdge } from "../types";
+import type { ProblemRecord, ProviderCandidate, ServiceRecord, SmartscapeScopeEdge } from "../types";
+
+export type ServiceProblemActivity = {
+  service: ServiceRecord;
+  problemCount: number;
+};
+
+export const prioritizeServicesByProblemActivity = (
+  services: ServiceRecord[],
+  problems: ProblemRecord[],
+): ServiceProblemActivity[] => {
+  const counts = new Map<string, number>();
+  for (const problem of problems) {
+    for (const serviceId of new Set(problem.affectedEntityIds)) {
+      counts.set(serviceId, (counts.get(serviceId) ?? 0) + 1);
+    }
+  }
+
+  return services
+    .map((service) => ({ service, problemCount: counts.get(service.id) ?? 0 }))
+    .sort((left, right) => (
+      right.problemCount - left.problemCount || left.service.name.localeCompare(right.service.name)
+    ));
+};
 
 export const mergeServiceInventory = (
   services: ServiceRecord[],

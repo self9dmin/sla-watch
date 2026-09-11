@@ -1,4 +1,4 @@
-import { buildSetupRecommendations } from "../ui/app/data/recommendations";
+import { buildSetupRecommendations, selectPrimarySetupRecommendations } from "../ui/app/data/recommendations";
 import type { ProblemRecord, ServiceRecord, SlaProviderResponse } from "../ui/app/types";
 
 const provider: SlaProviderResponse = {
@@ -140,6 +140,17 @@ describe("buildSetupRecommendations", () => {
 
     expect(recommendations).toEqual([
       expect.objectContaining({ id: "slo-coverage", priority: "low" }),
+    ]);
+  });
+
+  it("keeps optional enablement advice out of the primary coverage checklist", () => {
+    expect(selectPrimarySetupRecommendations([
+      { id: "required", priority: "high", title: "Required", detail: "Fix it", evidence: "Missing", action: "Review" },
+      { id: "recommended", priority: "medium", title: "Recommended", detail: "Improve it", evidence: "Missing", action: "Review" },
+      { id: "optional", priority: "low", title: "Optional", detail: "Reuse it", evidence: "Available", action: "Review" },
+    ])).toEqual([
+      expect.objectContaining({ id: "required" }),
+      expect.objectContaining({ id: "recommended" }),
     ]);
   });
 });

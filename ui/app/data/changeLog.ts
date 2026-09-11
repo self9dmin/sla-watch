@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.42",
+    version: "0.0.43",
     label: "Current release",
+    summary: "Focused Coverage on the work that affects incident review.",
+    details: [
+      "Stopped counting optional SLO and cross-product tag advice as open Coverage work.",
+      "Prioritized unmapped services with recent Dynatrace Problems so the most relevant boundary is reviewed first.",
+      "Kept the prioritization exact and read-only: it uses affected entity IDs and does not change attribution, tags, or Dynatrace entities.",
+    ],
+  },
+  {
+    version: "0.0.42",
+    label: "Previous release",
     summary: "Made coverage reliable for both Smartscape and service-only scopes.",
     details: [
       "Added Manual coverage for services that do not have a usable Smartscape runtime relationship.",

@@ -677,6 +677,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               <div className="setup-content-grid">
                 <ProviderTagSetup
                   services={services}
+                  problems={problems}
                   provider={directoryData}
                   providerSlug={selectedProviderSlug}
                   providerTagKey={providerLabelKey}

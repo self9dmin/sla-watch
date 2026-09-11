@@ -45,6 +45,10 @@ const add = (items: SetupRecommendation[], recommendation: SetupRecommendation):
   if (!items.some((item) => item.id === recommendation.id)) items.push(recommendation);
 };
 
+export const selectPrimarySetupRecommendations = (
+  recommendations: SetupRecommendation[],
+): SetupRecommendation[] => recommendations.filter(({ priority }) => priority !== "low");
+
 export const buildSetupRecommendations = ({
   services,
   problems,

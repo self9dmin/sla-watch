@@ -1,5 +1,5 @@
-import { buildProviderCandidates, mergeServiceInventory } from "../ui/app/data/providerAttribution";
-import type { ServiceRecord, SmartscapeScopeEdge } from "../ui/app/types";
+import { buildProviderCandidates, mergeServiceInventory, prioritizeServicesByProblemActivity } from "../ui/app/data/providerAttribution";
+import type { ProblemRecord, ServiceRecord, SmartscapeScopeEdge } from "../ui/app/types";
 
 describe("provider attribution candidates", () => {
   const services: ServiceRecord[] = [
@@ -54,5 +54,31 @@ describe("provider attribution candidates", () => {
       serviceTags: ["owner:checkout"],
     })]);
     expect(merged).toContainEqual({ id: "SERVICE-3", name: "Orders", type: "SERVICE", tags: ["owner:checkout"] });
+  });
+
+  it("prioritizes exact services with recent Problems without using their names", () => {
+    const problems: ProblemRecord[] = [
+      {
+        id: "P-1",
+        title: "Failure rate increase",
+        status: "CLOSED",
+        category: "ERROR",
+        affectedEntityIds: ["SERVICE-2", "SERVICE-2"],
+        hasRootCause: false,
+      },
+      {
+        id: "P-2",
+        title: "Response time degradation",
+        status: "CLOSED",
+        category: "SLOWDOWN",
+        affectedEntityIds: ["SERVICE-2"],
+        hasRootCause: false,
+      },
+    ];
+
+    expect(prioritizeServicesByProblemActivity(services, problems)).toEqual([
+      { service: services[1], problemCount: 2 },
+      { service: services[0], problemCount: 0 },
+    ]);
   });
 });

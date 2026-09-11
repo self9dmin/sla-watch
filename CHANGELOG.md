@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.43
+
+- Focused Coverage checks on required and recommended work instead of counting optional feature advice as open setup.
+- Prioritized unmapped services with recent Dynatrace Problems so SREs can review the service boundary most relevant to current evidence first.
+- Kept prioritization based on exact affected entity IDs and left provider attribution, service tags, and Dynatrace entities unchanged.
+
 ## 0.0.42
 
 - Added Manual coverage for services that do not have a usable Smartscape runtime relationship.
