@@ -43,7 +43,7 @@ type ContractAssignment = {
   rank: number;
 };
 
-type MappingSource = "contract" | "confirmed" | "candidate" | "manual" | "none";
+type MappingSource = "contract" | "confirmed" | "observed" | "candidate" | "manual" | "none";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -189,8 +189,8 @@ const IncidentDetail = ({
         <div><span>Applied terms</span><strong className={contractTerms?.source === "tenant override" ? "source-tenant" : ""}>{contractLoading ? "Checking" : contractError ? "Public fallback" : contractTerms?.source === "tenant override" ? "Tenant override" : "sla.directory"}</strong></div>
       </div>
       <div className={`incident-mapping-note incident-mapping-${mappingSource}`}>
-        <StatusPill tone={mappingSource === "confirmed" || mappingSource === "contract" ? "positive" : mappingSource === "candidate" ? "warning" : "neutral"}>
-          {mappingSource === "contract" ? "Contract scope match" : mappingSource === "confirmed" ? "Confirmed mapping" : mappingSource === "candidate" ? "Smartscape candidate" : mappingSource === "manual" ? "Manual selection" : "No service match"}
+        <StatusPill tone={mappingSource === "confirmed" || mappingSource === "contract" || mappingSource === "observed" ? "positive" : mappingSource === "candidate" ? "warning" : "neutral"}>
+          {mappingSource === "contract" ? "Contract scope match" : mappingSource === "confirmed" ? "Confirmed mapping" : mappingSource === "observed" ? "Observed topology" : mappingSource === "candidate" ? "Smartscape candidate" : mappingSource === "manual" ? "Manual selection" : "No service match"}
         </StatusPill>
         <span>{mappingDetail}</span>
         <Link to="/">Review coverage</Link>
@@ -344,7 +344,7 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
         ? `service:${assignment.serviceEntityId}`
         : `host:${assignment.serviceEntityId}:${assignment.runtimeEntityId}`;
       return scopeChoices.some((choice) => choice.key === candidateScopeKey)
-        ? [{ providerServiceId: assignment.providerServiceId, scopeKey: candidateScopeKey, serviceEntityId: assignment.serviceEntityId, evidence: assignment.evidence }]
+        ? [{ providerServiceId: assignment.providerServiceId, scopeKey: candidateScopeKey, serviceEntityId: assignment.serviceEntityId, evidence: assignment.evidence, confidence: "observed" as const }]
         : [];
     });
   }, [provider, scopeChoices, scopeSettings.assignments, selectedProblem]);
@@ -360,7 +360,7 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
       const candidateScopeKey = `host:${serviceEntityIdForEdge(edge)}:${runtimeEntityIdForEdge(edge)}`;
       if (!scopeChoices.some((choice) => choice.key === candidateScopeKey)) return;
       const key = `${candidate.providerServiceId}|${candidateScopeKey}`;
-      candidates.set(key, { providerServiceId: candidate.providerServiceId, scopeKey: candidateScopeKey, serviceEntityId: serviceEntityIdForEdge(edge), evidence: candidate.evidence });
+      candidates.set(key, { providerServiceId: candidate.providerServiceId, scopeKey: candidateScopeKey, serviceEntityId: serviceEntityIdForEdge(edge), evidence: candidate.evidence, confidence: candidate.confidence });
     });
     return Array.from(candidates.values());
   }, [provider, scopeChoices, selectedProblem, topology]);
@@ -395,7 +395,7 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
     } else if (topologyDecision) {
       setProviderServiceId(topologyDecision.providerServiceId);
       setScopeKey(topologyDecision.scopeKey);
-      setMappingSource("candidate");
+      setMappingSource(topologyDecision.confidence === "observed" ? "observed" : "candidate");
     } else {
       setProviderServiceId("*");
       setScopeKey("provider");
@@ -408,6 +408,8 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
     ? "A matching tenant scope selected this provider service and Dynatrace scope."
     : mappingSource === "confirmed"
       ? confirmedDecision?.evidence ?? "A mapping confirmed in Coverage was reused for this incident."
+      : mappingSource === "observed"
+        ? `${topologyDecision?.evidence ?? "Provider-native Smartscape runtime metadata identifies this provider service"}. This selects terms only and does not establish provider fault or credit eligibility.`
       : mappingSource === "candidate"
         ? `${topologyDecision?.evidence ?? "Smartscape runtime metadata suggests this provider service"}. Confirm it in Coverage before relying on it.`
         : mappingSource === "manual"

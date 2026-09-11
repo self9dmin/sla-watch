@@ -10,6 +10,7 @@ import type {
 import { providerTagValue } from "./providerTags";
 import {
   inferProviderServiceCandidate,
+  resolveProviderServiceCandidates,
   serviceEntityIdForEdge,
 } from "./providerScopeAssignments";
 
@@ -75,6 +76,7 @@ export const normalizeEvidenceDecision = (
     : null;
   const mappingBasis = row.mappingBasis === "confirmed-scope" ||
     row.mappingBasis === "provider-tag" ||
+    row.mappingBasis === "smartscape-observed" ||
     row.mappingBasis === "smartscape-candidate"
     ? row.mappingBasis
     : null;
@@ -184,25 +186,42 @@ export const buildEvidenceCandidates = ({
           providerTagValue(tag, providerLabelKey, providerSlug) === providerSlug,
       ),
     );
-    const suggested = topology
-      .filter(
-        (edge) =>
-          affectedIds.has(serviceEntityIdForEdge(edge)) &&
-          edge.providerSlug === providerSlug,
-      )
+    const relevantTopology = topology.filter(
+      (edge) =>
+        affectedIds.has(serviceEntityIdForEdge(edge)) &&
+        edge.providerSlug === providerSlug,
+    );
+    const suggested = relevantTopology
       .flatMap((edge) => {
         const candidate = inferProviderServiceCandidate(edge, provider);
-        return candidate ? [candidate] : [];
+        return candidate ? [{ ...candidate, serviceEntityId: serviceEntityIdForEdge(edge) }] : [];
       });
 
     if (confirmed.length === 0 && tagged.length === 0 && suggested.length === 0)
       return [];
 
+    const topologyServiceIds = new Set(
+      relevantTopology.map(serviceEntityIdForEdge),
+    );
+    const topologyResolutions = resolveProviderServiceCandidates(
+      relevantTopology,
+      provider,
+    );
+    const observed = suggested.length > 0 && Array.from(topologyServiceIds).every((serviceId) => {
+      const resolution = topologyResolutions.get(serviceId);
+      return Boolean(
+        resolution &&
+        !resolution.ambiguous &&
+        resolution.candidate?.confidence === "observed",
+      );
+    });
     const mappingBasis: EvidenceMappingBasis = confirmed.length > 0
       ? "confirmed-scope"
       : tagged.length > 0
         ? "provider-tag"
-        : "smartscape-candidate";
+        : observed
+          ? "smartscape-observed"
+          : "smartscape-candidate";
     const providerServiceIds = Array.from(
       new Set(
         (confirmed.length > 0
@@ -224,7 +243,9 @@ export const buildEvidenceCandidates = ({
       ? `${confirmed.length} operator-confirmed scope mapping${confirmed.length === 1 ? "" : "s"} overlap the affected services.`
       : mappingBasis === "provider-tag"
         ? `${tagged.length} affected service${tagged.length === 1 ? " has" : "s have"} the explicit ${providerLabelKey}:${providerSlug} tag.`
-        : `${suggested.length} Smartscape runtime relationship${suggested.length === 1 ? " suggests" : "s suggest"} this provider. Coverage confirmation is still required.`;
+        : mappingBasis === "smartscape-observed"
+          ? `${suggested.length} Smartscape relationship${suggested.length === 1 ? " identifies" : "s identify"} one provider service from provider-native runtime metadata.`
+          : `${suggested.length} Smartscape runtime relationship${suggested.length === 1 ? " suggests" : "s suggest"} this provider. The provider service remains ambiguous or requires confirmation.`;
 
     return [{
       key: createEvidenceDecisionKey(providerSlug, problem.id),

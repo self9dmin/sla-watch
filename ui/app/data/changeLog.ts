@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.44",
+    version: "0.0.45",
     label: "Current release",
+    summary: "Made Coverage safe for large service inventories.",
+    details: [
+      "Changed the default worklist to show only ambiguous or unresolved provider evidence instead of treating unrelated services as review work.",
+      "Uses one unique provider-native Smartscape service match without storing a mapping for every service; hostname-only and conflicting matches still require review.",
+      "Focuses global topology on host, cluster, and provider-native anchors, then loads exact affected-service topology for recent Problems.",
+      "Adds search, 50-row paging, and explicit incomplete-inventory reporting so bounded data is never presented as complete coverage.",
+      "Keeps saved mappings as exact operator overrides and preserves the provider-fault, local-impact, and credit boundaries.",
+    ],
+  },
+  {
+    version: "0.0.44",
+    label: "Previous release",
     summary: "Combined provider coverage into one review path.",
     details: [
       "Placed Smartscape-backed scopes and services without runtime context in one Coverage worklist.",

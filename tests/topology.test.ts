@@ -1,4 +1,12 @@
-import { detectedProviderSlugs, parseServiceCloudContexts, parseSmartscapeScopeEdges, uniqueLocations, uniqueRuntimeTargets } from "../ui/app/data/topology";
+import {
+  detectedProviderSlugs,
+  mergeSmartscapeScopeEdges,
+  parseServiceCloudContexts,
+  parseSmartscapeScopeEdges,
+  topologyAnchorRank,
+  uniqueLocations,
+  uniqueRuntimeTargets,
+} from "../ui/app/data/topology";
 
 describe("Smartscape scope parsing", () => {
   const data = {
@@ -32,7 +40,11 @@ describe("Smartscape scope parsing", () => {
 
   it("prefers the most precise location returned by Smartscape", () => {
     const edges = parseSmartscapeScopeEdges(data);
-    expect(edges[0].location).toBe("us-east-1a");
+    expect(edges[0]).toMatchObject({
+      location: "us-east-1a",
+      region: "us-east-1",
+      availabilityZone: "us-east-1a",
+    });
     expect(uniqueLocations(edges)).toEqual(["us-east-1a"]);
   });
 
@@ -103,5 +115,23 @@ describe("Smartscape scope parsing", () => {
       service_name: "Unscoped",
       request_count: 12,
     }] })).toEqual([]);
+  });
+
+  it("merges overlapping global and incident topology without duplicate rows", () => {
+    const [first, second] = parseSmartscapeScopeEdges(data);
+    expect(mergeSmartscapeScopeEdges([first], [first, second])).toEqual([first, second]);
+  });
+
+  it("ranks provider-native and infrastructure anchors ahead of process detail", () => {
+    const [base] = parseSmartscapeScopeEdges(data);
+    expect(topologyAnchorRank({ ...base, targetType: "AWS_EC2_INSTANCE" })).toBeLessThan(
+      topologyAnchorRank({ ...base, targetType: "HOST" }),
+    );
+    expect(topologyAnchorRank({ ...base, targetType: "HOST" })).toBeLessThan(
+      topologyAnchorRank({ ...base, targetType: "PROCESS" }),
+    );
+    expect(topologyAnchorRank({ ...base, targetType: "K8S_CLUSTER" })).toBeLessThan(
+      topologyAnchorRank({ ...base, targetType: "CONTAINER" }),
+    );
   });
 });

@@ -1,14 +1,30 @@
+export const SERVICE_RESULT_LIMIT = 200;
+export const SMARTSCAPE_RESULT_LIMIT = 500;
+export const INCIDENT_SMARTSCAPE_RESULT_LIMIT = 2000;
+export const INCIDENT_SERVICE_FILTER_LIMIT = 200;
+
 export const SERVICES_QUERY = `
 fetch dt.entity.service
 | fields id, name = entity.name, type = entity.type, tags
 | sort name asc
-| limit 200
+| limit ${SERVICE_RESULT_LIMIT}
 `;
 
-export const SMARTSCAPE_SERVICE_RUNTIME_QUERY = `
-smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
-| filter source_type == "SERVICE"
-| fields relationship = type,
+export const SERVICE_INVENTORY_COUNT_QUERY = `
+smartscapeNodes SERVICE
+| summarize service_count = count()
+`;
+
+const PREFERRED_COVERAGE_ANCHORS = `target_type == "HOST"
+    or target_type == "K8S_CLUSTER"
+    or startsWith(target_type, "AWS_")
+    or startsWith(target_type, "AZURE_")
+    or startsWith(target_type, "GCP_")
+    or startsWith(target_type, "GOOGLE_")
+    or startsWith(target_type, "OCI_")
+    or startsWith(target_type, "ORACLE_")`;
+
+const smartscapeFields = `| fields relationship = type,
     service_node_id = source_id,
     service_classic_id = getNodeField(source_id, "id_classic"),
     service_name = getNodeName(source_id),
@@ -32,9 +48,57 @@ smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
     oci_tenancy_id = getNodeField(target_id, "oci.tenancy.id"),
     oci_region = getNodeField(target_id, "oci.region"),
     oci_availability_domain = getNodeField(target_id, "oci.availability_domain"),
-    k8s_cluster = getNodeField(target_id, "k8s.cluster.name")
-| limit 500
+    k8s_cluster = getNodeField(target_id, "k8s.cluster.name")`;
+
+export const SMARTSCAPE_SERVICE_RUNTIME_QUERY = `
+smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
+| filter source_type == "SERVICE"
+| filter ${PREFERRED_COVERAGE_ANCHORS}
+${smartscapeFields}
+| limit ${SMARTSCAPE_RESULT_LIMIT}
 `;
+
+export const SMARTSCAPE_COVERAGE_COUNT_QUERY = `
+smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
+| filter source_type == "SERVICE"
+| filter ${PREFERRED_COVERAGE_ANCHORS}
+| summarize relationship_count = count(), service_count = countDistinctExact(source_id)
+`;
+
+const safeServiceIds = (serviceIds: string[]): string[] => Array.from(new Set(
+  serviceIds
+    .map((value) => value.trim().toUpperCase())
+    .filter((value) => /^SERVICE-[A-F0-9]+$/.test(value)),
+)).slice(0, INCIDENT_SERVICE_FILTER_LIMIT);
+
+export const createIncidentSmartscapeQuery = (serviceIds: string[]): string => {
+  const ids = safeServiceIds(serviceIds);
+  const filter = ids.length > 0
+    ? `in(service_classic_id_filter, array(${ids.map((id) => `"${id}"`).join(", ")}))`
+    : `service_classic_id_filter == "__NO_SERVICE__"`;
+  return `
+smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
+| filter source_type == "SERVICE"
+| fieldsAdd service_classic_id_filter = getNodeField(source_id, "id_classic")
+| filter ${filter}
+${smartscapeFields}
+| limit ${INCIDENT_SMARTSCAPE_RESULT_LIMIT}
+`;
+};
+
+export const createIncidentServicesQuery = (serviceIds: string[]): string => {
+  const ids = safeServiceIds(serviceIds);
+  const filter = ids.length > 0
+    ? `in(id, array(${ids.map((id) => `"${id}"`).join(", ")}))`
+    : `id == "__NO_SERVICE__"`;
+  return `
+fetch dt.entity.service
+| filter ${filter}
+| fields id, name = entity.name, type = entity.type, tags
+| sort name asc
+| limit ${INCIDENT_SERVICE_FILTER_LIMIT}
+`;
+};
 
 export const createProblemsQuery = (lookbackHours: number): string => `
 fetch dt.davis.problems, from:-${lookbackHours}h, to:now()

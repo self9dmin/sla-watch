@@ -13,7 +13,7 @@ export const useProviderScopeAssignments = () => {
   const query = useSettingsObjectsV2({
     schemaId: PROVIDER_SCOPE_ASSIGNMENTS_SCHEMA_ID,
     addFields: "value,summary,modificationInfo,schemaId",
-    pageSize: 500,
+    pageSize: 0,
   });
   const permissions = useEffectivePermissionsV2({
     body: {
@@ -44,6 +44,8 @@ export const useProviderScopeAssignments = () => {
   const canRead = permissions.data?.find((item) => item.permission === "app-settings:objects:read")?.granted !== "false";
   const canWrite = permissions.data?.find((item) => item.permission === "app-settings:objects:write")?.granted === "true";
   const mutating = create.isLoading || update.isLoading || remove.isLoading;
+  const totalCount = query.data?.totalCount ?? assignments.length;
+  const incomplete = Boolean(query.data?.error || query.data?.nextPageKey || totalCount > assignments.length);
 
   const createAssignment = async (value: ProviderScopeAssignmentValue): Promise<void> => {
     await create.execute({ body: { schemaId: PROVIDER_SCOPE_ASSIGNMENTS_SCHEMA_ID, value } });
@@ -70,6 +72,8 @@ export const useProviderScopeAssignments = () => {
     mutating,
     canRead,
     canWrite,
+    totalCount,
+    incomplete,
     error: query.error ?? permissions.error,
     createAssignment,
     updateAssignment,

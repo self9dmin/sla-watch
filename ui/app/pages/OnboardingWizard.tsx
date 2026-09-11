@@ -323,8 +323,8 @@ export const OnboardingWizard = ({
                 <div>
                   <strong>Provider scope is confirmed</strong>
                   <small>
-                    A confirmed Smartscape mapping or explicit Dynatrace tag
-                    identifies which provider the service depends on.
+                    Provider-native Smartscape metadata, an operator mapping,
+                    or an explicit tag identifies the provider boundary.
                   </small>
                 </div>
               </div>

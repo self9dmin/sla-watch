@@ -11,12 +11,12 @@ Precondition: AppEngine can run the app, and the user has the declared read scop
 Sequence:
 
 1. `App` restores personal and workspace state. If app-state reads fail, it uses local browser state and displays the degraded storage message.
-2. `Dashboard` issues DQL reads for services, Problems, logs, spans, service-request telemetry, and Smartscape service-to-runtime relationships.
+2. `Dashboard` issues bounded DQL reads for services, Problems, logs, spans, service-request telemetry, and preferred Smartscape coverage anchors. Separate aggregate queries verify whether the returned service or relationship inventory is complete.
 3. `Dashboard` calls the `slaDirectory` AppEngine function with the active provider slug. Other monitored providers remain configured and can be selected without replacing each other.
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
 5. The app reads active tenant custom terms, confirmed provider-service scope mappings, and prior human evidence decisions from App Settings. It preserves the public directory record as the fallback baseline.
-6. Coverage classifies the current provider boundary as loading, access-incomplete, contract-unavailable, action-required, boundary-ready, or review-available.
-7. The operating shell presents Coverage, Incidents, and Evidence. Coverage is the landing workspace and places provider, service, incident, and filing facts above one worklist containing Smartscape-backed scopes and services without runtime context. Incidents contains the observed Problem queue and effective filing references. Evidence combines Dynatrace-derived review candidates with a separate provider-reports view. Review terms exposes the complete normalized public provider record and tenant overrides.
+6. Coverage classifies the current provider boundary as loading, access-incomplete, inventory-incomplete, contract-unavailable, action-required, boundary-ready, or review-available. It never reports complete coverage from a truncated or unverified inventory.
+7. The operating shell presents Coverage, Incidents, and Evidence. Coverage is the landing workspace and places provider, service, incident, and filing facts above an exception-first worklist. Provider-native matches are automatic, ambiguous provider evidence is queued for review, and unrelated loaded services stay out of the default queue. Incidents contains the observed Problem queue and effective filing references. Evidence combines Dynatrace-derived review candidates with a separate provider-reports view. Review terms exposes the complete normalized public provider record and tenant overrides.
 8. Loading the workspace does not change a Dynatrace entity, tag, metric, Problem, SLO, custom terms record, evidence decision, or external ticket.
 
 Deny or degraded behavior: a missing read scope is shown as access incomplete, not as no telemetry. A failed directory request is shown as unavailable, not as a provider breach.
@@ -95,17 +95,18 @@ Actor: administrator with App Settings write access, access to the selected Cred
 
 Deny or degraded behavior: an inaccessible credential, invalid signature, missing `ANNOUNCEMENT_LIST` permission, invalid region, throttled endpoint, or malformed response is shown as unavailable. The app does not expose private key material, modify OCI, or represent an announcement as proof of local impact or credit eligibility.
 
-## Confirm a provider-service scope mapping
+## Review or override a provider-service scope mapping
 
 Actor: signed-in user with `app-settings:objects:write` for the app's `provider-scope-assignments` schema.
 
-1. The user opens Coverage. Items needing review appear before confirmed items in the shared service coverage worklist.
-2. Smartscape-backed rows show the exact service-to-runtime relationship for the active provider. Runtime type and cloud metadata may suggest a provider service only through a fixed provider-specific mapping table.
-3. The user reviews the exact Dynatrace service, runtime, location, and candidate provider service, then confirms or changes the provider service.
-4. App Settings stores the exact service and runtime IDs, display context, provider-service ID, and a concise evidence note.
-5. Incidents and Evidence can reuse this confirmed relationship for a Problem that affects the same service and runtime scope.
+1. The user opens Coverage. The default queue contains only provider evidence that is ambiguous or does not resolve to one provider service. Unrelated services remain searchable under All loaded.
+2. Smartscape-backed rows show one representative host, cluster, or provider-native runtime anchor per service. Process and container relationships are not expanded into primary Coverage rows.
+3. A fixed provider-specific table may resolve one provider-native runtime type to one provider service. That observed match is used without writing one App Settings object per service.
+4. Hostname-only patterns, conflicting provider services, and provider boundaries without a service match remain for review. The user can confirm or change the exact provider service.
+5. App Settings stores an operator override with exact service and runtime IDs, display context, provider-service ID, and a concise evidence note.
+6. Incidents and Evidence use exact tenant terms first, then an operator override, then a unique observed topology match. The operator still determines whether the provider caused the incident or owes a credit.
 
-Deny or degraded behavior: a candidate is not persisted or presented as confirmed without an explicit save. A missing Smartscape relationship is not replaced with a name-based guess. A read-only user can inspect candidates but cannot confirm, update, or remove a mapping.
+Deny or degraded behavior: a missing Smartscape relationship is not replaced with a name-based guess. A lower-confidence or ambiguous candidate is not presented as observed. A read-only user can inspect automatic matches and candidates but cannot create, update, or remove an override. If aggregate counts fail or exceed the loaded rows, Coverage reports incomplete inventory rather than a complete boundary.
 
 ## Add or edit a custom SLA
 
@@ -126,22 +127,22 @@ Deny or degraded behavior: without App Settings write permission, the page is re
 Actor: signed-in Dynatrace user.
 
 1. Incidents reads the Problem's exact affected entity IDs.
-2. It adds Smartscape runtime and location context only for relationships connected to those affected services.
+2. It issues a sanitized, bounded Smartscape query for the Problem's affected service IDs so incident review is not limited to the global Coverage sample.
 3. Active tenant overrides are evaluated by provider service, effective date, and exact target ID. Precedence is host, location, service, provider-wide fallback, then the public `sla.directory` record.
-4. If one most-specific tenant contract scope matches, Incident review selects it. Otherwise it checks confirmed Coverage scope mappings. If there is no confirmed mapping, one unique Smartscape provider-service candidate may be preselected and clearly labeled unconfirmed.
+4. If one most-specific tenant contract scope matches, Incident review selects it. Otherwise it checks saved Coverage overrides. If there is no saved mapping, one unique provider-native Smartscape service match is selected as observed. A hostname-only unique candidate may be preselected but remains visibly unconfirmed.
 5. If equally specific records or multiple provider-service candidates remain, the operator chooses the applicable boundary.
 6. The UI shows the mapping source, applied terms source, and filing reference, but does not assert root cause, provider fault, credit eligibility, or claim approval.
 
-Deny or degraded behavior: missing topology, scope settings, terms settings, or Problem access is surfaced as unavailable or incomplete. The app never substitutes a name-based guess or treats a Smartscape candidate as confirmed.
+Deny or degraded behavior: missing topology, scope settings, terms settings, or Problem access is surfaced as unavailable or incomplete. Invalid affected entity IDs are removed before query construction, and service IDs plus returned relationships are capped. The app never substitutes a name-based guess or treats a lower-confidence Smartscape candidate as observed.
 
 ## Review an evidence candidate
 
 Actor: signed-in user with `app-settings:objects:read`; saving a decision also requires `app-settings:objects:write` for `evidence-decisions`.
 
-1. Evidence compares each returned Problem with exact confirmed scope mappings, explicit provider tags, and Smartscape provider suggestions for the active provider.
-2. A Problem enters the candidate queue only when at least one exact affected service overlaps one of those boundaries. Confirmed mappings take precedence over provider tags, which take precedence over Smartscape suggestions.
+1. Evidence compares each returned Problem with exact saved scope mappings, explicit provider tags, observed provider-native topology, and lower-confidence Smartscape suggestions for the active provider.
+2. A Problem enters the candidate queue only when at least one exact affected service overlaps one of those boundaries. Saved mappings take precedence over provider tags, which take precedence over topology.
 3. The detail view gives one direct explanation of why the candidate appears, identifies the mapping basis, and links to the incident, Coverage, and current terms. Provider reports stay separate and do not establish local impact.
-4. The SRE reviews those records. A Smartscape-only candidate remains visibly unconfirmed.
+4. The SRE reviews those records. Provider-native topology is labeled observed, while hostname-only or conflicting topology remains visibly unconfirmed.
 5. Validation requires an explicit acknowledgement that the service scope and current terms were reviewed. Dismissal requires a concise operational reason.
 6. App Settings stores one bounded Problem snapshot, exact affected entity IDs, provider services, mapping basis, decision, review time, and concise note.
 7. A saved decision remains current only while the mapping basis, affected entities, and provider-service scope still match. A changed boundary returns the candidate to Needs review.
@@ -152,13 +153,13 @@ Deny or degraded behavior: a failed Problem, topology, directory, or decision-st
 
 Actor: signed-in user with `app-settings:objects:write` for the app's `provider-scope-assignments` schema.
 
-1. The user opens Coverage and selects a service without a Smartscape runtime relationship from the shared worklist.
+1. The user opens Coverage, switches to All loaded, and selects a service without provider evidence.
 2. The row identifies service inventory or a matching source tag as the available evidence. Existing provider tags are displayed only as source evidence.
 3. The user selects one exact service and chooses provider-level terms or one provider service. Service names are context only and never create an automatic assignment.
 4. A confirmation screen names the service, provider, and terms boundary. Saving writes an app-owned assignment to App Settings and does not modify Dynatrace entity metadata.
-5. The saved mapping is reused by Incidents and Evidence. The operator can update its provider-service selection or remove it to restore the unconfirmed state.
+5. The saved mapping is reused by Incidents and Evidence. The operator can update its provider-service selection or remove it to restore the no-provider-evidence state.
 
-Deny or degraded behavior: no selection or confirmation means no write. Services with usable active-provider Smartscape relationships use their runtime-backed row instead of being duplicated. A read-only user can inspect current coverage but cannot save, update, or remove it. Existing source tags are never changed.
+Deny or degraded behavior: no selection or confirmation means no write. Services with usable active-provider Smartscape relationships use their runtime-backed row instead of being duplicated. Services with no provider evidence are not treated as default review work. A read-only user can inspect current coverage but cannot save, update, or remove it. Existing source tags are never changed.
 
 ## Review the change log or get support
 

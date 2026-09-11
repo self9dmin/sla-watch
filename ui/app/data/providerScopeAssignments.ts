@@ -10,6 +10,7 @@ export type ProviderServiceCandidate = {
   providerServiceId: string;
   providerServiceName: string;
   evidence: string;
+  confidence: "observed" | "review";
 };
 
 export type IncidentProviderServiceCandidate = {
@@ -17,6 +18,13 @@ export type IncidentProviderServiceCandidate = {
   scopeKey: string;
   serviceEntityId: string;
   evidence: string;
+  confidence: "observed" | "review";
+};
+
+export type ProviderServiceResolution = {
+  candidate?: ProviderServiceCandidate;
+  ambiguous: boolean;
+  evidenceCount: number;
 };
 
 type RuntimeSignature = {
@@ -29,14 +37,16 @@ const RUNTIME_SIGNATURES: Record<string, RuntimeSignature[]> = {
   aws: [
     { pattern: /(?:^|_)EC2(?:_|$)|\.ec2\.internal$/i, serviceIds: ["ec2"], label: "EC2 runtime metadata" },
     { pattern: /(?:^|_)LAMBDA(?:_|$)/i, serviceIds: ["lambda"], label: "Lambda runtime type" },
-    { pattern: /(?:^|_)RDS(?:_|$)/i, serviceIds: ["rds", "aurora"], label: "RDS runtime type" },
+    { pattern: /(?:^|_)AURORA(?:_|$)/i, serviceIds: ["aurora"], label: "Aurora runtime type" },
+    { pattern: /(?:^|_)RDS(?:_|$)/i, serviceIds: ["rds"], label: "RDS runtime type" },
     { pattern: /(?:^|_)EKS(?:_|$)/i, serviceIds: ["eks"], label: "EKS runtime type" },
-    { pattern: /(?:^|_)ECS(?:_|$)/i, serviceIds: ["ecs", "fargate"], label: "ECS runtime type" },
+    { pattern: /(?:^|_)FARGATE(?:_|$)/i, serviceIds: ["fargate"], label: "Fargate runtime type" },
+    { pattern: /(?:^|_)ECS(?:_|$)/i, serviceIds: ["ecs"], label: "ECS runtime type" },
     { pattern: /(?:^|_)DYNAMODB(?:_|$)/i, serviceIds: ["dynamodb"], label: "DynamoDB runtime type" },
     { pattern: /(?:^|_)(?:ELB|ALB|NLB|LOAD_BALANCER)(?:_|$)/i, serviceIds: ["elb"], label: "load balancer runtime type" },
   ],
   azure: [
-    { pattern: /(?:^|_)(?:VM|VIRTUAL_MACHINE)(?:_|$)/i, serviceIds: ["virtual-machines"], label: "virtual machine runtime type" },
+    { pattern: /(?:^|_)VIRTUAL_?MACHINES?(?:_?SCALE_?SETS?)?(?:_|$)|(?:^|_)VM(?:_|$)/i, serviceIds: ["virtual-machines"], label: "virtual machine runtime type" },
     { pattern: /(?:^|_)FUNCTION(?:S)?(?:_|$)/i, serviceIds: ["functions", "functions-premium", "functions-consumption"], label: "Functions runtime type" },
     { pattern: /(?:^|_)AKS(?:_|$)|KUBERNETES_SERVICE/i, serviceIds: ["kubernetes-service"], label: "AKS runtime type" },
     { pattern: /(?:^|_)APP_SERVICE(?:_|$)/i, serviceIds: ["app-service", "app-service-standard", "app-service-enterprise"], label: "App Service runtime type" },
@@ -50,7 +60,7 @@ const RUNTIME_SIGNATURES: Record<string, RuntimeSignature[]> = {
     { pattern: /CLOUD_SQL/i, serviceIds: ["cloud-sql"], label: "Cloud SQL runtime type" },
   ],
   oci: [
-    { pattern: /(?:^|_)COMPUTE(?:_|$)|INSTANCE/i, serviceIds: ["compute-multiad", "compute-single"], label: "OCI Compute runtime type" },
+    { pattern: /OCI_(?:COMPUTE_)?INSTANCE|(?:^|_)COMPUTE(?:_|$)/i, serviceIds: ["compute-multiad", "compute-single"], label: "OCI Compute runtime type" },
     { pattern: /(?:^|_)OKE(?:_|$)|KUBERNETES/i, serviceIds: ["oke"], label: "OKE runtime type" },
     { pattern: /(?:^|_)FUNCTION(?:S)?(?:_|$)/i, serviceIds: ["functions"], label: "OCI Functions runtime type" },
     { pattern: /OBJECT_STORAGE/i, serviceIds: ["object-storage"], label: "Object Storage runtime type" },
@@ -124,12 +134,50 @@ export const resolveUniqueProviderServiceCandidate = (
   if (providerServiceIds.length !== 1) return undefined;
   if (items.length === 1) return items[0];
   const serviceEntityIds = [...new Set(items.map((item) => item.serviceEntityId))];
+  const preferred = items.find((item) => item.confidence === "observed") ?? items[0];
   return {
     providerServiceId: providerServiceIds[0],
     scopeKey: serviceEntityIds.length === 1 ? `service:${serviceEntityIds[0]}` : "provider",
     serviceEntityId: serviceEntityIds[0] ?? "*",
-    evidence: items[0].evidence,
+    evidence: preferred.evidence,
+    confidence: items.some((item) => item.confidence === "observed") ? "observed" : "review",
   };
+};
+
+export const resolveProviderServiceCandidates = (
+  edges: SmartscapeScopeEdge[],
+  provider: SlaProviderResponse,
+): Map<string, ProviderServiceResolution> => {
+  const candidatesByService = new Map<string, ProviderServiceCandidate[]>();
+  edges.forEach((edge) => {
+    const candidate = inferProviderServiceCandidate(edge, provider);
+    if (!candidate) return;
+    const serviceEntityId = serviceEntityIdForEdge(edge);
+    candidatesByService.set(serviceEntityId, [
+      ...(candidatesByService.get(serviceEntityId) ?? []),
+      candidate,
+    ]);
+  });
+
+  return new Map<string, ProviderServiceResolution>(Array.from(candidatesByService.entries()).map(([serviceEntityId, candidates]) => {
+    const byProviderService = new Map<string, ProviderServiceCandidate[]>();
+    candidates.forEach((candidate) => byProviderService.set(candidate.providerServiceId, [
+      ...(byProviderService.get(candidate.providerServiceId) ?? []),
+      candidate,
+    ]));
+    if (byProviderService.size !== 1) {
+      return [serviceEntityId, {
+        ambiguous: true,
+        evidenceCount: candidates.length,
+      }] as const;
+    }
+    const matchingCandidates = Array.from(byProviderService.values())[0];
+    return [serviceEntityId, {
+      candidate: matchingCandidates.find((candidate) => candidate.confidence === "observed") ?? matchingCandidates[0],
+      ambiguous: false,
+      evidenceCount: candidates.length,
+    }] as const;
+  }));
 };
 
 export const normalizeProviderScopeAssignment = (value: unknown): ProviderScopeAssignmentValue | null => {
@@ -169,8 +217,9 @@ export const inferProviderServiceCandidate = (
   const providerSlug = provider.provider.slug.toLowerCase();
   if (edge.providerSlug !== providerSlug) return null;
   const signatures = RUNTIME_SIGNATURES[providerSlug] ?? [];
+  const typeSignature = signatures.find((item) => item.pattern.test(edge.targetType));
   const runtimeEvidence = `${edge.targetType} ${edge.targetName}`;
-  const signature = signatures.find((item) => item.pattern.test(runtimeEvidence));
+  const signature = typeSignature ?? signatures.find((item) => item.pattern.test(runtimeEvidence));
   if (!signature) return null;
   const service = signature.serviceIds
     .map((id) => provider.services.find((item) => item.id.toLowerCase() === id))
@@ -180,5 +229,6 @@ export const inferProviderServiceCandidate = (
     providerServiceId: service.id,
     providerServiceName: service.name,
     evidence: `${signature.label} suggests ${service.name}`,
+    confidence: typeSignature ? "observed" : "review",
   };
 };

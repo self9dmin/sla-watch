@@ -81,7 +81,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app
         .getByText(
-          /Checking coverage|Access incomplete|Contract unavailable|Action required|Boundary ready|Review available/i,
+          /Checking coverage|Access incomplete|Inventory incomplete|Contract unavailable|Action required|Boundary ready|Review available/i,
         )
         .first(),
     ).toBeVisible();
@@ -95,17 +95,21 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByRole("navigation", { name: "Coverage views" }),
     ).toHaveCount(0);
-    await expect(app.getByText("Service coverage")).toBeVisible();
+    await expect(app.getByText("Coverage exceptions")).toBeVisible();
     await expect(
       app.getByRole("listbox", { name: "Provider coverage worklist" }),
+    ).toBeVisible();
+    await expect(
+      app.getByRole("searchbox", { name: "Search provider coverage" }),
+    ).toBeVisible();
+    await expect(
+      app.getByRole("combobox", { name: "Coverage worklist filter" }),
     ).toBeVisible();
     await expect(
       app.getByText(/A confirmed mapping is reused in Incidents/i),
     ).toHaveCount(0);
     await expect(
-      app.getByText(
-        /Saving a mapping changes only SLA Review/i,
-      ),
+      app.getByText(/Dynatrace applies provider-native matches/i),
     ).toBeVisible();
     await expect(app.getByRole("link", { name: "Manual coverage" })).toHaveCount(0);
     await expect(app.getByRole("link", { name: "Scope map" })).toHaveCount(0);

@@ -21,6 +21,7 @@ import {
   mergeServiceInventory,
 } from "../data/providerAttribution";
 import {
+  resolveProviderServiceCandidates,
   createProviderScopeAssignmentKey,
   isServiceScopeAssignment,
   runtimeEntityIdForEdge,
@@ -28,10 +29,19 @@ import {
 } from "../data/providerScopeAssignments";
 import { providerDisplayName } from "../data/providers";
 import {
+  mergeSmartscapeScopeEdges,
   parseServiceCloudContexts,
   parseSmartscapeScopeEdges,
 } from "../data/topology";
 import {
+  INCIDENT_SERVICE_FILTER_LIMIT,
+  INCIDENT_SMARTSCAPE_RESULT_LIMIT,
+  SERVICE_INVENTORY_COUNT_QUERY,
+  SERVICE_RESULT_LIMIT,
+  SMARTSCAPE_COVERAGE_COUNT_QUERY,
+  SMARTSCAPE_RESULT_LIMIT,
+  createIncidentServicesQuery,
+  createIncidentSmartscapeQuery,
   createLogsCountQuery,
   createProblemsQuery,
   createServiceMetricsQuery,
@@ -41,6 +51,7 @@ import {
 } from "../data/queries";
 import {
   type ProblemRecord,
+  type CoverageInventoryStatus,
   type ServiceRecord,
   type SlaProviderResponse,
   type WatchSection,
@@ -68,6 +79,21 @@ const stringArray = (value: unknown): string[] => {
   });
 };
 
+const parseServiceRecords = (
+  data: { records?: unknown[] } | undefined,
+): ServiceRecord[] => {
+  const records = Array.isArray(data?.records) ? data.records : [];
+  return records.map((record: unknown, index: number) => {
+    const row = asRecord(record);
+    return {
+      id: textValue(row.id, `service-${index + 1}`),
+      name: textValue(row.name, "Unnamed service"),
+      type: textValue(row.type, "SERVICE"),
+      tags: stringArray(row.tags),
+    };
+  });
+};
+
 const firstCount = (
   data: { records?: unknown[] } | undefined,
   field: string,
@@ -79,6 +105,9 @@ const firstCount = (
     return Number(value);
   return null;
 };
+
+const resultRecordCount = (data: { records?: unknown[] } | undefined): number =>
+  Array.isArray(data?.records) ? data.records.length : 0;
 
 const hasSignalValue = (value: unknown): boolean =>
   Array.isArray(value)
@@ -213,6 +242,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     error: serviceError,
     isLoading: servicesLoading,
   } = useDql({ query: SERVICES_QUERY });
+  const serviceCountQuery = useDql({ query: SERVICE_INVENTORY_COUNT_QUERY });
   const {
     data: problemData,
     error: problemError,
@@ -234,6 +264,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     isLoading: metricsLoading,
   } = useDql({ query: metricsQuery });
   const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
+  const topologyCountQuery = useDql({ query: SMARTSCAPE_COVERAGE_COUNT_QUERY });
   const directoryQuery = useAppFunction<SlaProviderResponse>({
     name: "slaDirectory",
     data: directoryRequest,
@@ -248,20 +279,10 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     directoryQuery.isLoading ||
     Boolean(!directoryQuery.error && directoryQuery.data && !directoryData);
 
-  const entityServices = useMemo<ServiceRecord[]>(() => {
-    const records = Array.isArray(serviceData?.records)
-      ? serviceData.records
-      : [];
-    return records.map((record: unknown, index: number) => {
-      const row = asRecord(record);
-      return {
-        id: textValue(row.id, `service-${index + 1}`),
-        name: textValue(row.name, "Unnamed service"),
-        type: textValue(row.type, "SERVICE"),
-        tags: stringArray(row.tags),
-      };
-    });
-  }, [serviceData?.records]);
+  const globalEntityServices = useMemo<ServiceRecord[]>(
+    () => parseServiceRecords(serviceData),
+    [serviceData],
+  );
 
   const problems = useMemo<ProblemRecord[]>(() => {
     const records = Array.isArray(problemData?.records)
@@ -284,16 +305,65 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     });
   }, [problemData?.records]);
 
-  const topology = useMemo(
+  const allAffectedServiceIds = useMemo(
+    () => Array.from(new Set(
+      problems
+        .flatMap((problem) => problem.affectedEntityIds)
+        .map((id) => id.trim().toUpperCase())
+        .filter((id) => /^SERVICE-[A-F0-9]+$/.test(id)),
+    )),
+    [problems],
+  );
+  const affectedServiceIds = useMemo(
+    () => allAffectedServiceIds.slice(0, INCIDENT_SERVICE_FILTER_LIMIT),
+    [allAffectedServiceIds],
+  );
+  const incidentTopologyQueryText = useMemo(
+    () => createIncidentSmartscapeQuery(affectedServiceIds),
+    [affectedServiceIds],
+  );
+  const incidentServicesQueryText = useMemo(
+    () => createIncidentServicesQuery(affectedServiceIds),
+    [affectedServiceIds],
+  );
+  const incidentTopologyQuery = useDql(
+    { query: incidentTopologyQueryText },
+    { enabled: affectedServiceIds.length > 0 },
+  );
+  const incidentServicesQuery = useDql(
+    { query: incidentServicesQueryText },
+    { enabled: affectedServiceIds.length > 0 },
+  );
+  const incidentEntityServices = useMemo<ServiceRecord[]>(
+    () => parseServiceRecords(incidentServicesQuery.data),
+    [incidentServicesQuery.data],
+  );
+  const entityServices = useMemo<ServiceRecord[]>(() => {
+    const merged = new Map<string, ServiceRecord>();
+    [...globalEntityServices, ...incidentEntityServices].forEach((service) =>
+      merged.set(service.id, service),
+    );
+    return Array.from(merged.values());
+  }, [globalEntityServices, incidentEntityServices]);
+
+  const coverageTopology = useMemo(
     () => parseSmartscapeScopeEdges(topologyQuery.data),
     [topologyQuery.data],
+  );
+  const incidentTopology = useMemo(
+    () => parseSmartscapeScopeEdges(incidentTopologyQuery.data),
+    [incidentTopologyQuery.data],
+  );
+  const topology = useMemo(
+    () => mergeSmartscapeScopeEdges(coverageTopology, incidentTopology),
+    [coverageTopology, incidentTopology],
   );
   const serviceCloudContexts = useMemo(
     () => parseServiceCloudContexts(metricsData),
     [metricsData],
   );
   const providerEvidence = useMemo(
-    () => [...topology, ...serviceCloudContexts],
+    () => mergeSmartscapeScopeEdges(topology, serviceCloudContexts),
     [serviceCloudContexts, topology],
   );
   const services = useMemo(
@@ -346,7 +416,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   );
   const confirmedScopeServiceIds = useMemo(() => {
     const currentScopeKeys = new Set(
-      topology.map((edge) =>
+      providerEvidence.map((edge) =>
         createProviderScopeAssignmentKey(
           selectedProviderSlug,
           serviceEntityIdForEdge(edge),
@@ -365,11 +435,22 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
         )
         .map((assignment) => assignment.serviceEntityId),
     );
-  }, [scopeSettings.assignments, selectedProviderSlug, topology]);
+  }, [providerEvidence, scopeSettings.assignments, selectedProviderSlug]);
+  const observedProviderServiceIds = useMemo(() => {
+    if (!directoryData) return new Set<string>();
+    return new Set(Array.from(
+      resolveProviderServiceCandidates(providerEvidence, directoryData).entries(),
+    ).flatMap(([serviceId, resolution]) =>
+      resolution.candidate?.confidence === "observed" && !resolution.ambiguous
+        ? [serviceId]
+        : [],
+    ));
+  }, [directoryData, providerEvidence]);
   const matchedProviderServices = services.filter(
     (service) =>
       taggedProviderServiceIds.has(service.id) ||
-      confirmedScopeServiceIds.has(service.id),
+      confirmedScopeServiceIds.has(service.id) ||
+      observedProviderServiceIds.has(service.id),
   ).length;
   const taggedProviderServices = taggedProviderServiceIds.size;
   const activeProviderCandidates = providerCandidates.filter(
@@ -382,81 +463,70 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
           (service) =>
             service.id === candidate.serviceId &&
             !taggedProviderServiceIds.has(service.id) &&
-            !confirmedScopeServiceIds.has(service.id),
+            !confirmedScopeServiceIds.has(service.id) &&
+            !observedProviderServiceIds.has(service.id),
         ),
       )
       .map((candidate) => candidate.serviceId),
   ).size;
 
+  const serviceTotal = firstCount(serviceCountQuery.data, "service_count");
+  const relationshipTotal = firstCount(topologyCountQuery.data, "relationship_count");
+  const loadedServiceRecords = resultRecordCount(serviceData);
+  const loadedRelationshipRecords = resultRecordCount(topologyQuery.data);
+  const serviceInventoryIncomplete = serviceTotal !== null
+    ? serviceTotal > loadedServiceRecords
+    : loadedServiceRecords >= SERVICE_RESULT_LIMIT;
+  const topologyInventoryIncomplete = relationshipTotal !== null
+    ? relationshipTotal > loadedRelationshipRecords
+    : loadedRelationshipRecords >= SMARTSCAPE_RESULT_LIMIT;
+  const incidentTopologyIncomplete =
+    allAffectedServiceIds.length > affectedServiceIds.length ||
+    resultRecordCount(incidentTopologyQuery.data) >= INCIDENT_SMARTSCAPE_RESULT_LIMIT;
+  const inventoryUnverified = Boolean(serviceCountQuery.error || topologyCountQuery.error);
+  const inventoryReasons = [
+    serviceInventoryIncomplete
+      ? `${loadedServiceRecords.toLocaleString()} of ${serviceTotal?.toLocaleString() ?? `more than ${SERVICE_RESULT_LIMIT.toLocaleString()}`} services loaded`
+      : null,
+    topologyInventoryIncomplete
+      ? `${loadedRelationshipRecords.toLocaleString()} of ${relationshipTotal?.toLocaleString() ?? `more than ${SMARTSCAPE_RESULT_LIMIT.toLocaleString()}`} preferred Smartscape relationships loaded`
+      : null,
+    incidentTopologyIncomplete
+      ? "The recent Problem scope exceeded the bounded incident topology query"
+      : null,
+    scopeSettings.incomplete
+      ? `${scopeSettings.assignments.length.toLocaleString()} of ${scopeSettings.totalCount.toLocaleString()} saved mappings loaded`
+      : null,
+  ].filter((value): value is string => Boolean(value));
+  const inventoryStatus: CoverageInventoryStatus = {
+    serviceTotal,
+    loadedServices: loadedServiceRecords,
+    relationshipTotal,
+    loadedRelationships: loadedRelationshipRecords,
+    incomplete: inventoryReasons.length > 0,
+    unverified: inventoryUnverified,
+    reasons: inventoryReasons,
+  };
+
   const telemetryLoading =
     servicesLoading ||
+    incidentServicesQuery.isLoading ||
     problemsLoading ||
     logsLoading ||
     spansLoading ||
     metricsLoading;
+  const inventoryLoading = serviceCountQuery.isLoading || topologyCountQuery.isLoading;
   const telemetryError =
-    serviceError ?? problemError ?? logsError ?? spansError ?? metricsError;
+    serviceError ?? incidentServicesQuery.error ?? problemError ?? logsError ?? spansError ?? metricsError;
   const telemetrySignalsPresent =
     problems.length > 0 ||
     (logCount !== null && logCount > 0) ||
     (spanCount !== null && spanCount > 0) ||
     hasMetricSeries(metricsData);
-  const claimReadiness =
-    telemetryLoading || directoryLoading || scopeSettings.loading
-      ? {
-          tone: "neutral" as Tone,
-          value: "Checking",
-          detail: "Waiting for the evidence path to settle.",
-        }
-      : telemetryError || !directoryData
-        ? {
-            tone: "warning" as Tone,
-            value: "Blocked",
-            detail: "Access or contract lookup must be repaired first.",
-          }
-        : !telemetrySignalsPresent
-          ? {
-              tone: "warning" as Tone,
-              value: "Needs telemetry",
-              detail: "No recent signal supports an evidence review.",
-            }
-          : services.length === 0
-            ? {
-                tone: "warning" as Tone,
-                value: "Needs service boundary",
-                detail: "No service entity is available for attribution.",
-              }
-            : matchedProviderServices === 0
-              ? providerLabels.length === 0
-                ? {
-                    tone: "warning" as Tone,
-                    value: "Needs coverage",
-                    detail:
-                      "Confirm which services depend on the selected provider.",
-                  }
-                : {
-                    tone: "warning" as Tone,
-                    value: "Needs mapping",
-                    detail:
-                      "Detected source tags do not match the selected provider.",
-                  }
-              : activeProblems === 0
-                ? {
-                    tone: "neutral" as Tone,
-                    value: "No incident in scope",
-                    detail:
-                      "The provider is identified, but there is no active Problem in scope.",
-                  }
-                : {
-                    tone: "positive" as Tone,
-                    value: "Candidate",
-                    detail:
-                      "A human review can compare the active Problem with the provider contract.",
-                  };
-
   const providerName = directoryData?.provider.name ?? providerSlug;
   const coverageStatus =
     telemetryLoading ||
+    inventoryLoading ||
     directoryLoading ||
     topologyQuery.isLoading ||
     scopeSettings.loading
@@ -465,11 +535,21 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
         ? "Access incomplete"
         : !directoryData
           ? "Contract unavailable"
+          : inventoryStatus.incomplete || inventoryStatus.unverified
+            ? "Inventory incomplete"
           : matchedProviderServices > 0
             ? activeProblems > 0
               ? "Review available"
               : "Boundary ready"
             : "Action required";
+  const coverageTone: Tone =
+    telemetryLoading || inventoryLoading || directoryLoading || topologyQuery.isLoading || scopeSettings.loading
+      ? "neutral"
+      : telemetryError || !directoryData || inventoryStatus.incomplete || inventoryStatus.unverified
+        ? "warning"
+        : matchedProviderServices > 0
+          ? "positive"
+          : "warning";
 
   const setupRecommendations = useMemo(
     () =>
@@ -558,7 +638,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                   service and runtime.
                 </Paragraph>
               </div>
-              <StatusPill tone={claimReadiness.tone}>{coverageStatus}</StatusPill>
+              <StatusPill tone={coverageTone}>{coverageStatus}</StatusPill>
             </div>
             <div className="overview-facts coverage-facts" aria-label="Coverage status">
               <OverviewFact
@@ -580,20 +660,26 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 }
               />
               <OverviewFact
-                label="Services covered"
+                label="Provider scope"
                 value={
-                  servicesLoading || scopeSettings.loading
+                  servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "Checking"
-                    : `${matchedProviderServices} / ${services.length}`
+                    : `${matchedProviderServices.toLocaleString()} service${matchedProviderServices === 1 ? "" : "s"}`
                 }
                 detail={
-                  suggestedServiceCount > 0
+                  observedProviderServiceIds.size > 0
+                    ? `${observedProviderServiceIds.size} matched from provider-native topology`
+                  : suggestedServiceCount > 0
                     ? `${suggestedServiceCount} suggestion${suggestedServiceCount === 1 ? "" : "s"} to review`
-                    : "confirmed scope or provider tag"
+                    : matchedProviderServices > 0
+                      ? "confirmed scope or provider tag"
+                      : `No loaded service evidence for ${providerName}`
                 }
                 tone={
-                  servicesLoading || scopeSettings.loading
+                  servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "neutral"
+                    : inventoryStatus.incomplete || inventoryStatus.unverified
+                      ? "warning"
                     : matchedProviderServices > 0
                       ? "positive"
                       : "warning"
@@ -639,11 +725,11 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             ) : null}
             <CoverageWorkspace
               provider={directoryData}
-              topology={topology}
+              topology={providerEvidence}
               services={services}
               problems={problems}
               providerTagKey={providerLabelKey}
-              loading={servicesLoading || topologyQuery.isLoading || directoryLoading}
+              loading={servicesLoading || incidentServicesQuery.isLoading || topologyQuery.isLoading || incidentTopologyQuery.isLoading || directoryLoading}
               error={topologyQuery.error ?? directoryError ?? undefined}
               scopeSettings={scopeSettings}
               recommendations={setupRecommendations}
@@ -652,6 +738,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 telemetryError ||
                   (services.length === 0 && telemetrySignalsPresent),
               )}
+              inventory={inventoryStatus}
             />
           </Surface>
         ) : section === "directory" ? (
@@ -661,9 +748,9 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               directoryLoading={directoryLoading}
               directoryError={directoryError ?? undefined}
               services={services}
-              topology={topology}
-              servicesLoading={servicesLoading}
-              serviceError={serviceError ?? undefined}
+              topology={providerEvidence}
+              servicesLoading={servicesLoading || incidentServicesQuery.isLoading}
+              serviceError={serviceError ?? incidentServicesQuery.error ?? undefined}
             />
           </Surface>
         ) : section === "incidents" ? (
@@ -671,15 +758,15 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             provider={directoryData}
             problems={problems}
             services={services}
-            topology={topology}
-            topologyLoading={topologyQuery.isLoading}
-            topologyError={topologyQuery.error ?? undefined}
+            topology={providerEvidence}
+            topologyLoading={topologyQuery.isLoading || incidentTopologyQuery.isLoading}
+            topologyError={topologyQuery.error ?? incidentTopologyQuery.error ?? undefined}
             lookbackHours={lookbackHours}
             onLookbackChange={(value) =>
               void updatePreferences({ lookbackHours: value })
             }
-            loading={problemsLoading}
-            error={problemError ?? undefined}
+            loading={problemsLoading || incidentServicesQuery.isLoading}
+            error={problemError ?? incidentServicesQuery.error ?? undefined}
           />
         ) : (
           <EvidenceWorkspace
@@ -689,18 +776,22 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             providerLabelKey={providerLabelKey}
             problems={problems}
             services={services}
-            topology={topology}
+            topology={providerEvidence}
             assignments={scopeSettings.assignments}
             lookbackHours={lookbackHours}
             loading={
               problemsLoading ||
+              incidentServicesQuery.isLoading ||
               topologyQuery.isLoading ||
+              incidentTopologyQuery.isLoading ||
               directoryLoading ||
               scopeSettings.loading
             }
             error={
               problemError ??
+              incidentServicesQuery.error ??
               topologyQuery.error ??
+              incidentTopologyQuery.error ??
               directoryError ??
               scopeSettings.error ??
               undefined

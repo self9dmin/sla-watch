@@ -92,6 +92,20 @@ export const parseSmartscapeScopeEdges = (data: { records?: unknown[] } | undefi
     const relationship = optionalText(row.relationship) === "belongs_to" ? "belongs_to" as const : "runs_on" as const;
     const provider = providerFromTarget(row);
 
+    const region = firstText(
+      row.aws_region,
+      row.azure_location,
+      row.gcp_region,
+      row.oci_region,
+      row.cloud_region,
+    );
+    const availabilityZone = firstText(
+      row.aws_availability_zone,
+      row.gcp_location,
+      row.oci_availability_domain,
+      row.cloud_availability_zone,
+    );
+
     return [{
       serviceNodeId,
       serviceClassicId: optionalText(row.service_classic_id),
@@ -103,17 +117,12 @@ export const parseSmartscapeScopeEdges = (data: { records?: unknown[] } | undefi
       targetType: optionalText(row.target_type) ?? "RUNTIME",
       relationship,
       location: firstText(
-        row.aws_availability_zone,
-        row.aws_region,
-        row.azure_location,
-        row.gcp_location,
-        row.gcp_region,
-        row.oci_availability_domain,
-        row.oci_region,
-        row.cloud_availability_zone,
-        row.cloud_region,
+        availabilityZone,
+        region,
         row.k8s_cluster,
       ),
+      region,
+      availabilityZone,
       providerSlug: provider.slug,
       providerEvidence: provider.evidence,
       accountId: provider.accountId,
@@ -150,6 +159,7 @@ export const parseServiceCloudContexts = (data: { records?: unknown[] } | undefi
       targetType: "SERVICE_CLOUD_CONTEXT",
       relationship: "runs_on" as const,
       location: region,
+      region,
       providerSlug: provider.slug,
       providerEvidence: evidence,
       accountId: provider.accountId,
@@ -172,3 +182,28 @@ export const uniqueLocations = (edges: SmartscapeScopeEdge[]): string[] =>
 export const detectedProviderSlugs = (edges: SmartscapeScopeEdge[]): string[] => (
   Array.from(new Set(edges.map((edge) => edge.providerSlug).filter((value): value is string => Boolean(value)))).sort()
 );
+
+const topologyEdgeKey = (edge: SmartscapeScopeEdge): string => [
+  edge.serviceClassicId ?? edge.serviceNodeId,
+  edge.targetClassicId ?? edge.targetNodeId,
+  edge.relationship,
+].join("|");
+
+export const mergeSmartscapeScopeEdges = (...groups: SmartscapeScopeEdge[][]): SmartscapeScopeEdge[] => {
+  const merged = new Map<string, SmartscapeScopeEdge>();
+  groups.flat().forEach((edge) => merged.set(topologyEdgeKey(edge), edge));
+  return Array.from(merged.values());
+};
+
+export const topologyAnchorRank = (edge: SmartscapeScopeEdge): number => {
+  const targetType = edge.targetType.toUpperCase();
+  if (/^(?:AWS|AZURE|GCP|GOOGLE|OCI|ORACLE)_/.test(targetType)) return 0;
+  if (targetType === "HOST") return 1;
+  if (targetType === "K8S_CLUSTER") return 2;
+  if (targetType === "SERVICE_CLOUD_CONTEXT") return 3;
+  if (targetType === "K8S_NAMESPACE" || targetType === "K8S_DEPLOYMENT") return 4;
+  if (targetType === "CONTAINER") return 5;
+  if (targetType === "PROCESS") return 6;
+  if (targetType === "K8S_POD") return 7;
+  return 8;
+};
