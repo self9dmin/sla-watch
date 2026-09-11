@@ -1,6 +1,21 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.37`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.38`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.38 verified scenarios
+
+The `0.0.38` artifact from source commit `be06491` was deployed to the designated Dynatrace target environment on 2026-09-10 and exercised through the installed application. No provider configuration, provider credential, Credential Vault record, tag, scope mapping, or SLA override was created or changed. Personal theme and onboarding state were exercised and returned to light theme with onboarding completed.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.38` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully; the installed change log reports `0.0.38 Current release` | Installed production deployment and Chrome smoke; source commit `be06491` |
+| Release gate | Type checks, lint, 16 test suites with 93 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24 | `npm run verify:release`; production dependency audit reported zero vulnerabilities |
+| Unified shell | The global header contains the SLA Watch identity and utility icons only. The operating shell presents Overview, Setup, Incidents, Provider notices, and Directory in that order | Installed production navigation and accessibility-tree smoke |
+| Complete provider record | Azure Directory returned published availability, credit policy, filing process, evidence requirements, exclusions, provenance, 122 service records, support plans, and tenant overrides | Installed production Directory smoke against the live `sla.directory` response |
+| Service catalog | The Services view displayed all 122 Azure records with search, SLA filtering, expandable details, and an internally bounded collection | Installed production Services smoke; body remained 1646 by 800 CSS pixels with no document overflow |
+| Support boundary | Support response targets were labeled separately from the availability SLA and `Not credit-backed`; named plans and response targets remained visible without implying a service-credit remedy | Installed production Support smoke in light and dark themes |
+| Onboarding | First-run guidance displayed the maintained SLA Watch mark, a one-line heading, concise setup explanation, and `Finish later and open Overview` | Installed production onboarding smoke after an explicit restart; onboarding was completed again afterward |
+| Desktop fit and themes | Overview and every exercised Directory view had equal body client and scroll dimensions of 1646 by 800 CSS pixels; the support record remained readable in light and dark themes | Installed production visual and dimension smoke |
 
 ## 0.0.37 verified scenarios
 
