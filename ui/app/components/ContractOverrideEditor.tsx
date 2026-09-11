@@ -235,10 +235,10 @@ export const ContractOverrideEditor = ({
 
   const footer = confirmDelete ? (
     <div className="contract-editor-footer contract-editor-footer-danger">
-      <span>This removes the tenant SLA override. The public directory baseline remains available.</span>
+      <span>This removes the tenant override. The public directory baseline remains available.</span>
       <div>
         <Button disabled={saving} onClick={() => setConfirmDelete(false)}>Keep override</Button>
-        <Button className="danger-action" variant="emphasized" disabled={saving} onClick={() => void remove()}>{saving ? "Removing" : "Remove SLA override"}</Button>
+        <Button className="danger-action" variant="emphasized" disabled={saving} onClick={() => void remove()}>{saving ? "Removing" : "Remove custom terms"}</Button>
       </div>
     </div>
   ) : (
@@ -246,7 +246,7 @@ export const ContractOverrideEditor = ({
       <div>{existing ? <Button className="danger-text-action" disabled={!canWrite || saving} onClick={() => setConfirmDelete(true)}>Remove</Button> : null}</div>
       <div>
         <Button disabled={saving} onClick={onDismiss}>Cancel</Button>
-        <Button variant="emphasized" disabled={!canWrite || saving} onClick={() => void save()}>{saving ? "Saving" : existing ? "Save changes" : "Add SLA override"}</Button>
+        <Button variant="emphasized" disabled={!canWrite || saving} onClick={() => void save()}>{saving ? "Saving" : existing ? "Save changes" : "Add custom terms"}</Button>
       </div>
     </div>
   );
@@ -254,14 +254,14 @@ export const ContractOverrideEditor = ({
   const editorBody = confirmDelete ? (
         <div className="contract-delete-confirmation">
           <strong>Remove {draft.providerServiceName} for {scopeSummary(draft)}?</strong>
-          <p>The app will fall back to the next matching tenant SLA override, then to the public sla.directory record.</p>
+          <p>The app will fall back to the next matching tenant override, then to the public sla.directory record.</p>
           {requestError ? <div className="error-box compact-error" role="alert">{requestError}</div> : null}
         </div>
       ) : (
         <form className="contract-editor" onSubmit={(event) => { event.preventDefault(); void save(); }}>
           <div className="contract-source-boundary">
             <div><span>Public baseline</span><strong>{publishedTarget === null || publishedTarget === undefined ? "No availability target" : `${publishedTarget}% availability`}</strong></div>
-            <p>The public record is retained for comparison. This tenant SLA override is applied only to the explicit scope and effective dates below.</p>
+            <p>The public record is retained for comparison. These custom terms apply only to the explicit scope and effective dates below.</p>
           </div>
 
           <div className="contract-form-grid">
@@ -281,7 +281,7 @@ export const ContractOverrideEditor = ({
                 <option value="host">Selected hosts or runtimes</option>
                 <option value="location">Cloud region or datacenter</option>
               </select>
-              <small>Choose where this SLA may be applied. More specific boundaries take precedence.</small>
+              <small>Choose where these terms may be applied. More specific boundaries take precedence.</small>
             </label>
           </div>
 
@@ -308,13 +308,13 @@ export const ContractOverrideEditor = ({
               </div>
               <div className="contract-evidence-boundary">
                 <div><span>Evidence assignment</span><strong>{selectedScopeIds.length === 0 ? "No target selected" : `${selectedScopeIds.length} exact ${selectedScopeIds.length === 1 ? "target" : "targets"}`}</strong></div>
-                <p>When a Problem includes a selected service, or Smartscape links an affected service to a selected host, runtime, or location, this SLA becomes applicable. The assignment does not determine provider fault.</p>
+                <p>When a Problem includes a selected service, or Smartscape links an affected service to a selected host, runtime, or location, these terms become applicable. The assignment does not determine provider fault.</p>
               </div>
             </section>
           ) : (
             <div className="contract-evidence-boundary contract-evidence-boundary-provider">
               <div><span>Evidence assignment</span><strong>Provider-wide fallback</strong></div>
-              <p>This SLA is not tied to a specific Dynatrace entity. It applies only after more specific host, location, and service assignments are considered.</p>
+              <p>These terms are not tied to a specific Dynatrace entity. They apply only after more specific host, location, and service assignments are considered.</p>
             </div>
           )}
 
@@ -342,14 +342,14 @@ export const ContractOverrideEditor = ({
             <label className="field-label contract-checkbox"><input type="checkbox" checked={draft.enabled} onChange={(event) => patchDraft({ enabled: event.target.checked })} /> Apply this override when it is in its effective date range</label>
           </fieldset>
 
-          <div className="contract-preview"><span>Effective change</span><strong>{termsSummary(draft)}</strong><small>All authenticated SLA Watch users can read this shared setting. Do not store confidential text, credentials, or personal data.</small></div>
-          {errors.length > 0 ? <div className="error-box compact-error" role="alert"><strong>Review the SLA override</strong><ul>{errors.map((error) => <li key={error}>{error}</li>)}</ul></div> : null}
+          <div className="contract-preview"><span>Effective change</span><strong>{termsSummary(draft)}</strong><small>All authenticated app users can read this shared setting. Do not store confidential text, credentials, or personal data.</small></div>
+          {errors.length > 0 ? <div className="error-box compact-error" role="alert"><strong>Review the custom terms</strong><ul>{errors.map((error) => <li key={error}>{error}</li>)}</ul></div> : null}
           {requestError ? <div className="error-box compact-error" role="alert">{requestError}</div> : null}
         </form>
       );
 
   if (presentation === "page") {
-    return <section className="contract-editor-page" aria-label={existing ? "Edit SLA override" : "Add SLA override"}>{editorBody}{footer}</section>;
+    return <section className="contract-editor-page" aria-label={existing ? "Edit custom terms" : "Add custom terms"}>{editorBody}{footer}</section>;
   }
 
   return (
@@ -357,7 +357,7 @@ export const ContractOverrideEditor = ({
       show={show}
       size="large"
       className="sla-contract-modal"
-      title={existing ? "Edit SLA override" : "Add SLA override"}
+      title={existing ? "Edit custom terms" : "Add custom terms"}
       onDismiss={onDismiss}
       dismissible={!saving}
       footer={footer}

@@ -7,15 +7,26 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.38",
+    version: "0.0.39",
     label: "Current release",
+    summary: "Renamed the app and simplified its operational language.",
+    details: [
+      "Renamed the product to SLA Review while keeping the existing application ID and tenant configuration intact.",
+      "Replaced repeated SLA labels with review, published terms, custom terms, coverage, and service credit where those labels are clearer.",
+      "Shortened onboarding and workspace headings without changing the evidence or attribution boundaries.",
+      "Updated settings, help, accessibility labels, tests, and operator documentation to use the same terminology.",
+    ],
+  },
+  {
+    version: "0.0.38",
+    label: "Previous release",
     summary: "Unified the operating shell and expanded the provider record.",
     details: [
       "Placed Overview, Setup, Incidents, Provider notices, and Directory in one task-ordered shell while reserving the global header for app identity and utilities.",
-      "Expanded Directory with published SLA terms, credit and claim policies, service-level coverage, support plans, response-target boundaries, record provenance, and tenant overrides.",
+      "Expanded Directory with published terms, credit and claim policies, service-level coverage, support plans, response-target boundaries, record provenance, and tenant overrides.",
       "Added strict parsing for nested support and SLA-tier records before external data reaches the interface.",
       "Added searchable, expandable service coverage inside a bounded panel that does not extend the page.",
-      "Restored the SLA Watch logo and shortened the first-run explanation and finish-later destination.",
+      "Restored the application logo and shortened the first-run explanation and finish-later destination.",
     ],
   },
   {
@@ -23,7 +34,7 @@ export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
     label: "Previous release",
     summary: "Made provider connection setup explicit, optional, and verifiable.",
     details: [
-      "Separated automatic public SLA terms and Dynatrace evidence from optional provider-reported incident connections in first-run onboarding.",
+      "Separated automatic published terms and Dynatrace evidence from optional provider-reported incident connections in first-run onboarding.",
       "Added a direct onboarding path to Provider connections for AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies.",
       "Required a successful connection test before a new or access-modified provider connection can be saved.",
       "Made the Smartscape scope map the Setup landing view and kept reusable provider tags in a secondary Service tags view.",
@@ -51,7 +62,7 @@ export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
       "Added credential-free public incident sources for OCI, OpenAI, Anthropic, and ElevenLabs, with an explicit non-customer-specific evidence label.",
       "Allowed multiple Google Cloud project connections and a project-specific source selector in Provider notices.",
       "Moved the Smartscape service scope map into Setup and stored operator-confirmed provider-service mappings for reuse in Incident review.",
-      "Incident review now selects exact tenant SLA scopes first, then confirmed scope mappings, and labels any remaining Smartscape result as an unconfirmed candidate.",
+      "Incident review now selects exact tenant contract scopes first, then confirmed scope mappings, and labels any remaining Smartscape result as an unconfirmed candidate.",
       "Replaced the generic provider-tag failure with distinct session, permission, entity, request, and unverified-outcome guidance.",
       "Changed the ownership recommendation to current Dynatrace Smartscape ownership documentation instead of an unreliable settings route.",
     ],
@@ -85,15 +96,15 @@ export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
       "Added Google Cloud Personalized Service Health as an optional project-scoped provider source, with public Google Cloud Status as a clearly labeled fallback.",
       "Kept service-account JSON in Dynatrace Credential Vault and stored only the project and credential identifiers in App Settings.",
       "Added a separate Provider notices workspace so provider reports remain distinct from Dynatrace-observed Problems.",
-      "Mapped stable Google product IDs to explicit sla.directory service IDs without inferring provider ownership or SLA eligibility.",
+      "Mapped stable Google product IDs to explicit sla.directory service IDs without inferring provider ownership or credit eligibility.",
     ],
   },
   {
     version: "0.0.31",
     label: "Previous release",
-    summary: "Added tenant SLA terms with explicit Dynatrace evidence boundaries.",
+    summary: "Added custom terms with explicit Dynatrace evidence boundaries.",
     details: [
-      "Added shared SLA overrides while retaining sla.directory as the read-only public baseline.",
+      "Added shared tenant overrides while retaining sla.directory as the read-only public baseline.",
       "Allowed one custom SLA to target multiple exact services, hosts, runtimes, or observed locations from the tenant.",
       "Added a Smartscape-backed scope map and conservative incident matching that never treats names or topology as proof of provider fault.",
       "Renamed the primary workspaces to Monitor and Directory, simplified the header actions, and expanded incident lookback options through 90 days.",

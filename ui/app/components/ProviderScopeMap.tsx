@@ -203,7 +203,7 @@ export const ProviderScopeMap = ({ provider, topology, loading, error, scopeSett
           <Button size="condensed" onClick={() => openApp("dynatrace.smartscape", "view/dynatrace.smartscape.smartscape-on-grail")}><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
         </div>
       </div>
-      <div className="scope-map-boundary"><strong>How it is used</strong><span>A confirmed mapping is reused in Incidents. A Smartscape candidate is a setup aid only and does not establish provider fault, local impact, or SLA eligibility.</span></div>
+      <div className="scope-map-boundary"><strong>How it is used</strong><span>A confirmed mapping is reused in Incidents. A Smartscape candidate is a setup aid only and does not establish provider fault, local impact, or credit eligibility.</span></div>
       {error ? <div className="error-box compact-error">Smartscape topology is unavailable. Check the storage:smartscape:read permission.</div> : null}
       {scopeSettings.error ? <div className="error-box compact-error">Confirmed scope mappings are unavailable. Check App Settings read access.</div> : null}
       {loading || scopeSettings.loading ? (
@@ -248,7 +248,7 @@ export const ProviderScopeMap = ({ provider, topology, loading, error, scopeSett
                 {effectiveTerms ? <TermsStrip terms={effectiveTerms} /> : null}
                 <div className="scope-detail-actions">
                   <Button size="condensed" variant="emphasized" disabled={!scopeSettings.canWrite || scopeSettings.mutating || !selectedProviderService} onClick={() => void saveAssignment()}>{scopeSettings.mutating ? "Saving" : selectedAssignment ? "Update confirmed mapping" : selectionMatchesCandidate ? `Confirm ${selectedProviderService?.name}` : "Confirm selected service"}</Button>
-                  <Button size="condensed" disabled={!selectedProviderService} onClick={openCreateSettings}>Add SLA override</Button>
+                  <Button size="condensed" disabled={!selectedProviderService} onClick={openCreateSettings}>Add custom terms</Button>
                   {selectedAssignment ? <Button size="condensed" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void removeAssignment()}>Remove mapping</Button> : null}
                 </div>
                 {feedback ? <div className={`scope-map-feedback scope-map-feedback-${feedback.tone}`} role={feedback.tone === "warning" ? "alert" : "status"}>{feedback.message}</div> : null}

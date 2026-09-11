@@ -9,7 +9,7 @@ export const ChangeLogPage = () => {
 
   return <div className="workflow-page change-log-page">
     <div className="page-intro">
-      <Text className="eyebrow">SLA Watch · release history</Text>
+      <Text className="eyebrow">SLA Review · release history</Text>
       <Heading level={1}>Change log</Heading>
       <Paragraph>Versioned application changes are listed here for operational awareness. This page is read-only and does not record tenant changes.</Paragraph>
     </div>

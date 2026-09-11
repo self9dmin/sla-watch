@@ -4,7 +4,7 @@
   "schemaId": "provider-scope-assignments",
   "version": "1.0.0",
   "displayName": "Provider service scope assignments",
-  "description": "Operator-confirmed mappings between Dynatrace service-to-runtime topology and a provider service SLA record.",
+  "description": "Operator-confirmed mappings between Dynatrace service-to-runtime topology and a provider service terms record.",
   "documentation": "Smartscape evidence can suggest a mapping, but an operator must confirm it. Assignments identify the applicable provider service record and do not establish provider fault, impact, or credit eligibility.",
   "multiObject": true,
   "maxObjects": 1000,

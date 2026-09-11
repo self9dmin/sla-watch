@@ -40,7 +40,7 @@ describe("provider tag helpers", () => {
       body: { error: { code: 403, message: "Forbidden" } },
     })).toEqual({
       title: "Tag change denied",
-      detail: "Ask a tenant administrator to grant Manage monitoring settings access and confirm that SLA Watch is authorized to write entity tags.",
+      detail: "Ask a tenant administrator to grant Manage monitoring settings access and confirm that SLA Review is authorized to write entity tags.",
       code: 403,
     });
   });

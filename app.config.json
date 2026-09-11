@@ -2,13 +2,13 @@
   "$schema": "./.dt-app/app.config.schema.json",
   "environmentUrl": "https://your-environment.apps.dynatrace.com/",
   "app": {
-    "name": "SLA Watch",
-    "version": "0.0.38",
+    "name": "SLA Review",
+    "version": "0.0.39",
     "icon": "ui/assets/sla-watch-icon.svg",
-    "description": "Correlate provider SLAs with Dynatrace evidence and service ownership",
+    "description": "Review provider terms against Dynatrace evidence and service ownership",
     "id": "my.sla",
     "scopes": [
-      { "name": "storage:entities:read", "comment": "Read services and managed entities for the SLA watch" },
+      { "name": "storage:entities:read", "comment": "Read services and managed entities for provider review" },
       { "name": "environment-api:entities:write", "comment": "Add or remove an explicitly confirmed provider tag on selected service entities" },
       { "name": "environment-api:credentials:read", "comment": "Read an administrator-selected AppEngine credential for an optional provider incident connection" },
       { "name": "storage:events:read", "comment": "Read problem events that can affect SLA posture" },
@@ -16,12 +16,12 @@
       { "name": "storage:logs:read", "comment": "Check whether correlated log telemetry exists" },
       { "name": "storage:spans:read", "comment": "Check whether distributed tracing telemetry exists" },
       { "name": "storage:smartscape:read", "comment": "Read service-to-runtime topology for contract scope selection" },
-      { "name": "app-settings:objects:read", "comment": "Read tenant-owned SLA overrides, provider connections, and confirmed scope mappings" },
-      { "name": "app-settings:objects:write", "comment": "Create, update, and remove explicitly confirmed SLA settings and scope mappings" },
+      { "name": "app-settings:objects:read", "comment": "Read tenant-owned custom terms, provider connections, and confirmed scope mappings" },
+      { "name": "app-settings:objects:write", "comment": "Create, update, and remove explicitly confirmed custom terms and scope mappings" },
       { "name": "state:user-app-states:read", "comment": "Restore personal theme and onboarding preferences" },
       { "name": "state:user-app-states:write", "comment": "Save personal theme and onboarding preferences" },
-      { "name": "state:app-states:read", "comment": "Read shared SLA Watch provider configuration" },
-      { "name": "state:app-states:write", "comment": "Save shared SLA Watch provider configuration" }
+      { "name": "state:app-states:read", "comment": "Read shared provider review configuration" },
+      { "name": "state:app-states:write", "comment": "Save shared provider review configuration" }
     ]
   },
   "plugins": ["@dynatrace-sdk/dt-app-plugin-client-app-settings-v2"]

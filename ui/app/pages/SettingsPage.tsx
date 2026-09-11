@@ -20,7 +20,7 @@ import type { AwsProviderNoticesResponse, AzureProviderNoticesResponse, Contract
 const SETUP_LINKS = [
   ["watch", "Monitor configuration"],
   ["provider-connections", "Provider connections"],
-  ["sla-overrides", "SLA overrides"],
+  ["sla-overrides", "Custom terms"],
   ["appearance", "Appearance"],
   ["intro", "Onboarding & walkthrough"],
 ] as const;
@@ -33,7 +33,7 @@ const SettingsRail = ({ page }: { page: string }) => {
   const navigate = useNavigate();
   return (
     <aside className="settings-rail">
-      <Button variant="default" onClick={() => { void navigate("/"); }}>Back to SLA Watch</Button>
+      <Button variant="default" onClick={() => { void navigate("/"); }}>Back to SLA Review</Button>
       <div className="settings-rail-title">Workspace settings</div>
       <RailGroup title="MY SETUP" links={SETUP_LINKS} page={page} />
       <div className="settings-rail-group">
@@ -44,7 +44,7 @@ const SettingsRail = ({ page }: { page: string }) => {
         <div className="settings-rail-label">SUPPORT</div>
         <CommunityLink className="settings-rail-link" />
       </div>
-      <div className="settings-rail-note">Monitor configuration, provider connections, and SLA overrides are shared with the workspace. Theme and walkthrough state stay personal to you. The change log is read-only.</div>
+      <div className="settings-rail-note">Monitor configuration, provider connections, and custom terms are shared with the workspace. Theme and walkthrough state stay personal to you. The change log is read-only.</div>
     </aside>
   );
 };
@@ -192,7 +192,7 @@ const WatchSettings = () => {
       <div className="settings-preview">
         <div className="eyebrow">Matching rules</div>
         <div className="provider-rule-list">{providerSlugs.map((slug) => <code key={slug}>{providerLabelKey || "provider"}:{slug}</code>)}</div>
-        <span>SLA Watch checks these explicit tags and separately reports Smartscape candidates. Saving monitor settings does not modify Dynatrace services.</span>
+        <span>The app checks these explicit tags and separately reports Smartscape candidates. Saving monitor settings does not modify Dynatrace services.</span>
         <NavLink className="text-action" to="/setup">Review service mapping in Setup</NavLink>
       </div>
       <div className="settings-actions"><Button variant="emphasized" disabled={providerSlugs.length === 0 || !providerSlug.trim()} onClick={() => void save()}>Save monitor settings</Button>{saved ? <SavedNote text="Monitor settings saved" /> : null}</div>
@@ -415,11 +415,11 @@ const ProviderConnectionsSettings = () => {
       </div>
 
       <div className="provider-connection-boundary">
-        <div><span className="eyebrow">Optional provider evidence</span><strong>AWS Health · Azure Service Health · Google Cloud Personalized Service Health · OCI Announcements</strong><small>Public SLA terms work without these connections. Add more than one account, subscription, project, or tenancy when required.</small></div>
+        <div><span className="eyebrow">Optional provider evidence</span><strong>AWS Health · Azure Service Health · Google Cloud Personalized Service Health · OCI Announcements</strong><small>Published terms work without these connections. Add more than one account, subscription, project, or tenancy when required.</small></div>
         <span className="connection-state connected">{providerConnections.connections.filter((item) => CONNECTED_PROVIDER_OPTIONS.some((provider) => provider.slug === item.providerSlug)).length} saved</span>
       </div>
 
-      <div className="provider-connection-prerequisite"><strong>Before you connect</strong><span>Allow the listed provider hosts under Dynatrace Settings &gt; General &gt; External requests. Create a Token in Credential Vault with AppEngine scope, access limited to SLA Watch, and access for the administrators who will test it. Paste only the credential ID below.</span></div>
+      <div className="provider-connection-prerequisite"><strong>Before you connect</strong><span>Allow the listed provider hosts under Dynatrace Settings &gt; General &gt; External requests. Create a Token in Credential Vault with AppEngine scope, access limited to SLA Review, and access for the administrators who will test it. Paste only the credential ID below.</span></div>
 
       <div className="provider-connection-switcher">
         <label className="field-label">Connection type
@@ -452,13 +452,13 @@ const ProviderConnectionsSettings = () => {
         <ol className="provider-connection-steps" aria-label="OCI connection requirements">
           <li><span>1</span><div><strong>Create a dedicated API user</strong><small>Upload an RSA API signing key. Do not use a Console password or auth token.</small></div></li>
           <li><span>2</span><div><strong>Grant Announcements read access</strong><small><code>Allow group AnnouncementListers to inspect announcements in tenancy</code></small></div></li>
-          <li><span>3</span><div><strong>Vault the signing JSON</strong><small>Use a Token credential restricted to SLA Watch, then allow outbound host <code>{outboundHost}</code>.</small></div></li>
+          <li><span>3</span><div><strong>Vault the signing JSON</strong><small>Use a Token credential restricted to SLA Review, then allow outbound host <code>{outboundHost}</code>.</small></div></li>
         </ol>
       ) : (
         <ol className="provider-connection-steps" aria-label="Google Cloud connection requirements">
           <li><span>1</span><div><strong>Enable Service Health API</strong><small>Enable <code>servicehealth.googleapis.com</code> for the project.</small></div></li>
           <li><span>2</span><div><strong>Grant the two required roles</strong><small>Use a dedicated service account with <code>roles/servicehealth.viewer</code> and <code>roles/serviceusage.serviceUsageConsumer</code>.</small></div></li>
-          <li><span>3</span><div><strong>Vault the service-account JSON</strong><small>Create an AppEngine-scoped Token restricted to SLA Watch. Allow <code>oauth2.googleapis.com</code> and <code>servicehealth.googleapis.com</code>.</small></div></li>
+          <li><span>3</span><div><strong>Vault the service-account JSON</strong><small>Create an AppEngine-scoped Token restricted to SLA Review. Allow <code>oauth2.googleapis.com</code> and <code>servicehealth.googleapis.com</code>.</small></div></li>
         </ol>
       )}
 
@@ -616,16 +616,16 @@ const SlaOverrideSettings = () => {
   return (
     <section className="settings-page settings-page-wide">
       <div className="page-intro sla-override-page-intro">
-        <Text className="eyebrow">Settings · SLA overrides</Text>
-        <Heading level={1}>Add a custom SLA.</Heading>
-        <Paragraph>Define operational terms for a provider service and an explicit Dynatrace scope. Public sla.directory terms remain available as the comparison baseline.</Paragraph>
+        <Text className="eyebrow">Settings · custom terms</Text>
+        <Heading level={1}>Add custom terms.</Heading>
+        <Paragraph>Define operational terms for a provider service and an explicit Dynatrace scope. Published terms remain available as the comparison baseline.</Paragraph>
       </div>
       {loading ? <div className="settings-callout" role="status"><strong>Loading contract scope</strong><span>Reading the provider record, service inventory, Smartscape topology, and tenant settings.</span></div> : null}
       {!loading && !activeDirectory ? <div className="error-box"><strong>Provider terms are unavailable.</strong><span>Return to Monitor configuration, verify the active provider and API connection, then try again.</span></div> : null}
       {!loading && activeDirectory && initialValue ? (
         <>
-          {!contractSettings.canWrite ? <div className="error-box compact-error">Your current role can review SLA overrides but cannot create them. Ask a Dynatrace administrator for app-settings write access.</div> : null}
-          {(serviceQuery.error || topologyQuery.error) ? <div className="settings-callout"><strong>Some Dynatrace scopes are unavailable</strong><span>You can still create a provider-level SLA override. Service, host, and location choices require the corresponding entity or Smartscape read access.</span></div> : null}
+          {!contractSettings.canWrite ? <div className="error-box compact-error">Your current role can review custom terms but cannot create them. Ask a Dynatrace administrator for app-settings write access.</div> : null}
+          {(serviceQuery.error || topologyQuery.error) ? <div className="settings-callout"><strong>Some Dynatrace scopes are unavailable</strong><span>You can still create a provider-level override. Service, host, and location choices require the corresponding entity or Smartscape read access.</span></div> : null}
           <ContractOverrideEditor
             presentation="page"
             provider={activeDirectory}
@@ -687,12 +687,12 @@ const IntroSettings = () => {
       <div className="page-intro"><Text className="eyebrow">Settings · onboarding</Text><Heading level={1}>Review first-run guidance.</Heading><Paragraph>Run onboarding when the monitored provider list changes. Use the shorter walkthrough when a responder needs a tour of the operating views.</Paragraph></div>
       <div className="onboarding-status-row"><div><span className="eyebrow">Onboarding</span><strong>{preferences.onboardingComplete ? "Completed" : "Not completed"}</strong></div><div><span className="eyebrow">Walkthrough</span><strong>Available anytime</strong></div><div><span className="eyebrow">Providers</span><strong>{preferences.providerSlugs.map(providerDisplayName).join(", ")}</strong></div></div>
       <div className="settings-actions"><Button variant="emphasized" onClick={() => void restartIntro()}>Restart onboarding</Button><Button onClick={() => void resetTour()}>Start walkthrough now</Button>{saved ? <SavedNote text="Opening walkthrough" /> : null}</div>
-      <div className="settings-callout"><strong>What onboarding changes</strong><span>It saves the monitored providers and active view as SLA Watch workspace settings. It does not create provider credentials, connect a cloud account, change telemetry, add tags, create an SLA claim, or determine provider fault.</span></div>
+      <div className="settings-callout"><strong>What onboarding changes</strong><span>It saves the monitored providers and active view as workspace settings. It does not create provider credentials, connect a cloud account, change telemetry, add tags, create a claim, or determine provider fault.</span></div>
     </section>
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">SLA workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure monitor defaults, provider data, SLA evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Monitor configuration</span><strong>Select monitored providers and the tag convention.</strong><span>Service assignments are reviewed from Setup.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Public SLA terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">SLA overrides</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one SLA to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Onboarding & walkthrough</span><strong>Review first-run setup or tour the operating views.</strong><span>Use onboarding for provider choices and the walkthrough for responder orientation.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">Review workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure monitor defaults, provider data, evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Monitor configuration</span><strong>Select monitored providers and the tag convention.</strong><span>Service assignments are reviewed from Setup.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Published terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">Custom terms</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one terms record to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Onboarding & walkthrough</span><strong>Review first-run setup or tour the operating views.</strong><span>Use onboarding for provider choices and the walkthrough for responder orientation.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();

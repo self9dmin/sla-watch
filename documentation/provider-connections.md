@@ -1,13 +1,13 @@
 # Provider incident connections
 
-Provider connections are optional, read-only sources of provider-reported service health. They supplement public `sla.directory` terms and Dynatrace evidence. They do not replace either source, prove that a Dynatrace service was affected, establish provider fault, or determine SLA credit eligibility.
+Provider connections are optional, read-only sources of provider-reported service health. They supplement public `sla.directory` terms and Dynatrace evidence. They do not replace either source, prove that a Dynatrace service was affected, establish provider fault, or determine service credit eligibility.
 
-An installed copy of SLA Watch can keep multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies at the same time. Every connection belongs to the Dynatrace environment where it was created.
+An installed copy of SLA Review can keep multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies at the same time. Every connection belongs to the Dynatrace environment where it was created.
 
 ## What works without a provider connection
 
-- Public SLA terms load automatically from `sla.directory`. The user does not supply an API key or configure the `sla.directory` MCP server.
-- Overview, Setup, Smartscape scope mapping, Directory, Incidents, custom SLA overrides, and Dynatrace telemetry review remain available.
+- Published terms load automatically from `sla.directory`. The user does not supply an API key or configure the `sla.directory` MCP server.
+- Overview, Setup, Smartscape scope mapping, Directory, Incidents, custom terms, and Dynatrace telemetry review remain available.
 - Google Cloud and OCI can use clearly labeled public status sources. Those feeds are not project- or tenancy-specific.
 - AWS and Azure remain available for contracts and Dynatrace evidence, but account-specific provider notices require a configured connection.
 
@@ -15,10 +15,10 @@ An installed copy of SLA Watch can keep multiple AWS accounts, Azure subscriptio
 
 Before adding a connection, confirm all of the following:
 
-1. The administrator can write the SLA Watch `provider-connections` App Settings schema.
+1. The administrator can write the SLA Review `provider-connections` App Settings schema.
 2. The provider identity has only the read permissions listed below.
 3. The provider secret is stored as a Token in Dynatrace Credential Vault with AppEngine scope.
-4. Credential access is limited to SLA Watch and the users who must test or use it. Both the app and the current user need access.
+4. Credential access is limited to SLA Review and the users who must test or use it. Both the app and the current user need access.
 5. Every exact provider hostname is allowed under Dynatrace **Settings > General > External requests**. Do not disable allowlist enforcement.
 
 See the Dynatrace guidance for [Credential Vault](https://docs.dynatrace.com/docs/manage/credential-vault) and [external request allowlisting](https://developer.dynatrace.com/develop/guides/app-functions/allow-outbound-connections/).
@@ -44,11 +44,11 @@ OCI Announcements are retained by Oracle for 90 days. The app reads summary anno
 
 1. Complete the provider-side identity and read permission.
 2. Add the required hostnames to Dynatrace External requests.
-3. Create the provider-specific Token in Credential Vault. Restrict it to SLA Watch and the intended administrators.
-4. Open **SLA Watch > Settings > Provider connections**.
+3. Create the provider-specific Token in Credential Vault. Restrict it to SLA Review and the intended administrators.
+4. Open **SLA Review > Settings > Provider connections**.
 5. Select AWS, Microsoft Azure, Google Cloud, or OCI.
 6. Select **Add a new account**, **subscription**, **project**, or **tenancy**.
-7. Enter an operator-facing name, the exact provider scope identifier, the OCI region when applicable, and the Credential Vault record ID. Never paste the secret into SLA Watch settings.
+7. Enter an operator-facing name, the exact provider scope identifier, the OCI region when applicable, and the Credential Vault record ID. Never paste the secret into app settings.
 8. Select **Test connection**. The app validates the identifier, Credential Vault access, provider authentication, and provider scope. A failed test is not saved as a usable connection.
 9. After the test reports **Connection verified**, select **Save connection**.
 10. Open **Provider notices** and select the saved source when more than one source exists.
@@ -57,16 +57,16 @@ Repeat the process for every required account scope. Adding a second account, su
 
 ## Interpreting the result
 
-- **Connection verified** means the current user and SLA Watch could read the selected provider scope at test time. It does not mean an incident exists.
+- **Connection verified** means the current user and SLA Review could read the selected provider scope at test time. It does not mean an incident exists.
 - **No notices returned** is a valid result when the provider has no relevant event in the selected lookback window.
 - **Public** or **fallback** means the result is not customer-specific. It must not be used as proof of local impact.
-- Authentication, support-plan, IAM, scope, outbound-host, and malformed-response failures remain visible. SLA Watch does not silently turn a failed account-specific AWS, Azure, or OCI request into public evidence.
+- Authentication, support-plan, IAM, scope, outbound-host, and malformed-response failures remain visible. The app does not silently turn a failed account-specific AWS, Azure, or OCI request into public evidence.
 
 ## Change or remove a connection
 
 - Editing the provider scope, OCI region, or Credential Vault ID requires a new successful test before the update can be saved.
 - Renaming a connection or disabling its use does not change the provider credential.
-- Removing the SLA Watch connection deletes only its non-secret metadata. It does not delete the Credential Vault record or revoke the cloud identity.
+- Removing the app connection deletes only its non-secret metadata. It does not delete the Credential Vault record or revoke the cloud identity.
 - To retire access completely, remove the connection, revoke or delete the provider-side key or secret, and delete the Credential Vault record according to the tenant's credential lifecycle.
 
 ## Current acceptance boundary

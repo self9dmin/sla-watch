@@ -23,8 +23,8 @@ The app is suitable for continued hardening as a custom AppEngine app. The revie
 
 | Area | Evidence | State | Closure action |
 | --- | --- | --- | --- |
-| Manifest identity | `app.config.json` uses `my.sla`, `SLA Watch`, version `0.0.38`, a maintained icon, and a sub-80-character description | `0.0.38` is the latest verified target-environment deployment | Confirm the permanent publisher-owned app ID and final Hub name. Do not change the ID casually after distribution. |
-| Name discoverability | `SLA Watch` is short and title case | Likely compliant, uniqueness unverified | Check Hub for collisions and ensure the final name describes the use case. |
+| Manifest identity | `app.config.json` uses `my.sla`, `SLA Review`, version `0.0.39`, a maintained icon, and a sub-80-character description | `0.0.38` is the latest verified target-environment deployment; `0.0.39` is the current release candidate | Confirm the permanent publisher-owned app ID and final Hub name. Do not change the ID casually after distribution. |
+| Name discoverability | `SLA Review` is short and title case | Likely compliant, uniqueness unverified | Check Hub for collisions and ensure the final name describes the use case. |
 | Icon and listing media | A custom SVG icon is included; final Hub screenshots and listing media are not yet packaged | Partial | Review the icon and add final Hub screenshots/demo assets. |
 | Runtime scopes | Manifest declares read-only telemetry and Smartscape scopes, user/app state, App Settings read/write, and `environment-api:entities:write` for confirmed provider-tag changes | Deployed in `0.0.31`; both write paths still need least-privilege acceptance | Test each scope with a least-privilege user and ensure the Hub Technical information page explains both write purposes. |
 | Runtime authorization | UI reports access-incomplete states and preflights effective entity-write permission before enabling the tag action | Granted state verified in production without applying a tag; negative and management-zone coverage missing | Add guarded granted, denied, conditional, partial-match, and undo acceptance tests. |

@@ -210,7 +210,7 @@ export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNotices
       {!supported ? (
         <div className="provider-notices-empty">
           <strong>No provider-owned incident source is configured for this provider.</strong>
-          <span>{providerSlug.toUpperCase()} remains available for SLA terms, service attribution, and Dynatrace incident review. Optional provider connections are separate from monitored-provider setup.</span>
+          <span>{providerSlug.toUpperCase()} remains available for published terms, service attribution, and Dynatrace incident review. Optional provider connections are separate from monitored-provider setup.</span>
           <Button as={Link} to="/settings/provider-connections" size="condensed">Review provider connections</Button>
         </div>
       ) : !(accountConnectionSupported && connectionSettings.loading) && configuredSourceRequired ? (
@@ -249,7 +249,7 @@ export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNotices
         </>
       ) : null}
 
-      <div className="provider-notices-boundary"><strong>Correlation boundary</strong><span>A provider notice can support a review. It does not prove that a Dynatrace service was affected or that an SLA credit is due.</span></div>
+      <div className="provider-notices-boundary"><strong>Correlation boundary</strong><span>A provider notice can support a review. It does not prove that a Dynatrace service was affected or that a service credit is due.</span></div>
     </Surface>
   );
 };

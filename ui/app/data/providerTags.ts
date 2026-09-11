@@ -66,14 +66,14 @@ export const providerTagWriteIssue = (error: unknown): ProviderTagWriteIssue => 
   if (code === 401 || /expired|authentication|not authenticated|invalid token/.test(message)) {
     return {
       title: "Dynatrace session expired",
-      detail: "Reload SLA Watch, then review the same services before applying the tag again.",
+      detail: "Reload the app, then review the same services before applying the tag again.",
       code: 401,
     };
   }
   if (code === 403 || /forbidden|permission|unauthori[sz]ed|missing scope/.test(message)) {
     return {
       title: "Tag change denied",
-      detail: "Ask a tenant administrator to grant Manage monitoring settings access and confirm that SLA Watch is authorized to write entity tags.",
+      detail: "Ask a tenant administrator to grant Manage monitoring settings access and confirm that SLA Review is authorized to write entity tags.",
       code: 403,
     };
   }

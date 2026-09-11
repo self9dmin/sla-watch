@@ -29,10 +29,10 @@ type ProviderDirectoryWorkspaceProps = {
 };
 
 const TABS: ReadonlyArray<{ id: DirectoryTab; label: string }> = [
-  { id: "terms", label: "SLA terms" },
+  { id: "terms", label: "Published terms" },
   { id: "services", label: "Services" },
   { id: "support", label: "Support" },
-  { id: "overrides", label: "SLA overrides" },
+  { id: "overrides", label: "Custom terms" },
 ];
 
 const StatusPill = ({
@@ -342,7 +342,7 @@ export const ProviderDirectoryWorkspace = ({
     <div className="directory-workspace">
       <div className="directory-heading">
         <div>
-          <Heading level={2}>{provider.name} SLA record</Heading>
+          <Heading level={2}>{provider.name} terms</Heading>
           <Paragraph>
             Public terms from sla.directory, service-level coverage, support
             options, and tenant-specific overrides.
@@ -411,7 +411,7 @@ export const ProviderDirectoryWorkspace = ({
                   disabled={!contractSettings.canWrite}
                   onClick={() => openCreateSettings()}
                 >
-                  Add SLA override
+                  Add custom terms
                 </Button>
               </div>
             </div>
@@ -542,11 +542,11 @@ export const ProviderDirectoryWorkspace = ({
                     aria-labelledby="higher-tiers-heading"
                   >
                     <span className="eyebrow">Plan-specific commitments</span>
-                    <h3 id="higher-tiers-heading">Higher SLA tiers</h3>
+                    <h3 id="higher-tiers-heading">Higher availability tiers</h3>
                     <div
                       className="directory-record-table"
                       role="table"
-                      aria-label="Higher SLA tiers"
+                      aria-label="Higher availability tiers"
                     >
                       <div
                         className="directory-record-row directory-record-header"
@@ -611,7 +611,7 @@ export const ProviderDirectoryWorkspace = ({
                     />
                     <Fact label="Directory slug" value={provider.slug} />
                     <Fact
-                      label="SLA status"
+                      label="Record status"
                       value={
                         provider.statusCode
                           ? `${provider.status} · ${provider.statusCode}`
@@ -665,7 +665,7 @@ export const ProviderDirectoryWorkspace = ({
                     </p>
                   ) : null}
                   <p className="directory-provenance">
-                    API generated {directory.generatedAt}. SLA Watch does not
+                    API generated {directory.generatedAt}. The app does not
                     alter this public record.
                   </p>
                 </section>
@@ -695,14 +695,14 @@ export const ProviderDirectoryWorkspace = ({
                   placeholder="Search services"
                 />
                 <select
-                  aria-label="Service SLA filter"
+                  aria-label="Service coverage filter"
                   value={serviceFilter}
                   onChange={(event) =>
                     setServiceFilter(event.currentTarget.value as ServiceFilter)
                   }
                 >
                   <option value="all">All records</option>
-                  <option value="eligible">SLA eligible</option>
+                  <option value="eligible">Covered by terms</option>
                   <option value="reference">Reference only</option>
                 </select>
               </div>
@@ -716,7 +716,7 @@ export const ProviderDirectoryWorkspace = ({
             <div
               className="directory-service-records"
               role="list"
-              aria-label={`${provider.name} service SLA records`}
+              aria-label={`${provider.name} service coverage records`}
             >
               {visibleServices.map((service) => {
                 const overrideCount = providerOverrides.filter(
@@ -746,7 +746,7 @@ export const ProviderDirectoryWorkspace = ({
                       <StatusPill
                         tone={service.eligible ? "positive" : "neutral"}
                       >
-                        {service.eligible ? "SLA eligible" : "Reference"}
+                        {service.eligible ? "Covered" : "Reference"}
                       </StatusPill>
                     </summary>
                     <div className="directory-service-detail">
@@ -806,7 +806,7 @@ export const ProviderDirectoryWorkspace = ({
                         >
                           {overrideCount > 0
                             ? `Review ${overrideCount} override${overrideCount === 1 ? "" : "s"}`
-                            : "Add SLA override"}
+                            : "Add custom terms"}
                         </button>
                       </div>
                     </div>
@@ -816,7 +816,7 @@ export const ProviderDirectoryWorkspace = ({
               {visibleServices.length === 0 ? (
                 <div className="contract-empty">
                   <strong>No matching services</strong>
-                  <span>Clear the search or change the SLA filter.</span>
+                  <span>Clear the search or change the coverage filter.</span>
                 </div>
               ) : null}
             </div>
@@ -831,7 +831,7 @@ export const ProviderDirectoryWorkspace = ({
         {tab === "support" ? (
           <div className="directory-support-view">
             <div className="support-boundary">
-              <strong>Separate from the availability SLA</strong>
+              <strong>Separate from availability terms</strong>
               <span>
                 Support response times are service targets or entitlements
                 unless the provider explicitly attaches a remedy.
@@ -840,7 +840,7 @@ export const ProviderDirectoryWorkspace = ({
                 tone={support?.responseIsSla ? "positive" : "neutral"}
               >
                 {support?.responseIsSla
-                  ? "Contractual response SLA"
+                  ? "Contractual response target"
                   : "Not credit-backed"}
               </StatusPill>
             </div>
@@ -957,7 +957,7 @@ export const ProviderDirectoryWorkspace = ({
                       >
                         <span>Plan</span>
                         <span>Price</span>
-                        <span>SLA access</span>
+                        <span>Coverage</span>
                         <span>Response target</span>
                       </div>
                       {provider.supportTiers.map((tier) => (
@@ -986,7 +986,7 @@ export const ProviderDirectoryWorkspace = ({
           <div className="contract-overrides-view">
             <div className="contract-overrides-toolbar">
               <div>
-                <strong>Tenant SLA terms</strong>
+                <strong>Custom terms</strong>
                 <span>
                   Shared in this environment. Public records remain unchanged.
                 </span>
@@ -999,7 +999,7 @@ export const ProviderDirectoryWorkspace = ({
                 }
                 onClick={() => openCreateSettings()}
               >
-                Add SLA override
+                Add custom terms
               </Button>
             </div>
             {!contractSettings.canRead || contractSettings.error ? (
@@ -1017,20 +1017,20 @@ export const ProviderDirectoryWorkspace = ({
               <strong>Data boundary</strong>
               <span>
                 Store operational values and a reference only. All authenticated
-                SLA Watch users can read these settings, so do not paste
+                app users can read these settings, so do not paste
                 confidential contract text or credentials.
               </span>
             </div>
             {contractSettings.loading ? (
               <div className="directory-loading" role="status">
-                <strong>Loading SLA overrides</strong>
+                <strong>Loading custom terms</strong>
                 <span>Reading shared App Settings.</span>
               </div>
             ) : providerOverrides.length === 0 ? (
               <div className="contract-empty">
                 <strong>No tenant overrides for {provider.name}</strong>
                 <span>
-                  Until an override is added, SLA Watch uses the public
+                  Until an override is added, the app uses the public
                   directory record.
                 </span>
                 <Button
@@ -1038,14 +1038,14 @@ export const ProviderDirectoryWorkspace = ({
                   disabled={!contractSettings.canWrite}
                   onClick={() => openCreateSettings()}
                 >
-                  Add the first SLA override
+                  Add custom terms
                 </Button>
               </div>
             ) : (
               <div
                 className="contract-override-list"
                 role="list"
-                aria-label={`${provider.name} SLA overrides`}
+                aria-label={`${provider.name} custom terms`}
               >
                 {providerOverrides.map((override) => {
                   const state = overrideState(override);

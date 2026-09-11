@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.39
+
+- Renamed the app to SLA Review while keeping the existing application ID and tenant configuration intact.
+- Replaced repeated acronym-heavy labels with review, published terms, custom terms, coverage, and service credit where those labels are clearer.
+- Shortened onboarding and workspace headings without changing the evidence or attribution boundaries.
+- Updated settings, help, accessibility labels, tests, and operator documentation to use the same terminology.
+
 ## 0.0.38
 
 - Consolidated Overview, Setup, Incidents, Provider notices, and Directory into one task-ordered operating shell and removed the duplicate Monitor and Directory destinations from the global header.
