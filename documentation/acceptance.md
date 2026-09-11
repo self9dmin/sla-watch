@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.40`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.41`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.41 verified scenarios
+
+The `0.0.41` artifact from source commit `13e1a74` was deployed to the designated Dynatrace target environment on 2026-09-10 and exercised through the installed application. No provider configuration, provider credential, Credential Vault record, tag, scope mapping, custom terms record, or evidence decision was created or changed. Personal theme state was switched to light for visual verification and restored to dark.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The installed application frame reports `my.sla` version `0.0.41`; the manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully | Installed production deployment, change log, and Chrome smoke; source commit `13e1a74` |
+| Release gate | Type checks, lint, 18 test suites with 107 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24 | `npm run verify:release`; production dependency audit reported zero vulnerabilities; [GitHub Actions run 34559101335](https://github.com/self9dmin/sla-watch/actions/runs/34559101335) |
+| Candidate qualification | Only exact affected-service overlap with confirmed Coverage, an exact provider tag, or a same-provider Smartscape suggestion can create a candidate. Service names, lookalike tags, wrong-provider topology, and unrelated Problems remain excluded | `tests/evidenceCandidates.test.ts`; 12 focused tests passed |
+| Decision loop | A representative local candidate showed one match explanation and one Decision area. Validate stayed disabled until acknowledgement; Dismiss without a note produced an inline error; the removed gate cards and candidate-level FinOps handoff were absent | Tenant-hosted local Chrome interaction smoke in light and dark themes; the temporary visual record was removed before the release commit |
+| Decision freshness | A stored decision remains current only while its mapping basis, affected entity IDs, and provider-service IDs match the candidate. A changed boundary returns it to Needs review | Focused stale-decision and canonical-key unit coverage |
+| Conservative production state | Sixteen Problems were observed in seven days, but none overlapped the current AWS boundary. Evidence returned no review candidates and did not infer one from a service name | Installed production Evidence and Incidents smoke |
+| Provider-source boundary | Provider reports remained separate from Dynatrace-derived candidates and stated that an AWS account connection is optional, read-only provider evidence | Installed production Provider reports smoke; no connection was created |
+| Desktop fit and themes | Coverage, Incidents, Evidence, Provider reports, and AWS terms each had equal body client and scroll dimensions of 1646 by 747 CSS pixels. The Evidence workflow and shell remained readable in both themes | Installed production dimension and visual smoke; representative candidate checked locally in both themes |
+| Open mutation acceptance | The live tenant produced no valid candidate, so a production evidence-decision write was deliberately not forced. Least-privilege create, update, dismiss, read-only, and removal behavior remain open acceptance items | Target environment remained unchanged; pure decision and candidate logic passed automated coverage |
 
 ## 0.0.40 verified scenarios
 
