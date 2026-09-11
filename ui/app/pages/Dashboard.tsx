@@ -11,10 +11,12 @@ import { ProviderScopeMap } from "../components/ProviderScopeMap";
 import { ProviderDirectoryWorkspace } from "../components/ProviderDirectoryWorkspace";
 import { ProviderNotices } from "../components/ProviderNotices";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
+import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
 import { providerTagValue } from "../data/providerTags";
 import { buildSetupRecommendations } from "../data/recommendations";
 import { formatEvidenceLookback } from "../data/lookback";
 import { buildProviderCandidates, mergeServiceInventory } from "../data/providerAttribution";
+import { createProviderScopeAssignmentKey, runtimeEntityIdForEdge, serviceEntityIdForEdge } from "../data/providerScopeAssignments";
 import { providerDisplayName } from "../data/providers";
 import { parseServiceCloudContexts, parseSmartscapeScopeEdges } from "../data/topology";
 import {
@@ -107,8 +109,9 @@ const EvidenceStep = ({ number, title, detail, state }: { number: number; title:
 export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
   const section = initialSection;
   const location = useLocation();
-  const setupView = new URLSearchParams(location.search).get("view") === "scope" ? "scope" : "boundary";
+  const setupView = new URLSearchParams(location.search).get("view") === "tags" ? "tags" : "scope";
   const { preferences, updatePreferences } = useSlaPreferences();
+  const scopeSettings = useProviderScopeAssignments();
   const { providerSlugs, providerSlug, providerLabelKey, lookbackHours } = preferences;
   const [providerNoticeRefresh, setProviderNoticeRefresh] = useState(0);
   const problemsQuery = useMemo(() => createProblemsQuery(lookbackHours), [lookbackHours]);
@@ -156,10 +159,25 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
   const spanCount = firstCount(spansData, "span_count");
   const selectedProviderSlug = directoryData?.provider.slug ?? providerSlug;
   const providerLabels = useMemo(() => Array.from(new Set(services.flatMap((service) => service.tags.map((tag) => providerTagValue(tag, providerLabelKey, selectedProviderSlug)).filter((value): value is string => Boolean(value))))), [providerLabelKey, selectedProviderSlug, services]);
-  const matchedProviderServices = services.filter((service) => service.tags.some((tag) => providerTagValue(tag, providerLabelKey, selectedProviderSlug) === selectedProviderSlug)).length;
+  const taggedProviderServiceIds = useMemo(() => new Set(services
+    .filter((service) => service.tags.some((tag) => providerTagValue(tag, providerLabelKey, selectedProviderSlug) === selectedProviderSlug))
+    .map((service) => service.id)), [providerLabelKey, selectedProviderSlug, services]);
+  const confirmedScopeServiceIds = useMemo(() => {
+    const currentScopeKeys = new Set(topology.map((edge) => createProviderScopeAssignmentKey(
+      selectedProviderSlug,
+      serviceEntityIdForEdge(edge),
+      runtimeEntityIdForEdge(edge),
+    )));
+    return new Set(scopeSettings.assignments
+      .filter((assignment) => assignment.enabled && assignment.providerSlug === selectedProviderSlug && currentScopeKeys.has(assignment.assignmentKey))
+      .map((assignment) => assignment.serviceEntityId));
+  }, [scopeSettings.assignments, selectedProviderSlug, topology]);
+  const matchedProviderServices = services.filter((service) => taggedProviderServiceIds.has(service.id) || confirmedScopeServiceIds.has(service.id)).length;
+  const taggedProviderServices = taggedProviderServiceIds.size;
+  const confirmedScopeServices = services.filter((service) => confirmedScopeServiceIds.has(service.id)).length;
   const activeProviderCandidates = providerCandidates.filter((candidate) => candidate.providerSlug === selectedProviderSlug);
   const suggestedServiceCount = new Set(activeProviderCandidates
-    .filter((candidate) => services.some((service) => service.id === candidate.serviceId && !service.tags.some((tag) => providerTagValue(tag, providerLabelKey, selectedProviderSlug) === selectedProviderSlug)))
+    .filter((candidate) => services.some((service) => service.id === candidate.serviceId && !taggedProviderServiceIds.has(service.id) && !confirmedScopeServiceIds.has(service.id)))
     .map((candidate) => candidate.serviceId)).size;
 
   const telemetryLoading = servicesLoading || problemsLoading || logsLoading || spansLoading || metricsLoading;
@@ -174,8 +192,8 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
         : telemetrySignalsPresent
           ? { tone: "positive" as Tone, title: "Telemetry detected", detail: "Dynatrace has service entities or signals that can support an evidence review." }
           : { tone: "warning" as Tone, title: "Telemetry missing", detail: `No Problems, logs, spans, or service request series were detected in the last ${formatEvidenceLookback(lookbackHours)}.` };
-  const providerState = directoryLoading
-    ? { tone: "neutral" as Tone, title: "Checking provider identity", detail: `Loading the ${providerSlug} contract before evaluating tags.` }
+  const providerState = directoryLoading || scopeSettings.loading
+    ? { tone: "neutral" as Tone, title: "Checking provider scope", detail: `Loading the ${providerSlug} contract and confirmed service mappings.` }
     : !directoryData
       ? { tone: "warning" as Tone, title: "Directory unavailable", detail: directoryError?.message ?? "Load a provider contract before checking provider identity." }
       : telemetryLoading
@@ -186,13 +204,13 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
             ? { tone: "warning" as Tone, title: "Identify service first", detail: "The tenant has telemetry, but the affected service inventory is incomplete. Provider tagging cannot be evaluated yet." }
               : services.length === 0
               ? { tone: "warning" as Tone, title: "No service entities", detail: "There is no service inventory to tag. Fix instrumentation or entity access before identifying a provider." }
+              : matchedProviderServices > 0
+                ? { tone: "positive" as Tone, title: "Provider scope confirmed", detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? " is" : "s are"} identified by ${confirmedScopeServices > 0 ? `${confirmedScopeServices} scope mapping${confirmedScopeServices === 1 ? "" : "s"}` : ""}${confirmedScopeServices > 0 && taggedProviderServices > 0 ? " and " : ""}${taggedProviderServices > 0 ? `${taggedProviderServices} provider tag${taggedProviderServices === 1 ? "" : "s"}` : ""}. This still does not prove a provider outage.` }
               : providerLabels.length === 0
                 ? { tone: "warning" as Tone, title: "Provider tags missing", detail: suggestedServiceCount > 0 ? `Smartscape found ${suggestedServiceCount} ${directoryData.provider.name} service candidate${suggestedServiceCount === 1 ? "" : "s"}. Confirm each assignment in Setup.` : `Services exist, but no explicit provider tag was found. Review the services that depend on ${directoryData.provider.name} in Setup.` }
-                : matchedProviderServices > 0
-                  ? { tone: "positive" as Tone, title: "Provider identified", detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? "" : "s"} carry an explicit ${directoryData.provider.name} tag. This still does not prove a provider outage.` }
-                  : { tone: "warning" as Tone, title: "Provider identification needed", detail: `Provider tags were found (${providerLabels.slice(0, 3).join(", ")}), but none resolve to ${directoryData.provider.name}. Select the correct provider or update the Dynatrace tags.` };
+                : { tone: "warning" as Tone, title: "Provider identification needed", detail: `Provider tags were found (${providerLabels.slice(0, 3).join(", ")}), but none resolves to ${directoryData.provider.name}. Select the correct provider or update the Dynatrace tags.` };
 
-  const claimReadiness = telemetryLoading || directoryLoading
+  const claimReadiness = telemetryLoading || directoryLoading || scopeSettings.loading
     ? { tone: "neutral" as Tone, value: "Checking", detail: "Waiting for the evidence path to settle." }
     : telemetryError || !directoryData
       ? { tone: "warning" as Tone, value: "Blocked", detail: "Access or contract lookup must be repaired first." }
@@ -200,16 +218,16 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
         ? { tone: "warning" as Tone, value: "Needs telemetry", detail: "No recent signal supports an evidence review." }
         : services.length === 0
           ? { tone: "warning" as Tone, value: "Needs service boundary", detail: "No service entity is available for attribution." }
-          : providerLabels.length === 0
-            ? { tone: "warning" as Tone, value: "Needs setup", detail: "Identify which services depend on the selected provider." }
-            : matchedProviderServices === 0
-              ? { tone: "warning" as Tone, value: "Needs mapping", detail: "Detected provider tags do not match the selected contract." }
-              : activeProblems === 0
-                ? { tone: "neutral" as Tone, value: "No incident in scope", detail: "The provider is identified, but there is no active Problem in scope." }
-                : { tone: "positive" as Tone, value: "Candidate", detail: "A human review can compare the active Problem with the provider contract." };
+          : matchedProviderServices === 0
+            ? providerLabels.length === 0
+              ? { tone: "warning" as Tone, value: "Needs setup", detail: "Confirm which services depend on the selected provider." }
+              : { tone: "warning" as Tone, value: "Needs mapping", detail: "Detected provider tags do not match the selected contract." }
+            : activeProblems === 0
+              ? { tone: "neutral" as Tone, value: "No incident in scope", detail: "The provider is identified, but there is no active Problem in scope." }
+              : { tone: "positive" as Tone, value: "Candidate", detail: "A human review can compare the active Problem with the provider contract." };
 
   const providerName = directoryData?.provider.name ?? providerSlug;
-  const overviewAssessment = telemetryLoading || directoryLoading
+  const overviewAssessment = telemetryLoading || directoryLoading || scopeSettings.loading
     ? {
         title: "Checking this environment",
         detail: "Dynatrace telemetry and the selected provider contract are still loading.",
@@ -244,42 +262,42 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
                 action: "Review service access",
                 href: "/settings/watch",
               }
+            : matchedProviderServices > 0
+              ? activeProblems === 0
+                ? {
+                    title: "No incident requires provider review",
+                    detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? " matches" : "s match"} ${providerName}. No active Problems were found in the last ${formatEvidenceLookback(lookbackHours)}.`,
+                    action: "Review provider terms",
+                    href: "/directory",
+                  }
+                : {
+                    title: "Review the active Problem before considering a claim",
+                    detail: `${activeProblems} active Problem${activeProblems === 1 ? "" : "s"} and ${matchedProviderServices} provider-matched service${matchedProviderServices === 1 ? "" : "s"} require human review.`,
+                    action: "Review incident evidence",
+                    href: "/incidents",
+                  }
             : providerLabels.length === 0 && suggestedServiceCount > 0
               ? {
                   title: `Confirm ${suggestedServiceCount} ${providerName} service candidate${suggestedServiceCount === 1 ? "" : "s"}`,
-                  detail: `Smartscape links ${suggestedServiceCount === 1 ? "this service" : "these services"} to ${providerName} runtime metadata. Review the evidence before adding an explicit provider tag.`,
-                  action: "Review candidates",
+                  detail: `Smartscape links ${suggestedServiceCount === 1 ? "this service" : "these services"} to ${providerName} runtime metadata. Confirm the provider service before using the mapping in incident review.`,
+                  action: "Open scope map",
                   href: "/setup",
                 }
               : providerLabels.length === 0
               ? {
                   title: `Identify which services depend on ${providerName}`,
                   detail: `${services.length} service${services.length === 1 ? " is" : "s are"} visible, but no explicit provider tag was found.`,
-                  action: "Continue setup",
-                  href: "/setup",
+                  action: "Review service tags",
+                  href: "/setup?view=tags",
                 }
-              : matchedProviderServices === 0
-                ? {
-                    title: `Resolve provider tags to ${providerName}`,
-                    detail: `${providerLabels.length} provider tag${providerLabels.length === 1 ? " is" : "s are"} visible, but none resolves to the selected contract.`,
-                    action: "Resolve provider mapping",
-                    href: "/setup",
-                  }
-                : activeProblems === 0
-                  ? {
-                      title: "No incident requires provider review",
-                      detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? " matches" : "s match"} ${providerName}. No active Problems were found in the last ${formatEvidenceLookback(lookbackHours)}.`,
-                      action: "Review provider terms",
-                      href: "/directory",
-                    }
-                  : {
-                      title: "Review the active Problem before considering a claim",
-                      detail: `${activeProblems} active Problem${activeProblems === 1 ? "" : "s"} and ${matchedProviderServices} provider-matched service${matchedProviderServices === 1 ? "" : "s"} require human review.`,
-                      action: "Review incident evidence",
-                      href: "/incidents",
-                    };
+              : {
+                  title: `Resolve provider tags to ${providerName}`,
+                  detail: `${providerLabels.length} provider tag${providerLabels.length === 1 ? " is" : "s are"} visible, but none resolves to the selected contract.`,
+                  action: "Review service tags",
+                  href: "/setup?view=tags",
+                };
 
-  const setupStatus = telemetryLoading || directoryLoading || topologyQuery.isLoading
+  const setupStatus = telemetryLoading || directoryLoading || topologyQuery.isLoading || scopeSettings.loading
     ? "Checking setup"
     : telemetryError
       ? "Access incomplete"
@@ -300,8 +318,9 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     selectedProviderSlug,
     providerLabelKey,
     matchedProviderServices,
+    taggedProviderServices,
     providerCandidateServices: suggestedServiceCount,
-  }), [directoryData, directoryError, matchedProviderServices, problems, providerLabelKey, providerLabels, selectedProviderSlug, services, suggestedServiceCount, telemetryError, telemetrySignalsPresent]);
+  }), [directoryData, directoryError, matchedProviderServices, problems, providerLabelKey, providerLabels, selectedProviderSlug, services, suggestedServiceCount, taggedProviderServices, telemetryError, telemetrySignalsPresent]);
 
   const handleRefresh = () => {
     if (section === "provider-notices") {
@@ -365,9 +384,9 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
               />
               <OverviewFact
                 label="Services mapped"
-                value={servicesLoading ? "Checking" : `${matchedProviderServices} / ${services.length}`}
-                detail="explicit provider boundary"
-                tone={servicesLoading ? "neutral" : matchedProviderServices > 0 ? "positive" : "warning"}
+                value={servicesLoading || scopeSettings.loading ? "Checking" : `${matchedProviderServices} / ${services.length}`}
+                detail="confirmed scope or provider tag"
+                tone={servicesLoading || scopeSettings.loading ? "neutral" : matchedProviderServices > 0 ? "positive" : "warning"}
               />
               <OverviewFact
                 label="Incidents"
@@ -387,27 +406,27 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
         ) : section === "setup" ? (
           <Surface className="panel-card setup-panel">
             <div className="setup-heading">
-              <div><Heading level={2}>Setup</Heading><Paragraph>Complete the provider boundary once, then use Overview and Incidents for daily review.</Paragraph></div>
+              <div><Heading level={2}>Setup</Heading><Paragraph>Confirm each service scope in Smartscape. Add provider tags only when other Dynatrace workflows should reuse the boundary.</Paragraph></div>
               <StatusPill tone={claimReadiness.tone}>{setupStatus}</StatusPill>
             </div>
             <div className="evidence-ladder" role="list" aria-label="SLA Watch setup stages">
               <EvidenceStep number={1} title="Telemetry" detail={telemetryState.title} state={telemetryState.tone} />
               <EvidenceStep number={2} title="Services" detail={servicesLoading ? "Checking inventory" : `${services.length} detected`} state={services.length > 0 && !servicesLoading ? "positive" : telemetryLoading ? "neutral" : "warning"} />
-              <EvidenceStep number={3} title="Provider identity" detail={directoryLoading || topologyQuery.isLoading ? "Checking mapping" : matchedProviderServices > 0 ? `${matchedProviderServices} confirmed` : suggestedServiceCount > 0 ? `${suggestedServiceCount} candidate${suggestedServiceCount === 1 ? "" : "s"}` : "0 confirmed"} state={matchedProviderServices > 0 && !directoryLoading ? "positive" : providerState.tone} />
+              <EvidenceStep number={3} title="Provider scope" detail={directoryLoading || topologyQuery.isLoading || scopeSettings.loading ? "Checking mapping" : matchedProviderServices > 0 ? `${matchedProviderServices} confirmed` : suggestedServiceCount > 0 ? `${suggestedServiceCount} candidate${suggestedServiceCount === 1 ? "" : "s"}` : "0 confirmed"} state={matchedProviderServices > 0 && !directoryLoading ? "positive" : providerState.tone} />
               <EvidenceStep number={4} title="Contract" detail={directoryData ? `${providerName} loaded` : "Unavailable"} state={directoryData ? "positive" : "neutral"} />
             </div>
             <nav className="setup-view-tabs" aria-label="Setup views">
-              <Link className={setupView === "boundary" ? "setup-view-tab active" : "setup-view-tab"} to="/setup">Provider boundary</Link>
-              <Link className={setupView === "scope" ? "setup-view-tab active" : "setup-view-tab"} to="/setup?view=scope">Scope map</Link>
+              <Link className={setupView === "scope" ? "setup-view-tab active" : "setup-view-tab"} to="/setup">Scope map</Link>
+              <Link className={setupView === "tags" ? "setup-view-tab active" : "setup-view-tab"} to="/setup?view=tags">Service tags</Link>
             </nav>
             {telemetryError ? <div className="error-box setup-error">Telemetry scan incomplete. Check the current user's data access.</div> : null}
-            {setupView === "boundary" ? (
+            {setupView === "tags" ? (
               <div className="setup-content-grid">
                 <ProviderTagSetup services={services} providerName={providerName} providerSlug={selectedProviderSlug} providerTagKey={providerLabelKey} providerCandidates={activeProviderCandidates} topologyLoading={topologyQuery.isLoading || metricsLoading} topologyError={topologyQuery.error ?? metricsError ?? undefined} loading={servicesLoading || directoryLoading} onRefresh={() => refetchServices()} />
                 <SetupAdvisor recommendations={setupRecommendations} loading={telemetryLoading || directoryLoading} limitedContext={Boolean(telemetryError || (services.length === 0 && telemetrySignalsPresent))} />
               </div>
             ) : (
-              <ProviderScopeMap provider={directoryData} topology={topology} loading={topologyQuery.isLoading || directoryLoading} error={topologyQuery.error ?? directoryError ?? undefined} />
+              <ProviderScopeMap provider={directoryData} topology={topology} loading={topologyQuery.isLoading || directoryLoading} error={topologyQuery.error ?? directoryError ?? undefined} scopeSettings={scopeSettings} />
             )}
           </Surface>
         ) : section === "directory" ? (

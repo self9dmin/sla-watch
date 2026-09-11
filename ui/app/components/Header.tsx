@@ -135,7 +135,7 @@ export const Header = ({
               Close
             </button>
           </div>
-          <p>Use Setup to define the provider boundary, Overview to monitor the current state, Incidents to review Dynatrace Problems, and Provider notices to inspect provider-reported events separately.</p>
+          <p>Use Setup to confirm provider scope, Overview to monitor the current state, Incidents to review Dynatrace Problems, and Provider notices to inspect provider-reported events separately.</p>
           <section>
             <h3>1. Set up</h3>
             <p>Select a provider, verify telemetry, and explicitly map the services that depend on it.</p>

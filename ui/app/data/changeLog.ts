@@ -7,8 +7,21 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.36",
+    version: "0.0.37",
     label: "Current release",
+    summary: "Made provider connection setup explicit, optional, and verifiable.",
+    details: [
+      "Separated automatic public SLA terms and Dynatrace evidence from optional provider-reported incident connections in first-run onboarding.",
+      "Added a direct onboarding path to Provider connections for AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies.",
+      "Required a successful connection test before a new or access-modified provider connection can be saved.",
+      "Made the Smartscape scope map the Setup landing view and kept reusable provider tags in a secondary Service tags view.",
+      "Clarified External requests, Credential Vault, least-privilege IAM, multiple-scope, and credential-removal responsibilities.",
+      "Shortened the responder walkthrough and stopped it from opening automatically after onboarding or Finish later.",
+    ],
+  },
+  {
+    version: "0.0.36",
+    label: "Previous release",
     summary: "Added account-specific incident sources for four core cloud providers.",
     details: [
       "Established AWS, Microsoft Azure, Google Cloud, and OCI as peer core providers. AWS is only the initial focused view for a fresh workspace.",

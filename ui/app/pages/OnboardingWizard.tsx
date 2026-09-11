@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
-import { Heading, Paragraph, Text } from "@dynatrace/strato-components/typography";
+import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
+import { CONNECTED_PROVIDER_OPTIONS } from "../data/providerConnections";
 import { providerDisplayName } from "../data/providers";
 
 const PROVIDER_PRESETS = [
@@ -8,22 +9,20 @@ const PROVIDER_PRESETS = [
   { slug: "azure", name: "Microsoft Azure", note: "Cloud infrastructure and managed services" },
   { slug: "gcp", name: "Google Cloud", note: "Cloud infrastructure and managed services" },
   { slug: "oci", name: "Oracle Cloud Infrastructure", note: "Cloud infrastructure and managed services" },
-  { slug: "openai", name: "OpenAI", note: "AI platform and API services" },
-  { slug: "anthropic", name: "Anthropic", note: "Claude platform and API services" },
-  { slug: "elevenlabs", name: "ElevenLabs", note: "Voice AI platform and API services" },
-  { slug: "stripe", name: "Stripe", note: "Payments and financial infrastructure" },
 ];
+
+type OnboardingDestination = "/setup" | "/settings/provider-connections";
 
 type OnboardingWizardProps = {
   initialProvider: string;
   initialProviders: string[];
-  onComplete: (providerSlugs: string[], providerSlug: string) => Promise<void>;
+  onComplete: (providerSlugs: string[], providerSlug: string, destination: OnboardingDestination) => Promise<void>;
   onSkip: () => Promise<void>;
 };
 
 const StepIndicator = ({ step }: { step: number }) => (
-  <div className="onboarding-steps" aria-label={`Setup step ${step + 1} of 4`}>
-    {["Welcome", "Provider", "Evidence", "Ready"].map((label, index) => (
+  <div className="onboarding-steps" aria-label={`Setup step ${step + 1} of 5`}>
+    {["Start", "Providers", "Connections", "Evidence", "Next"].map((label, index) => (
       <div className={`onboarding-step ${index <= step ? "complete" : ""} ${index === step ? "active" : ""}`} key={label}>
         <span>{index < step ? "✓" : index + 1}</span>
         <small>{label}</small>
@@ -37,10 +36,11 @@ export const OnboardingWizard = ({ initialProvider, initialProviders, onComplete
   const [providerSlug, setProviderSlug] = useState(initialProvider || "aws");
   const [providerSlugs, setProviderSlugs] = useState(initialProviders.length > 0 ? initialProviders : [initialProvider || "aws"]);
   const [saving, setSaving] = useState(false);
+  const connectionOptions = CONNECTED_PROVIDER_OPTIONS.filter((provider) => providerSlugs.includes(provider.slug));
 
-  const complete = async () => {
+  const complete = async (destination: OnboardingDestination) => {
     setSaving(true);
-    await onComplete(providerSlugs, providerSlug.trim().toLowerCase());
+    await onComplete(providerSlugs, providerSlug.trim().toLowerCase(), destination);
   };
 
   const toggleProvider = (slug: string) => {
@@ -75,18 +75,17 @@ export const OnboardingWizard = ({ initialProvider, initialProviders, onComplete
         {step === 0 ? (
           <div className="onboarding-hero">
             <div>
-              <Text className="eyebrow">Initial setup</Text>
-              <Heading level={1} id="onboarding-title">Review provider evidence for this environment.</Heading>
-              <Paragraph>Select a provider contract and define the evidence boundary used by the monitor. The monitor separates service symptoms, provider identity, and contract eligibility.</Paragraph>
+              <Heading level={1} id="onboarding-title">Set up provider SLA review for this environment.</Heading>
+              <Paragraph>SLA Watch loads public contract terms automatically, compares them with Dynatrace evidence, and keeps optional provider-reported incidents separate from observed service symptoms.</Paragraph>
             </div>
             <div className="onboarding-proof-grid" aria-label="Checks performed by SLA Watch">
-              <div><span className="proof-index">01</span><strong>Telemetry</strong><small>Is there enough live signal to investigate?</small></div>
-              <div><span className="proof-index">02</span><strong>Identity</strong><small>Can we identify the provider boundary?</small></div>
-              <div><span className="proof-index">03</span><strong>Contract</strong><small>Does the selected contract include the service?</small></div>
+              <div><strong>Public SLA terms</strong><small>No sla.directory credential is required.</small></div>
+              <div><strong>Dynatrace evidence</strong><small>Telemetry and Smartscape remain the tenant evidence source.</small></div>
+              <div><strong>Provider notices</strong><small>Cloud incident connections are optional and read-only.</small></div>
             </div>
             <div className="onboarding-footer-row">
-              <span className="muted-copy">No changes are made to your tenant.</span>
-              <Button variant="emphasized" onClick={() => setStep(1)}>Configure monitor</Button>
+              <span className="muted-copy">Provider choices are saved as SLA Watch settings. This setup does not change cloud resources, telemetry, tags, or SLAs.</span>
+              <Button variant="emphasized" onClick={() => setStep(1)}>Start setup</Button>
             </div>
           </div>
         ) : null}
@@ -94,9 +93,8 @@ export const OnboardingWizard = ({ initialProvider, initialProviders, onComplete
         {step === 1 ? (
           <div className="onboarding-panel">
             <div className="onboarding-title-block">
-              <Text className="eyebrow">Step 2 · Contract source</Text>
-              <Heading level={2}>Select the provider contracts.</Heading>
-              <Paragraph>Select every provider that belongs in the monitor. The most recently selected provider opens first, and you can switch focused views at any time.</Paragraph>
+              <Heading level={2}>Choose the cloud providers to monitor.</Heading>
+              <Paragraph>Select every hyperscaler used by this environment. The most recently selected provider opens first. Other sla.directory providers can be added later from Monitor configuration.</Paragraph>
             </div>
             <div className="provider-preset-grid">
               {PROVIDER_PRESETS.map((provider) => (
@@ -115,32 +113,52 @@ export const OnboardingWizard = ({ initialProvider, initialProviders, onComplete
         {step === 2 ? (
           <div className="onboarding-panel">
             <div className="onboarding-title-block">
-              <Text className="eyebrow">Step 3 · Evidence model</Text>
+              <Heading level={2}>Add provider incident sources now or later.</Heading>
+              <Paragraph>Each connection reads notices for one account, subscription, project, or tenancy. Create the provider credential in Dynatrace Credential Vault, then enter only its record ID under Provider connections.</Paragraph>
+            </div>
+            {connectionOptions.length > 0 ? (
+              <div className="onboarding-connection-list" aria-label="Available provider incident connections">
+                {connectionOptions.map((provider) => (
+                  <div className="onboarding-connection-row" key={provider.slug}>
+                    <span className="provider-preset-dot">{provider.slug.slice(0, 2).toUpperCase()}</span>
+                    <span><strong>{provider.sourceName}</strong><small>{provider.scopeSummary}. Add more than one {provider.scopeNoun} when required.</small></span>
+                    <small>{provider.fallbackSummary}</small>
+                  </div>
+                ))}
+              </div>
+            ) : <div className="onboarding-connection-empty"><strong>No account-specific adapter applies to the current selection.</strong><span>You can continue with public SLA terms and Dynatrace evidence.</span></div>}
+            <div className="onboarding-connection-boundary"><strong>Credential boundary</strong><span>SLA Watch stores the provider scope and Credential Vault record ID. It cannot create, display, rotate, or delete provider credentials.</span></div>
+            <div className="onboarding-actions"><Button onClick={() => setStep(1)}>Back</Button><Button variant="emphasized" onClick={() => setStep(3)}>Continue</Button></div>
+          </div>
+        ) : null}
+
+        {step === 3 ? (
+          <div className="onboarding-panel">
+            <div className="onboarding-title-block">
               <Heading level={2}>Provider attribution requires evidence.</Heading>
               <Paragraph>The monitor evaluates provider attribution in stages. Review each stage before treating a service symptom as provider-related.</Paragraph>
             </div>
             <div className="evidence-ladder">
               <div className="evidence-ladder-row"><span className="evidence-state state-neutral">1</span><div><strong>Telemetry exists</strong><small>Problems, logs, spans, or service request signals are present.</small></div></div>
               <div className="evidence-ladder-row"><span className="evidence-state state-neutral">2</span><div><strong>Service is in scope</strong><small>The affected entity is visible in the tenant inventory.</small></div></div>
-              <div className="evidence-ladder-row"><span className="evidence-state state-warning">3</span><div><strong>Provider boundary is known</strong><small>An explicit Dynatrace tag identifies which provider the service depends on.</small></div></div>
+              <div className="evidence-ladder-row"><span className="evidence-state state-warning">3</span><div><strong>Provider scope is confirmed</strong><small>A confirmed Smartscape mapping or explicit Dynatrace tag identifies which provider the service depends on.</small></div></div>
               <div className="evidence-ladder-row"><span className="evidence-state state-positive">4</span><div><strong>Contract record is available</strong><small>A matching contract supports review but does not establish provider fault or credit eligibility.</small></div></div>
             </div>
-            <div className="onboarding-actions"><Button onClick={() => setStep(1)}>Back</Button><Button variant="emphasized" onClick={() => setStep(3)}>I understand</Button></div>
+            <div className="onboarding-actions"><Button onClick={() => setStep(2)}>Back</Button><Button variant="emphasized" onClick={() => setStep(4)}>Continue</Button></div>
           </div>
         ) : null}
 
-        {step === 3 ? (
+        {step === 4 ? (
           <div className="onboarding-panel onboarding-ready">
             <div className="ready-check">✓</div>
-            <Text className="eyebrow">Step 4 · Review</Text>
-            <Heading level={2}>Monitor configuration is complete.</Heading>
-            <Paragraph>The monitor will load the selected contracts, scan the last 24 hours of Dynatrace evidence, and report whether the next action is telemetry setup, provider identification, or contract review.</Paragraph>
-            <div className="ready-summary"><span>Provider contracts<strong>{providerSlugs.map(providerDisplayName).join(", ")}</strong></span><span>Evidence window<strong>Last 24 hours</strong></span><span>Opens with<strong>{providerDisplayName(providerSlug)}</strong></span></div>
-            <div className="onboarding-actions"><Button onClick={() => setStep(2)}>Back</Button><Button variant="emphasized" disabled={saving} onClick={() => void complete()}>{saving ? "Opening monitor" : "Open SLA Watch"}</Button></div>
+            <Heading level={2}>Choose the next setup task.</Heading>
+            <Paragraph>Start with Scope map to confirm which Dynatrace services use each provider. Provider incident connections are optional and can be configured now or later.</Paragraph>
+            <div className="ready-summary"><span>Providers monitored<strong>{providerSlugs.map(providerDisplayName).join(", ")}</strong></span><span>Opens with<strong>{providerDisplayName(providerSlug)}</strong></span><span>Incident connections<strong>{connectionOptions.length} available to configure</strong></span></div>
+            <div className="onboarding-actions"><Button onClick={() => setStep(3)}>Back</Button>{connectionOptions.length > 0 ? <Button disabled={saving} onClick={() => void complete("/settings/provider-connections")}>{saving ? "Saving setup" : "Configure provider connections"}</Button> : null}<Button variant="emphasized" disabled={saving} onClick={() => void complete("/setup")}>{saving ? "Saving setup" : "Open Scope map"}</Button></div>
           </div>
         ) : null}
 
-        <button type="button" className="onboarding-skip" disabled={saving} onClick={() => void skip()}>Skip setup</button>
+        <button type="button" className="onboarding-skip" disabled={saving} onClick={() => void skip()}>Finish later and open Monitor</button>
       </section>
     </main>
   );

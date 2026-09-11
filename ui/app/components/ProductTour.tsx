@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
-import { isCommunityLive } from "../data/externalLinks";
 
 type TourStep = { target: string; title: string; body: string };
 
@@ -13,7 +12,12 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="setup"]',
     title: "Complete provider setup",
-    body: "Setup verifies telemetry, service inventory, provider tags, and contract access. Review services here before adding a provider tag.",
+    body: "Setup opens on the Smartscape scope map. Confirm the provider service for each exact runtime relationship, then use Service tags only when other Dynatrace workflows should reuse the boundary.",
+  },
+  {
+    target: '[data-tour="provider-notices"]',
+    title: "Keep provider notices separate",
+    body: "Provider notices shows optional AWS account, Azure subscription, Google Cloud project, or OCI tenancy events. Configure these sources under Settings. Public feeds are labeled separately.",
   },
   {
     target: '[data-tour="provider"]',
@@ -27,23 +31,8 @@ const STEPS: TourStep[] = [
   },
   {
     target: '[data-tour="settings"]',
-    title: "Configure the evidence boundary",
-    body: "Settings controls monitored providers, the active provider, tag key, lookback window, theme, and walkthrough state. Monitor configuration is shared, while theme and walkthrough state stay personal.",
-  },
-  {
-    target: '[data-tour="changes"]',
-    title: "Review the change log",
-    body: "The change log lists versioned application updates. It does not record tenant changes or alter your Dynatrace data.",
-  },
-  {
-    target: '[data-tour="community"]',
-    title: isCommunityLive() ? "Find community support" : "Community support is coming soon",
-    body: isCommunityLive() ? "Open the Dynatrace Community profile for questions, support, and issue discussion outside the app." : "The Community destination remains disabled until SLA Watch is ready for public launch.",
-  },
-  {
-    target: '[data-tour="tour"]',
-    title: "Review attribution guidance",
-    body: "Use the walkthrough icon any time. The help guide explains the difference between a provider candidate and evidence of provider fault.",
+    title: "Configure the workspace",
+    body: "Settings controls monitored providers, optional provider incident connections, SLA overrides, the tag key, and the lookback window. Provider connections can be added for more than one account scope.",
   },
 ];
 

@@ -1,6 +1,9 @@
 import {
+  CONNECTED_PROVIDER_OPTIONS,
   createProviderConnectionKey,
   normalizeProviderConnection,
+  providerConnectionVerificationKey,
+  supportsProviderConnection,
   validateProviderConnection,
 } from "../ui/app/data/providerConnections";
 
@@ -29,6 +32,22 @@ describe("provider connection settings", () => {
 
   it("creates a stable per-project key", () => {
     expect(createProviderConnectionKey("GCP", "Example-Project-123")).toBe("gcp|example-project-123");
+  });
+
+  it("keeps the four cloud connection types as peer options", () => {
+    expect(CONNECTED_PROVIDER_OPTIONS.map((provider) => provider.slug)).toEqual(["aws", "azure", "gcp", "oci"]);
+    expect(CONNECTED_PROVIDER_OPTIONS.map((provider) => provider.scopeNoun)).toEqual(["account", "subscription", "project", "tenancy"]);
+    expect(supportsProviderConnection("oci")).toBe(true);
+    expect(supportsProviderConnection("openai")).toBe(false);
+  });
+
+  it("requires a new connection test when provider access fields change", () => {
+    const renamed = { ...valid, displayName: "Renamed", enabled: false };
+    expect(providerConnectionVerificationKey(valid)).toBe("gcp|example-project-123||CREDENTIALS_VAULT-0123456789ABCDEF");
+    expect(providerConnectionVerificationKey(renamed)).toBe(providerConnectionVerificationKey(valid));
+    expect(providerConnectionVerificationKey({ ...valid, credentialId: "credentials_vault-fedcba9876543210" })).not.toBe(
+      providerConnectionVerificationKey(valid),
+    );
   });
 
   it("normalizes and validates an OCI tenancy connection", () => {

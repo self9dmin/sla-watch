@@ -38,7 +38,7 @@ Setup -> Smartscape service-to-runtime scope -> provider-service suggestion -> o
 Settings -> explicit SLA terms and evidence targets -> validation -> App Settings V2
          -> shared contract override using exact service, runtime, or location identifiers
 
-Settings -> provider account scope and Credential Vault ID -> validation -> App Settings V2
+Settings -> provider account scope and Credential Vault ID -> successful connection test -> App Settings V2
          -> shared provider connection metadata, never the provider secret
 ```
 

@@ -77,3 +77,5 @@ export const useProviderScopeAssignments = () => {
     refetch: query.refetch,
   };
 };
+
+export type ProviderScopeAssignmentsState = ReturnType<typeof useProviderScopeAssignments>;
