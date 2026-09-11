@@ -187,8 +187,8 @@ export const Header = ({
           <section>
             <h3>1. Confirm coverage</h3>
             <p>
-              Start with Scope map for Smartscape relationships. Use Manual
-              coverage only for services without a usable runtime relationship.
+              Start in Coverage. Review Smartscape recommendations and services
+              without runtime context in the same worklist.
             </p>
           </section>
           <section>

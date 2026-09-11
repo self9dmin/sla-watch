@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.44
+
+- Combined Smartscape-backed scopes and services without runtime context into one Coverage worklist.
+- Kept one terms panel for confirming, updating, or removing either mapping type and moved items needing review ahead of confirmed items.
+- Preserved source tags as read-only evidence and kept all mapping changes inside SLA Review.
+
 ## 0.0.43
 
 - Focused Coverage checks on required and recommended work instead of counting optional feature advice as open setup.

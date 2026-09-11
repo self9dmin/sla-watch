@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.43",
+    version: "0.0.44",
     label: "Current release",
+    summary: "Combined provider coverage into one review path.",
+    details: [
+      "Placed Smartscape-backed scopes and services without runtime context in one Coverage worklist.",
+      "Kept one terms panel for confirming, updating, or removing either mapping type, with items needing review shown first.",
+      "Preserved source tags as read-only evidence and kept mapping changes inside SLA Review.",
+    ],
+  },
+  {
+    version: "0.0.43",
+    label: "Previous release",
     summary: "Focused Coverage on the work that affects incident review.",
     details: [
       "Stopped counting optional SLO and cross-product tag advice as open Coverage work.",

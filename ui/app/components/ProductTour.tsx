@@ -12,7 +12,7 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="coverage"]',
     title: "Confirm provider coverage",
-    body: "Coverage is the starting point. Use Scope map for Smartscape relationships and Manual coverage for services without a usable runtime relationship.",
+    body: "Coverage is the starting point. Smartscape recommendations and services without runtime context share one review list.",
   },
   {
     target: '[data-tour="incidents"]',

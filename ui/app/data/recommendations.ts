@@ -132,8 +132,8 @@ export const buildSetupRecommendations = ({
       evidence: providerCandidateServices > 0
         ? `${providerCandidateServices} topology candidate${providerCandidateServices === 1 ? "" : "s"}; ${services.length - providerCandidateServices} service${services.length - providerCandidateServices === 1 ? " has" : "s have"} no matching ${directoryData.provider.name} runtime evidence.`
         : `${services.length} service${services.length === 1 ? "" : "s"} returned, but none has confirmed coverage or a matching source tag.`,
-      action: providerCandidateServices > 0 ? "Open scope map" : "Open manual coverage",
-      href: providerCandidateServices > 0 ? "/" : "/?view=tags&review=provider#provider-service-tags",
+      action: "Review service coverage",
+      href: "/#service-coverage-list",
     });
   } else if (directoryData && providerLabels.length > 0 && matchedProviderServices === 0) {
     add(recommendations, {
