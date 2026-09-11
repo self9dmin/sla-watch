@@ -1,6 +1,24 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.41`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.42`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.42 verified scenarios
+
+The `0.0.42` artifact from source commit `ab0a671` was deployed to the designated Dynatrace target environment on 2026-09-11 and exercised through the installed application. One exact, non-confidential service mapping and one evidence validation were created solely to verify the full operating loop. The validation was reset and the mapping was removed. Reload checks confirmed that neither temporary record remained. No Dynatrace entity metadata, provider credential, Credential Vault record, custom terms record, or cloud resource was created or changed. Personal theme state was switched to light for visual verification and restored to dark.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.42` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `ab0a671` |
+| Release gate | Type checks, lint, 18 test suites with 103 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24 | `npm run verify:release`; production dependency audit reported zero vulnerabilities; [GitHub Actions run 34561366779](https://github.com/self9dmin/sla-watch/actions/runs/34561366779) |
+| App-owned manual coverage | Coverage created an exact AWS mapping for `SERVICE-AA147ED7BD41422D` without modifying source tags or any Dynatrace entity. The mapped count increased and the service was labeled `Covered in app` | Installed production Coverage interaction |
+| Coverage persistence | Reloading retained the exact service mapping and its provider-level terms | Installed production reload smoke |
+| Candidate reuse | Evidence reused that mapping for Problem `P-260933`, identified `wayfinder-engage-api-inter` as the affected service, and stated that one operator-confirmed scope mapping qualified the candidate | Installed production Evidence interaction |
+| Decision lifecycle | Validate required acknowledgement, persisted after reload, and exposed Reset decision. Reset returned the candidate to Needs review and persisted | Installed production Evidence interaction and reload smoke |
+| Reversible cleanup | The exact temporary mapping was removed. Reload returned Manual coverage to zero app mappings, and Evidence returned no candidates or saved decision | Installed production Coverage and Evidence cleanup smoke |
+| Conservative boundary | After cleanup, eleven observed Problems produced no candidate because none overlapped the remaining confirmed AWS scope. The app did not infer provider responsibility from service names | Installed production Evidence smoke |
+| Live inventory behavior | The tenant changed from eight to seven services and from sixteen to eleven observed Problems during acceptance. The app refreshed without retaining the removed test boundary; final AWS state showed two of seven services covered by four pre-existing confirmed Smartscape rows and zero of five manually covered | Installed production refresh and reload smoke |
+| Desktop fit and themes | Scope map, Manual coverage, and Evidence remained compact and readable in light and dark themes without unnecessary document scrolling | Installed production visual smoke; dark theme restored after acceptance |
+| Removed entity-write dependency | Manual coverage is stored in the app's settings and the manifest no longer requests entity-write permission. Source provider tags remain read-only evidence | Manifest inspection, release analysis, and installed production copy |
 
 ## 0.0.41 verified scenarios
 
@@ -173,9 +191,10 @@ The `0.0.30` artifact from source commit `c8d3b6f` was deployed to the designate
 ## Not proven by this record
 
 - A separate least-privilege user for every declared telemetry and state scope.
-- A provider-tag write or undo against a disposable service under granted, denied, or management-zone-limited permissions.
+- Manual coverage and evidence-decision behavior under denied, read-only, or management-zone-limited permissions.
 - Automated Playwright coverage against a disposable authenticated tenant.
-- A confirmed scope mapping carried from Setup into an incident against a disposable target-environment dataset.
+- Manual coverage update behavior and evidence dismissal with a non-confidential note.
 - Target-environment outbound-host access for every optional public provider-status adapter.
+- Live customer-scoped AWS, Azure, Google Cloud, and OCI connections using disposable least-privilege identities.
 - Automated credit eligibility or provider-side approval.
 - Dynatrace Hub listing approval, standard verification, or code signing.
