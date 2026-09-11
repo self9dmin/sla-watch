@@ -7,6 +7,7 @@
 - Reduced global topology to host, cluster, and provider-native anchors while retaining incident-scoped topology for exact affected service IDs.
 - Added search, 50-row paging, aggregate inventory checks, and an explicit incomplete state so bounded data is never presented as complete coverage.
 - Reused observed topology in Incidents and Evidence while keeping saved mappings as exact operator overrides and preserving the provider-fault and credit boundaries.
+- Limited the active-provider list to providers detected in Dynatrace or explicitly added through a mapping, incident connection, or workspace setting.
 
 ## 0.0.44
 

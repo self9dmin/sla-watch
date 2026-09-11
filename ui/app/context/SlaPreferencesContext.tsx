@@ -12,7 +12,7 @@ import {
 } from "../types";
 import { createStateExpiration } from "../data/stateExpiration";
 import { isEvidenceLookbackHours } from "../data/lookback";
-import { normalizeProviderSlug, normalizeProviderSlugs } from "../data/providers";
+import { normalizeProviderSlug, normalizeProviderSlugs, sortProviderSlugs } from "../data/providers";
 
 const USER_STATE_KEY = "sla.user.v1";
 const WORKSPACE_STATE_KEY = "sla.workspace.v1";
@@ -23,10 +23,10 @@ const LEGACY_LOCAL_KEY = "sla.preferences.v1.local";
 
 type PreferencesPatch = Partial<SlaPreferences>;
 type UserPreferencesState = Pick<SlaPreferences, "theme" | "onboardingComplete" | "tourCompleted">;
-type WorkspacePreferencesState = Pick<SlaPreferences, "providerSlugs" | "providerSlug" | "providerLabelKey" | "lookbackHours">;
+type WorkspacePreferencesState = Pick<SlaPreferences, "providerSlugs" | "manualProviderSlugs" | "providerSlug" | "providerLabelKey" | "lookbackHours">;
 
 const USER_FIELDS: ReadonlyArray<keyof UserPreferencesState> = ["theme", "onboardingComplete", "tourCompleted"];
-const WORKSPACE_FIELDS: ReadonlyArray<keyof WorkspacePreferencesState> = ["providerSlugs", "providerSlug", "providerLabelKey", "lookbackHours"];
+const WORKSPACE_FIELDS: ReadonlyArray<keyof WorkspacePreferencesState> = ["providerSlugs", "manualProviderSlugs", "providerSlug", "providerLabelKey", "lookbackHours"];
 
 export interface SlaPreferencesContextValue {
   preferences: SlaPreferences;
@@ -48,12 +48,16 @@ const normalizePreferences = (value: unknown): SlaPreferences => {
   const item = value as Record<string, unknown>;
   const requestedActiveProvider = normalizeProviderSlug(item.providerSlug) ?? DEFAULT_SLA_PREFERENCES.providerSlug;
   const providerSlugs = normalizeProviderSlugs(item.providerSlugs, DEFAULT_SLA_PREFERENCES.providerSlugs);
+  const manualProviderSlugs = sortProviderSlugs(
+    normalizeProviderSlugs(item.manualProviderSlugs, []),
+  );
   const monitoredProviders = providerSlugs.includes(requestedActiveProvider)
     ? providerSlugs
     : [...providerSlugs, requestedActiveProvider].slice(0, 12);
   return {
     theme: isTheme(item.theme) ? item.theme : DEFAULT_SLA_PREFERENCES.theme,
     providerSlugs: monitoredProviders,
+    manualProviderSlugs,
     providerSlug: requestedActiveProvider,
     providerLabelKey: stringOr(item.providerLabelKey, DEFAULT_SLA_PREFERENCES.providerLabelKey),
     lookbackHours: isEvidenceLookbackHours(item.lookbackHours) ? item.lookbackHours : DEFAULT_SLA_PREFERENCES.lookbackHours,
@@ -98,6 +102,7 @@ const writeLocalState = (value: SlaPreferences): void => {
     };
     const workspace: WorkspacePreferencesState = {
       providerSlugs: value.providerSlugs,
+      manualProviderSlugs: value.manualProviderSlugs,
       providerSlug: value.providerSlug,
       providerLabelKey: value.providerLabelKey,
       lookbackHours: value.lookbackHours,
@@ -177,6 +182,7 @@ export const SlaPreferencesProvider = ({ children }: { children: React.ReactNode
               body: {
                 value: JSON.stringify({
                   providerSlugs: nextPreferences.providerSlugs,
+                  manualProviderSlugs: nextPreferences.manualProviderSlugs,
                   providerSlug: nextPreferences.providerSlug,
                   providerLabelKey: nextPreferences.providerLabelKey,
                   lookbackHours: nextPreferences.lookbackHours,

@@ -8,8 +8,8 @@ SLA Review is a Dynatrace AppEngine app for evidence-first provider attribution.
 - Reads Davis Problems, logs, spans, and service-request telemetry for a selectable 24-hour to 90-day window.
 - Retrieves provider and service contract data from the versioned `sla.directory` JSON API through an AppEngine function.
 - Presents the active provider's published terms, credit policy, claim process, exclusions, service catalog, support plans, support-response boundary, source metadata, and tenant overrides in one read-only Directory workspace.
-- Treats AWS, Microsoft Azure, Google Cloud, and Oracle Cloud Infrastructure as four peer cloud providers. A fresh workspace monitors all four and opens AWS first only as the initial focused view.
-- Monitors more than one provider at a time and keeps the active provider as a focused view rather than a tenant-wide replacement.
+- Treats AWS, Microsoft Azure, Google Cloud, and Oracle Cloud Infrastructure as four peer cloud providers. The active list is limited to providers evidenced by Dynatrace or explicitly added by an administrator.
+- Monitors more than one relevant provider at a time. Smartscape runtime metadata, cloud dimensions, source-owned provider tags, saved scope mappings, enabled incident connections, and manual settings can place a provider in scope.
 - Lets administrators add multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies for customer-scoped provider evidence. Credentials remain in Dynatrace Credential Vault.
 - Reads credential-free public status for Google Cloud and OCI, plus optional OpenAI, Anthropic, and ElevenLabs sources. Public records remain explicitly non-customer-specific.
 - Opens on a compact Coverage workspace with provider, service, incident, and filing facts above an exception-first worklist.
@@ -40,7 +40,7 @@ The runtime data path does not require an MCP server or a user-supplied `sla.dir
 ## First-run setup
 
 1. Install SLA Review and open it from the Dynatrace Apps page.
-2. Use onboarding to choose the providers monitored by the workspace. A fresh workspace includes AWS, Azure, GCP, and OCI, with AWS only as the initial focused view.
+2. Use onboarding to confirm the providers detected from this environment. Add a provider manually only when the dependency is not visible in Dynatrace. AWS, Azure, GCP, and OCI remain available as peer options.
 3. Open **Coverage**. Review only ambiguous or unresolved provider evidence. Provider-native matches are already available under Covered, while All loaded supports intentional manual mapping. Existing source tags remain read-only evidence.
 4. Optionally open **Settings > Provider connections**. For each account, subscription, project, or tenancy, create a least-privilege provider identity and store its secret in Dynatrace Credential Vault. SLA Review receives only the credential record ID.
 5. Add the exact provider hosts to Dynatrace External requests, test the connection, and save it only after verification succeeds. A provider connection does not assign services or prove provider fault.

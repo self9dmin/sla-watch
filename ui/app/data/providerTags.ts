@@ -1,3 +1,5 @@
+import { canonicalProviderSlug, sortProviderSlugs } from "./providers";
+
 const DEFAULT_PROVIDER_KEYS = ["provider", "vendor", "cloud.provider"] as const;
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -16,4 +18,10 @@ export const providerTagValue = (tag: string, configuredKey: string, expectedPro
 
 export const providerTagValues = (tags: string[], configuredKey: string, expectedProvider?: string): string[] => (
   Array.from(new Set(tags.map((tag) => providerTagValue(tag, configuredKey, expectedProvider)).filter((value): value is string => Boolean(value))))
+);
+
+export const detectedProviderTagSlugs = (tagGroups: string[][], configuredKey: string): string[] => sortProviderSlugs(
+  tagGroups.flatMap((tags) => providerTagValues(tags, configuredKey))
+    .map(canonicalProviderSlug)
+    .filter((value): value is string => Boolean(value)),
 );

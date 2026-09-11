@@ -12,9 +12,10 @@ import { createOverrideKey } from "../data/contractOverrides";
 import { mergeServiceInventory } from "../data/providerAttribution";
 import { CONNECTED_PROVIDER_OPTIONS, createProviderConnectionKey, providerConnectionScopeId, providerConnectionScopeLabel, providerConnectionVerificationKey, validateProviderConnection, type ConnectedProvider } from "../data/providerConnections";
 import { EVIDENCE_LOOKBACK_OPTIONS } from "../data/lookback";
+import { detectedProviderTagSlugs } from "../data/providerTags";
 import { createServiceMetricsQuery, SERVICES_QUERY, SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
 import { detectedProviderSlugs, parseServiceCloudContexts, parseSmartscapeScopeEdges } from "../data/topology";
-import { normalizeProviderSlug, PROVIDER_CATALOG, providerDetail, providerDisplayName } from "../data/providers";
+import { canonicalProviderSlug, PROVIDER_CATALOG, providerDetail, providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
 import type { AwsProviderNoticesResponse, AzureProviderNoticesResponse, ContractOverrideValue, ContractScopeKind, EvidenceLookbackHours, GcpProviderNoticesResponse, OciProviderNoticesResponse, ProviderConnectionValue, ServiceRecord, SlaProviderResponse, SlaThemePreference } from "../types";
 
 const SETUP_LINKS = [
@@ -63,7 +64,7 @@ const recordText = (value: unknown, fallback: string): string => typeof value ==
 
 const WatchSettings = () => {
   const { preferences, updatePreferences } = useSlaPreferences();
-  const [providerSlugs, setProviderSlugs] = useState(preferences.providerSlugs);
+  const [manualProviderSlugs, setManualProviderSlugs] = useState(preferences.manualProviderSlugs);
   const [providerSlug, setProviderSlug] = useState(preferences.providerSlug);
   const [providerLabelKey, setProviderLabelKey] = useState(preferences.providerLabelKey);
   const [lookbackHours, setLookbackHours] = useState<EvidenceLookbackHours>(preferences.lookbackHours);
@@ -74,31 +75,43 @@ const WatchSettings = () => {
   const serviceCloudQuery = useDql({ query: serviceCloudQueryText });
   const topology = useMemo(() => parseSmartscapeScopeEdges(topologyQuery.data), [topologyQuery.data]);
   const serviceCloudContexts = useMemo(() => parseServiceCloudContexts(serviceCloudQuery.data), [serviceCloudQuery.data]);
-  const detectedProviders = useMemo(() => detectedProviderSlugs([...topology, ...serviceCloudContexts]), [serviceCloudContexts, topology]);
+  const providerEvidence = useMemo(() => [...topology, ...serviceCloudContexts], [serviceCloudContexts, topology]);
+  const detectedProviders = useMemo(() => resolveEnvironmentProviderSlugs({
+    detected: detectedProviderSlugs(providerEvidence),
+    tagged: detectedProviderTagSlugs(providerEvidence.map((edge) => edge.serviceTags), providerLabelKey),
+  }), [providerEvidence, providerLabelKey]);
+  const enabledProviderSlugs = useMemo(() => resolveEnvironmentProviderSlugs({
+    detected: detectedProviders,
+    manual: manualProviderSlugs,
+    fallback: providerSlug,
+  }), [detectedProviders, manualProviderSlugs, providerSlug]);
   const providerOptions = useMemo(() => Array.from(new Set([
     ...PROVIDER_CATALOG.map((provider) => provider.slug),
-    ...providerSlugs,
+    ...preferences.providerSlugs,
+    ...manualProviderSlugs,
     ...detectedProviders,
-  ])), [detectedProviders, providerSlugs]);
+  ])), [detectedProviders, manualProviderSlugs, preferences.providerSlugs]);
   const directoryRequest = useMemo(() => ({ vendor: providerSlug }), [providerSlug]);
   const directoryConnection = useAppFunction<SlaProviderResponse>({ name: "slaDirectory", data: directoryRequest, responseType: "json" });
   const activeDirectory = directoryConnection.data?.provider.slug === providerSlug ? directoryConnection.data : undefined;
   const directoryChecking = directoryConnection.isLoading || Boolean(!directoryConnection.error && directoryConnection.data && !activeDirectory);
 
   useEffect(() => {
-    setProviderSlugs(preferences.providerSlugs);
+    setManualProviderSlugs(preferences.manualProviderSlugs);
     setProviderSlug(preferences.providerSlug);
     setProviderLabelKey(preferences.providerLabelKey);
     setLookbackHours(preferences.lookbackHours);
-  }, [preferences.providerLabelKey, preferences.providerSlug, preferences.providerSlugs, preferences.lookbackHours]);
+  }, [preferences.manualProviderSlugs, preferences.providerLabelKey, preferences.providerSlug, preferences.lookbackHours]);
+
+  useEffect(() => {
+    if (!enabledProviderSlugs.includes(providerSlug)) setProviderSlug(enabledProviderSlugs[0] ?? providerSlug);
+  }, [enabledProviderSlugs, providerSlug]);
 
   const toggleProvider = (slug: string) => {
-    setProviderSlugs((current) => {
+    if (detectedProviders.includes(slug)) return;
+    setManualProviderSlugs((current) => {
       if (current.includes(slug)) {
-        if (current.length === 1) return current;
-        const next = current.filter((item) => item !== slug);
-        if (providerSlug === slug) setProviderSlug(next[0]);
-        return next;
+        return current.filter((item) => item !== slug);
       }
       return [...current, slug].slice(0, 12);
     });
@@ -106,9 +119,9 @@ const WatchSettings = () => {
   };
 
   const addCustomProvider = () => {
-    const normalized = normalizeProviderSlug(customProvider);
+    const normalized = canonicalProviderSlug(customProvider);
     if (!normalized) return;
-    setProviderSlugs((current) => Array.from(new Set([...current, normalized])).slice(0, 12));
+    setManualProviderSlugs((current) => Array.from(new Set([...current, normalized])).slice(0, 12));
     setProviderSlug(normalized);
     setCustomProvider("");
     setSaved(false);
@@ -116,7 +129,8 @@ const WatchSettings = () => {
 
   const save = async () => {
     await updatePreferences({
-      providerSlugs,
+      providerSlugs: enabledProviderSlugs,
+      manualProviderSlugs,
       providerSlug: providerSlug.trim().toLowerCase(),
       providerLabelKey: providerLabelKey.trim() || "provider",
       lookbackHours,
@@ -129,21 +143,22 @@ const WatchSettings = () => {
     <section className="settings-page">
       <div className="page-intro">
         <Text className="eyebrow">Settings · providers</Text>
-        <Heading level={1}>Configure provider defaults.</Heading>
-        <Paragraph>Choose the providers to monitor, the active provider for focused views, and the evidence window. Review service assignments in Coverage.</Paragraph>
+        <Heading level={1}>Configure providers.</Heading>
+        <Paragraph>Review providers detected in this environment, add unobserved dependencies, and set the evidence window. Service assignments remain in Coverage.</Paragraph>
       </div>
       <fieldset className="provider-monitor-fieldset">
-        <legend>Monitored providers</legend>
-        <p>Keep more than one provider in scope. Provider-native Smartscape matches apply automatically; ambiguous matches remain for review in Coverage.</p>
+        <legend>Providers in scope</legend>
+        <p>Providers found in Dynatrace are enabled automatically. Add a provider only when the dependency is not visible in topology or service tags.</p>
         <div className="provider-monitor-grid">
           {providerOptions.map((slug) => {
-            const monitored = providerSlugs.includes(slug);
             const detected = detectedProviders.includes(slug);
+            const manuallyAdded = manualProviderSlugs.includes(slug);
+            const monitored = detected || manuallyAdded;
             return (
-              <label className={`provider-monitor-option${monitored ? " selected" : ""}`} key={slug}>
-                <input type="checkbox" checked={monitored} onChange={() => toggleProvider(slug)} aria-label={`Monitor ${providerDisplayName(slug)}`} />
+              <label className={`provider-monitor-option${monitored ? " selected" : ""}${detected ? " detected" : ""}`} key={slug}>
+                <input type="checkbox" checked={monitored} disabled={detected} onChange={() => toggleProvider(slug)} aria-label={`Monitor ${providerDisplayName(slug)}`} />
                 <span><strong>{providerDisplayName(slug)}</strong><small>{providerDetail(slug)}</small></span>
-                <span className={`provider-monitor-signal${detected ? " detected" : ""}`}>{detected ? "Detected in Smartscape" : monitored ? "Monitored" : "Available"}</span>
+                <span className={`provider-monitor-signal${detected ? " detected" : ""}`}>{detected ? "Detected in Dynatrace" : manuallyAdded ? "Added manually" : "Available"}</span>
               </label>
             );
           })}
@@ -152,16 +167,16 @@ const WatchSettings = () => {
           <label className="field-label">Add another sla.directory provider
             <input value={customProvider} onChange={(event) => setCustomProvider(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="provider slug" autoComplete="off" />
           </label>
-          <Button size="condensed" disabled={!normalizeProviderSlug(customProvider)} onClick={addCustomProvider}>Add provider</Button>
+          <Button size="condensed" disabled={!canonicalProviderSlug(customProvider)} onClick={addCustomProvider}>Add provider</Button>
         </div>
-        {!topologyQuery.isLoading && !serviceCloudQuery.isLoading && detectedProviders.length === 0 ? <small className="provider-detection-note">No cloud provider was identified from current service topology or service metric dimensions. You can still monitor a provider and assign services manually.</small> : null}
+        {!topologyQuery.isLoading && !serviceCloudQuery.isLoading && detectedProviders.length === 0 ? <small className="provider-detection-note">No provider was identified from current topology, cloud dimensions, or source tags. Add a provider manually when Dynatrace cannot observe the dependency.</small> : null}
       </fieldset>
       <div className="settings-form-grid">
         <label className="field-label">Active provider
           <select value={providerSlug} onChange={(event) => setProviderSlug(event.target.value)} aria-label="Active provider for focused views">
-            {providerSlugs.map((slug) => <option key={slug} value={slug}>{providerDisplayName(slug)}</option>)}
+            {enabledProviderSlugs.map((slug) => <option key={slug} value={slug}>{providerDisplayName(slug)}</option>)}
           </select>
-          <small>Coverage, Incidents, Evidence, and Directory focus on this provider. Other monitored providers remain configured.</small>
+          <small>Coverage, Incidents, Evidence, and Directory show only providers detected in this environment or added manually.</small>
         </label>
         <label className="field-label">Source tag key
           <input value={providerLabelKey} onChange={(event) => setProviderLabelKey(event.target.value)} placeholder="provider" autoComplete="off" />
@@ -191,11 +206,11 @@ const WatchSettings = () => {
       </div>
       <div className="settings-preview">
         <div className="eyebrow">Matching rules</div>
-        <div className="provider-rule-list">{providerSlugs.map((slug) => <code key={slug}>{providerLabelKey || "provider"}:{slug}</code>)}</div>
+        <div className="provider-rule-list">{enabledProviderSlugs.map((slug) => <code key={slug}>{providerLabelKey || "provider"}:{slug}</code>)}</div>
         <span>The app reads these source-owned tags and separately reports Smartscape candidates. Saving provider settings does not modify Dynatrace services.</span>
         <NavLink className="text-action" to="/">Review service mapping in Coverage</NavLink>
       </div>
-      <div className="settings-actions"><Button variant="emphasized" disabled={providerSlugs.length === 0 || !providerSlug.trim()} onClick={() => void save()}>Save provider settings</Button>{saved ? <SavedNote text="Provider settings saved" /> : null}</div>
+      <div className="settings-actions"><Button variant="emphasized" disabled={enabledProviderSlugs.length === 0 || !providerSlug.trim()} onClick={() => void save()}>Save provider settings</Button>{saved ? <SavedNote text="Provider settings saved" /> : null}</div>
     </section>
   );
 };
@@ -684,15 +699,15 @@ const IntroSettings = () => {
   };
   return (
     <section className="settings-page">
-      <div className="page-intro"><Text className="eyebrow">Settings · onboarding</Text><Heading level={1}>Review first-run guidance.</Heading><Paragraph>Run onboarding when the monitored provider list changes. Use the shorter walkthrough when a responder needs a tour of the operating views.</Paragraph></div>
-      <div className="onboarding-status-row"><div><span className="eyebrow">Onboarding</span><strong>{preferences.onboardingComplete ? "Completed" : "Not completed"}</strong></div><div><span className="eyebrow">Walkthrough</span><strong>Available anytime</strong></div><div><span className="eyebrow">Providers</span><strong>{preferences.providerSlugs.map(providerDisplayName).join(", ")}</strong></div></div>
+      <div className="page-intro"><Text className="eyebrow">Settings · onboarding</Text><Heading level={1}>Review first-run guidance.</Heading><Paragraph>Run onboarding when provider coverage changes. Use the shorter walkthrough when a responder needs a tour of the operating views.</Paragraph></div>
+      <div className="onboarding-status-row"><div><span className="eyebrow">Onboarding</span><strong>{preferences.onboardingComplete ? "Completed" : "Not completed"}</strong></div><div><span className="eyebrow">Walkthrough</span><strong>Available anytime</strong></div><div><span className="eyebrow">Provider discovery</span><strong>Automatic</strong></div></div>
       <div className="settings-actions"><Button variant="emphasized" onClick={() => void restartIntro()}>Restart onboarding</Button><Button onClick={() => void resetTour()}>Start walkthrough now</Button>{saved ? <SavedNote text="Opening walkthrough" /> : null}</div>
-      <div className="settings-callout"><strong>What onboarding changes</strong><span>It saves the monitored providers and active view as workspace settings. It does not create provider credentials, connect a cloud account, change telemetry, add tags, create a claim, or determine provider fault.</span></div>
+      <div className="settings-callout"><strong>What onboarding changes</strong><span>It saves manual provider additions and the active view as workspace settings. Detected providers come from the environment. Onboarding does not create credentials, connect a cloud account, change telemetry, add tags, create a claim, or determine provider fault.</span></div>
     </section>
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">Review workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure providers, optional incident data, evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Provider configuration</span><strong>Select monitored providers and the tag convention.</strong><span>Service assignments are reviewed in Coverage.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Published terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">Custom terms</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one terms record to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Onboarding & walkthrough</span><strong>Review first-run setup or tour the operating views.</strong><span>Use onboarding for provider choices and the walkthrough for responder orientation.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">Review workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure providers, optional incident data, evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Provider configuration</span><strong>Review detected providers and add unobserved dependencies.</strong><span>Service assignments are reviewed in Coverage.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Published terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">Custom terms</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one terms record to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Onboarding & walkthrough</span><strong>Review first-run setup or tour the operating views.</strong><span>Use onboarding for provider choices and the walkthrough for responder orientation.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();
