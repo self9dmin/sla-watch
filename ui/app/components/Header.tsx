@@ -187,8 +187,8 @@ export const Header = ({
           <section>
             <h3>1. Confirm coverage</h3>
             <p>
-              Select a provider and confirm the service-to-runtime scope in
-              Smartscape. Provider tags remain optional for wider Dynatrace use.
+              Start with Scope map for Smartscape relationships. Use Manual
+              coverage only for services without a usable runtime relationship.
             </p>
           </section>
           <section>

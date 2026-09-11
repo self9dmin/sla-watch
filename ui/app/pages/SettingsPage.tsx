@@ -163,9 +163,9 @@ const WatchSettings = () => {
           </select>
           <small>Coverage, Incidents, Evidence, and Directory focus on this provider. Other monitored providers remain configured.</small>
         </label>
-        <label className="field-label">Provider tag key
+        <label className="field-label">Source tag key
           <input value={providerLabelKey} onChange={(event) => setProviderLabelKey(event.target.value)} placeholder="provider" autoComplete="off" />
-          <small>Examples the app understands: <code>provider:aws</code>, <code>vendor=aws</code>, or <code>[aws]</code>.</small>
+          <small>Read-only examples: <code>provider:aws</code>, <code>vendor=aws</code>, or <code>[aws]</code>.</small>
         </label>
         <label className="field-label">Evidence lookback
           <select value={lookbackHours} onChange={(event) => setLookbackHours(Number(event.target.value) as EvidenceLookbackHours)}>
@@ -192,7 +192,7 @@ const WatchSettings = () => {
       <div className="settings-preview">
         <div className="eyebrow">Matching rules</div>
         <div className="provider-rule-list">{providerSlugs.map((slug) => <code key={slug}>{providerLabelKey || "provider"}:{slug}</code>)}</div>
-        <span>The app checks these explicit tags and separately reports Smartscape candidates. Saving provider settings does not modify Dynatrace services.</span>
+        <span>The app reads these source-owned tags and separately reports Smartscape candidates. Saving provider settings does not modify Dynatrace services.</span>
         <NavLink className="text-action" to="/">Review service mapping in Coverage</NavLink>
       </div>
       <div className="settings-actions"><Button variant="emphasized" disabled={providerSlugs.length === 0 || !providerSlug.trim()} onClick={() => void save()}>Save provider settings</Button>{saved ? <SavedNote text="Provider settings saved" /> : null}</div>

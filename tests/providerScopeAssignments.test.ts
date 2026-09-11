@@ -1,6 +1,9 @@
 import {
   createProviderScopeAssignmentKey,
+  createServiceScopeAssignment,
+  createServiceScopeAssignmentKey,
   inferProviderServiceCandidate,
+  isServiceScopeAssignment,
   normalizeProviderScopeAssignment,
   resolveUniqueProviderServiceCandidate,
 } from "../ui/app/data/providerScopeAssignments";
@@ -45,6 +48,35 @@ describe("provider scope assignments", () => {
   it("creates a stable key from the exact provider, service, and runtime scope", () => {
     expect(createProviderScopeAssignmentKey(" AWS ", "SERVICE-1", "HOST-1"))
       .toBe("aws|service-1|host-1");
+  });
+
+  it("creates a reversible service-level assignment without changing the entity", () => {
+    const value = createServiceScopeAssignment({
+      providerSlug: " AWS ",
+      providerServiceId: "*",
+      providerServiceName: "Provider-level terms",
+      serviceEntityId: "SERVICE-1",
+      serviceEntityName: "Checkout",
+    });
+
+    expect(value).toMatchObject({
+      assignmentKey: createServiceScopeAssignmentKey("aws", "SERVICE-1"),
+      providerSlug: "aws",
+      providerServiceId: "*",
+      serviceEntityId: "SERVICE-1",
+      runtimeEntityId: "SERVICE-1",
+      runtimeType: "SERVICE_SCOPE",
+      enabled: true,
+    });
+    expect(isServiceScopeAssignment(value)).toBe(true);
+  });
+
+  it("does not confuse a Smartscape runtime assignment with service-level coverage", () => {
+    expect(isServiceScopeAssignment({
+      serviceEntityId: "SERVICE-1",
+      runtimeEntityId: "HOST-1",
+      runtimeType: "HOST",
+    })).toBe(false);
   });
 
   it("normalizes a confirmed assignment and rejects incomplete records", () => {

@@ -99,13 +99,13 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByText(/A confirmed mapping is reused in Incidents/i),
     ).toBeVisible();
-    await app.getByRole("link", { name: "Service tags" }).click();
+    await app.getByRole("link", { name: "Manual coverage" }).click();
     await expect(
-      app.getByText(/Scope map confirmations already work inside the app/i),
+      app.getByText(/Confirm services that Smartscape does not place in the scope map/i),
     ).toBeVisible();
     await expect(
       app.getByText(
-        /No tag is added until you select exact services and confirm the change/i,
+        /This does not change service names, tags, telemetry, or cloud resources/i,
       ),
     ).toBeVisible();
     await app.getByRole("link", { name: "Scope map" }).click();

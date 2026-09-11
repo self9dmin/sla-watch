@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.41",
+    version: "0.0.42",
     label: "Current release",
+    summary: "Made coverage reliable for both Smartscape and service-only scopes.",
+    details: [
+      "Added Manual coverage for services that do not have a usable Smartscape runtime relationship.",
+      "Stored manual confirmations in App Settings and reused them in Incidents and Evidence without changing service tags or telemetry.",
+      "Kept source-owned provider tags as read-only matching evidence and removed the broad entity-write permission from the app.",
+      "Added a reset action for saved evidence decisions so an operator can correct or remove a previous review.",
+      "Preserved Scope map as the primary Coverage workflow and kept provider-level terms as the safe default for manual mappings.",
+    ],
+  },
+  {
+    version: "0.0.41",
+    label: "Previous release",
     summary: "Reduced Evidence to one explainable SRE decision loop.",
     details: [
       "Replaced the four evidence gate cards with one direct explanation of why a candidate appears and links to its supporting records.",

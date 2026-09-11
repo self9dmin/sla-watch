@@ -12,7 +12,7 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="coverage"]',
     title: "Confirm provider coverage",
-    body: "Coverage is the starting point. Use Scope map to confirm exact service-to-runtime assignments, or Service tags when other Dynatrace features need the same boundary.",
+    body: "Coverage is the starting point. Use Scope map for Smartscape relationships and Manual coverage for services without a usable runtime relationship.",
   },
   {
     target: '[data-tour="incidents"]',

@@ -24,6 +24,7 @@ import {
 } from "../data/providerAttribution";
 import {
   createProviderScopeAssignmentKey,
+  isServiceScopeAssignment,
   runtimeEntityIdForEdge,
   serviceEntityIdForEdge,
 } from "../data/providerScopeAssignments";
@@ -217,7 +218,6 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     data: serviceData,
     error: serviceError,
     isLoading: servicesLoading,
-    refetch: refetchServices,
   } = useDql({ query: SERVICES_QUERY });
   const {
     data: problemData,
@@ -366,7 +366,8 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
           (assignment) =>
             assignment.enabled &&
             assignment.providerSlug === selectedProviderSlug &&
-            currentScopeKeys.has(assignment.assignmentKey),
+            (isServiceScopeAssignment(assignment) ||
+              currentScopeKeys.has(assignment.assignmentKey)),
         )
         .map((assignment) => assignment.serviceEntityId),
     );
@@ -379,6 +380,14 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const taggedProviderServices = taggedProviderServiceIds.size;
   const activeProviderCandidates = providerCandidates.filter(
     (candidate) => candidate.providerSlug === selectedProviderSlug,
+  );
+  const activeTopologyServiceIds = useMemo(
+    () => Array.from(new Set(
+      topology
+        .filter((edge) => edge.providerSlug === selectedProviderSlug)
+        .map(serviceEntityIdForEdge),
+    )),
+    [selectedProviderSlug, topology],
   );
   const suggestedServiceCount = new Set(
     activeProviderCandidates
@@ -443,7 +452,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                     tone: "warning" as Tone,
                     value: "Needs mapping",
                     detail:
-                      "Detected provider tags do not match the selected contract.",
+                      "Detected source tags do not match the selected provider.",
                   }
               : activeProblems === 0
                 ? {
@@ -656,7 +665,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 }
                 to="/?view=tags"
               >
-                Service tags
+                Manual coverage
               </Link>
             </nav>
             {telemetryError ? (
@@ -668,16 +677,12 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               <div className="setup-content-grid">
                 <ProviderTagSetup
                   services={services}
-                  providerName={providerName}
+                  provider={directoryData}
                   providerSlug={selectedProviderSlug}
                   providerTagKey={providerLabelKey}
-                  providerCandidates={activeProviderCandidates}
-                  topologyLoading={topologyQuery.isLoading || metricsLoading}
-                  topologyError={
-                    topologyQuery.error ?? metricsError ?? undefined
-                  }
+                  topologyServiceIds={activeTopologyServiceIds}
                   loading={servicesLoading || directoryLoading}
-                  onRefresh={() => refetchServices()}
+                  scopeSettings={scopeSettings}
                 />
                 <SetupAdvisor
                   recommendations={setupRecommendations}

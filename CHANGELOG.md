@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.42
+
+- Added Manual coverage for services that do not have a usable Smartscape runtime relationship.
+- Stored manual confirmations in App Settings and reused them in Incidents and Evidence without changing service tags or telemetry.
+- Kept source-owned provider tags as read-only matching evidence and removed the entity-write permission from the app.
+- Added a reset action for saved evidence decisions so an operator can correct or remove a previous review.
+- Kept Scope map as the primary Coverage workflow and provider-level terms as the conservative manual default.
+
 ## 0.0.41
 
 - Replaced four evidence gate cards with one direct explanation of why a candidate appears and links to the supporting incident, coverage, and terms.

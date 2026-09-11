@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-SLA Review is a read-mostly Dynatrace AppEngine application with five explicit tenant write paths: confirmed provider-tag changes, operator-confirmed provider-service scope mappings, tenant-owned custom terms, optional provider-connection metadata, and human evidence decisions. It monitors a collection of provider contracts from `sla.directory` while one active provider controls each focused review. It compares those records with custom terms, the live service inventory, Smartscape topology, recent telemetry, and separately labeled provider reports. Its output is an evidence posture for human review, not an automated credit decision.
+SLA Review is a read-mostly Dynatrace AppEngine application with four explicit shared tenant write paths: operator-confirmed coverage mappings, tenant-owned custom terms, optional provider-connection metadata, and human evidence decisions. It monitors a collection of provider contracts from `sla.directory` while one active provider controls each focused review. It compares those records with custom terms, the live service inventory, Smartscape topology, recent telemetry, and separately labeled provider reports. Its output is an evidence posture for human review, not an automated credit decision.
 
 The application has no database of its own, no scheduled work, no webhook receiver, no email sender, and no embedded agent. There is no `cron.md`, `emails.md`, `seo.md`, or `automation.md` because those capabilities do not exist in this release.
 
@@ -11,7 +11,6 @@ The application has no database of its own, no scheduled work, no webhook receiv
 - React 18 and TypeScript UI under `ui/`.
 - Dynatrace Strato components and design tokens for the UI.
 - Dynatrace DQL through `@dynatrace-sdk/react-hooks` for services, Problems, logs, spans, service-request telemetry, and Smartscape relationships.
-- Dynatrace Environment API custom-tag and effective-permission clients for the explicit service-tag workflow.
 - Six AppEngine functions: `api/slaDirectory.function.ts` for public contract data; `api/awsHealth.function.ts`, `api/azureServiceHealth.function.ts`, `api/gcpServiceHealth.function.ts`, and `api/ociAnnouncements.function.ts` for customer-scoped provider notices; and `api/providerPublicStatus.function.ts` for credential-free public OCI, OpenAI, Anthropic, and ElevenLabs status.
 - App state services for user preferences and shared provider review configuration.
 - App Settings V2 for shared, versioned tenant custom terms, confirmed provider-service scope mappings, human evidence decisions, and non-secret provider connection metadata.
@@ -23,17 +22,17 @@ The browser entry point is `ui/main.tsx`. Application routing is in `ui/app/App.
 Dashboard -> useDql / useAppFunction -> Dynatrace Grail or sla.directory -> normalized records -> evidence state -> UI
 ```
 
-The application has six write paths, including personal and shared preferences:
+The application has five write paths, including personal and shared preferences:
 
 ```text
 Settings -> SlaPreferencesContext -> user/app state service
                                      \-> browser local fallback when state access is unavailable
 
-Coverage -> explicit service selection -> confirmation -> effective permission check
-         -> Environment API custom-tag endpoint -> exact selected service entity IDs
-
 Coverage -> Smartscape service-to-runtime scope -> provider-service suggestion -> operator confirmation
          -> App Settings V2 -> exact service and runtime mapping reused by Incidents and Evidence
+
+Coverage -> service outside the Scope map -> operator confirmation
+         -> App Settings V2 -> exact service mapping reused by Incidents and Evidence
 
 Evidence -> Problem plus provider boundary -> SRE acknowledgement -> validate or dismiss
          -> App Settings V2 -> bounded operational decision for follow-up
@@ -48,7 +47,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 ## Authentication and trust boundaries
 
 1. The Dynatrace AppShell establishes the signed-in user session.
-2. DQL, app-state, and custom-tag calls run in the current user's permission context. The effective access is the intersection of the app-declared scopes and the user's IAM permissions.
+2. DQL, app-state, and App Settings calls run in the current user's permission context. The effective access is the intersection of the app-declared scopes and the user's IAM permissions.
 3. The browser invokes `slaDirectory` through the AppEngine function endpoint. The function validates the vendor slug, calls only `https://sla.directory`, bounds the request to eight seconds, and validates the response shape before returning data.
 4. The browser invokes `awsHealth` with a validated 12-digit account ID and Credential Vault record ID. The function verifies the credential's account with AWS STS, signs fixed AWS Health requests with Signature Version 4, filters out non-account-specific events, and calls only the fixed US East endpoints required by AWS Health.
 5. The browser invokes `azureServiceHealth` with a validated subscription ID and Credential Vault record ID. The function validates the vaulted client-credential shape, obtains a short-lived Microsoft Entra token from a fixed tenant endpoint, and reads only Resource Health events for the selected subscription through Azure Resource Manager.
@@ -58,7 +57,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 9. External API responses are treated as untrusted data. React renders them as text, no HTML is injected, response text is bounded, and provider product identifiers are mapped only through explicit tables. Ambiguous products remain unmapped.
 10. App state stores provider configuration and personal display preferences. App Settings stores custom terms, confirmed scope mappings, exact evidence target IDs, bounded human evidence decisions, and non-secret provider connection metadata. Provider secrets remain in Credential Vault and are never returned to the browser.
 11. The release history is bundled with the application. The Community destination is launch-gated and does not expose an external link before public launch.
-12. Provider tags are written only to service entity IDs selected in Coverage. Existing tags are preserved. Services with a conflicting provider tag are excluded from the bulk selection and require manual review.
+12. Existing provider tags are read only as optional source evidence. The app stores confirmed coverage in App Settings and never writes or removes entity tags.
 
 ## Canonical sources of truth
 
@@ -77,7 +76,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 - Personal preferences and shared provider review configuration: Dynatrace app-state services when available.
 - Offline state: browser local storage only as an explicitly surfaced fallback.
 
-The monitored-provider collection determines which contracts can be reviewed. The active provider controls Coverage, Incidents, Evidence, and Directory inside the shared operating shell. Coverage is the landing workspace, with Scope map first and Service tags second. Evidence contains both Dynatrace-derived review candidates and separately labeled provider reports. Changing the active provider does not remove another monitored provider, modify service tags, or change a provider connection.
+The monitored-provider collection determines which contracts can be reviewed. The active provider controls Coverage, Incidents, Evidence, and Directory inside the shared operating shell. Coverage is the landing workspace, with Scope map first and Manual coverage second. Evidence contains both Dynatrace-derived review candidates and separately labeled provider reports. Changing the active provider does not remove another monitored provider, modify entity metadata, or change a provider connection.
 
 Directory is the normalized presentation of the complete supported `sla.directory` provider response. It keeps published terms, credit policy, claim requirements, exclusions, service-specific coverage, support plans, support-response status, and record provenance visibly separate from tenant-owned overrides. The parser rejects malformed nested support and tier records before they reach this surface.
 
@@ -91,7 +90,7 @@ The app does not alter or copy the public provider record. A tenant override is 
 - `sla.directory` is an external availability dependency. The UI reports unavailable or unknown states and never converts a failed request into a healthy result (`api/slaDirectory.function.ts`, `ui/app/pages/Dashboard.tsx`).
 - Shared app-state writes are workspace-wide and scope-controlled. A user with write permission can change shared provider configuration (`documentation/permissions.md`).
 - Custom-term writes are environment-shared App Settings and do not inherit the 90-day app-state expiry. Users with schema write access can change or remove them, and all authenticated app users can read them.
-- Applying a custom tag can affect other Dynatrace configurations that select entities by tag. Coverage names those consumers before confirmation, requires exact service selection, and offers a last-action undo. Undo is a compensating action, not a transactional rollback, so concurrent edits still require operator review.
+- Manual coverage is app-owned configuration. It does not update source metadata for other Dynatrace features. Teams that need a reusable platform-wide tag must manage it at the telemetry source or through an independently governed Dynatrace configuration.
 - Evidence decisions are shared App Settings records readable by authenticated app users. Notes must remain concise and operational. They must not contain credentials, confidential contract text, personal data, or an assertion that the provider accepted liability or approved a credit.
 - AppEngine external-request allowlisting is environment configuration, not repository configuration. The target environment must retain `sla.directory`, the fixed AWS and Azure hosts, the Google hosts used by any enabled provider connection, each configured OCI Announcements regional host, and the four fixed public-status hosts documented in `variables.md`.
 - Personalized Service Health is provider evidence, not tenant impact evidence. An `IMPACTED` relevance value is reported as Google's project assessment and is not converted into a Dynatrace root-cause or credit decision.
