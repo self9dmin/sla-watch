@@ -14,7 +14,10 @@ import type {
 } from "../types";
 import {
   buildEvidenceCandidates,
+  evidenceDecisionInputError,
+  evidenceDecisionMatchesCandidate,
   evidenceDecisionValue,
+  MAX_EVIDENCE_DECISION_NOTE_LENGTH,
   type EvidenceCandidate,
 } from "../data/evidenceCandidates";
 import { formatEvidenceLookback } from "../data/lookback";
@@ -76,27 +79,6 @@ const CandidateState = ({
   return <StatusPill tone="warning">Needs review</StatusPill>;
 };
 
-const EvidenceGate = ({
-  label,
-  value,
-  detail,
-  tone,
-  action,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  tone: Tone;
-  action?: React.ReactNode;
-}) => (
-  <div className={`candidate-gate candidate-gate-${tone}`} role="listitem">
-    <span>{label}</span>
-    <strong>{value}</strong>
-    <small>{detail}</small>
-    {action ? <div className="candidate-gate-action">{action}</div> : null}
-  </div>
-);
-
 const CandidateDetail = ({
   candidate,
   decision,
@@ -111,22 +93,27 @@ const CandidateDetail = ({
   const [note, setNote] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [saveError, setSaveError] = useState<string>();
+  const decisionIsCurrent = decision
+    ? evidenceDecisionMatchesCandidate(decision, candidate)
+    : false;
+  const currentDecision = decisionIsCurrent ? decision : undefined;
 
   useEffect(() => {
     setNote(decision?.decisionNote ?? "");
-    setAcknowledged(decision?.status === "validated");
+    setAcknowledged(
+      decisionIsCurrent && decision?.status === "validated",
+    );
     setSaveError(undefined);
-  }, [candidate.key, decision?.decisionNote, decision?.status]);
+  }, [candidate.key, decision?.decisionNote, decision?.status, decisionIsCurrent]);
 
   const save = async (status: "validated" | "dismissed") => {
-    if (status === "validated" && !acknowledged) {
-      setSaveError(
-        "Confirm the review boundary before validating this candidate.",
-      );
-      return;
-    }
-    if (status === "dismissed" && note.trim().length === 0) {
-      setSaveError("Add a short reason before dismissing this candidate.");
+    const inputError = evidenceDecisionInputError({
+      status,
+      note,
+      acknowledged,
+    });
+    if (inputError) {
+      setSaveError(inputError);
       return;
     }
     setSaveError(undefined);
@@ -154,7 +141,6 @@ const CandidateDetail = ({
   const providerServices = candidate.providerServiceNames.length > 0
     ? candidate.providerServiceNames.join(", ")
     : "Provider-level terms";
-  const claimProcess = provider.provider.claimProcess;
   const reviewTime = decision?.lastModifiedTime ?? decision?.reviewedAt;
 
   return (
@@ -166,7 +152,7 @@ const CandidateDetail = ({
           </span>
           <Heading level={3}>{candidate.problem.title}</Heading>
         </div>
-        <CandidateState decision={decision} />
+        <CandidateState decision={currentDecision} />
       </div>
 
       <dl className="candidate-facts">
@@ -188,126 +174,86 @@ const CandidateDetail = ({
         </div>
       </dl>
 
-      <div className="candidate-gates" role="list" aria-label="Evidence gates">
-        <EvidenceGate
-          label="Dynatrace impact"
-          value="Observed"
-          detail="A Problem overlaps one or more service entities."
-          tone="positive"
-          action={<Link to={`/incidents?problem=${encodeURIComponent(candidate.problem.id)}`}>Open incident</Link>}
-        />
-        <EvidenceGate
-          label="Coverage"
-          value={formatMappingBasis(candidate)}
-          detail={candidate.mappingEvidence}
-          tone={candidate.scopeConfirmed ? "positive" : "warning"}
-          action={<Link to="/">Review coverage</Link>}
-        />
-        <EvidenceGate
-          label="Provider report"
-          value="Separate review"
-          detail="Compare any provider-owned report before attributing cause."
-          tone="neutral"
-          action={<Link to="/evidence?view=provider-reports">Review reports</Link>}
-        />
-        <EvidenceGate
-          label="Terms"
-          value={
-            claimProcess?.deadlineDays
-              ? `${claimProcess.deadlineDays} day filing reference`
-              : "Record available"
-          }
-          detail="Current terms still require human verification."
-          tone="positive"
-          action={<Link to="/directory">Review terms</Link>}
-        />
-      </div>
+      <section className="candidate-match" aria-label="Why this candidate appears">
+        <div>
+          <strong>Why this appears</strong>
+          <p>{candidate.mappingEvidence}</p>
+        </div>
+        <StatusPill tone={candidate.scopeConfirmed ? "positive" : "warning"}>
+          {formatMappingBasis(candidate)}
+        </StatusPill>
+        <nav aria-label="Candidate references">
+          <Link to={`/incidents?problem=${encodeURIComponent(candidate.problem.id)}`}>Open incident</Link>
+          <Link to="/">Review coverage</Link>
+          <Link to="/directory">Review terms</Link>
+        </nav>
+      </section>
 
-      <div className="candidate-review-grid">
-        <section className="candidate-review-panel" aria-label="Human review decision">
-          <div className="candidate-review-heading">
-            <div>
-              <span className="eyebrow">Human review</span>
-              <strong>Record an operational decision</strong>
-            </div>
-            {decision ? (
-              <span className="candidate-reviewed-at">
-                {reviewTime ? `Updated ${formatDateTime(reviewTime)}` : "Saved"}
-              </span>
-            ) : null}
-          </div>
-          <label className="candidate-review-note">
-            <span>Review note</span>
-            <textarea
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              rows={2}
-              placeholder="Add a concise operational reason. Do not paste confidential contract text."
-              disabled={!settings.canWrite || settings.mutating}
-            />
-          </label>
-          <label className="candidate-acknowledgement">
-            <input
-              type="checkbox"
-              checked={acknowledged}
-              onChange={(event) => setAcknowledged(event.target.checked)}
-              disabled={!settings.canWrite || settings.mutating}
-            />
-            <span>
-              I reviewed the service scope and current terms. This decision does
-              not establish provider fault or credit eligibility.
+      <section className="candidate-review-panel" aria-label="Human review decision">
+        <div className="candidate-review-heading">
+          <strong>Decision</strong>
+          {decision ? (
+            <span className="candidate-reviewed-at">
+              {reviewTime ? `Updated ${formatDateTime(reviewTime)}` : "Saved"}
             </span>
-          </label>
-          {saveError ? <div className="candidate-decision-error" role="alert">{saveError}</div> : null}
-          {settings.error ? (
-            <div className="candidate-decision-error" role="status">
-              Evidence decisions are unavailable. Existing evidence remains read-only.
-            </div>
           ) : null}
-          <div className="candidate-review-actions">
-            <Button
-              variant="emphasized"
-              color="primary"
-              size="condensed"
-              disabled={!settings.canWrite || settings.mutating || !acknowledged}
-              onClick={() => void save("validated")}
-            >
-              {settings.mutating ? "Saving" : "Validate for follow-up"}
-            </Button>
-            <Button
-              size="condensed"
-              disabled={!settings.canWrite || settings.mutating}
-              onClick={() => void save("dismissed")}
-            >
-              Dismiss
-            </Button>
-            {!settings.loading && !settings.canWrite ? (
-              <span>Read-only. App Settings write access is required.</span>
-            ) : null}
+        </div>
+        {!decisionIsCurrent && decision ? (
+          <div className="candidate-decision-stale" role="status">
+            Coverage changed after the previous decision. Review and save it again.
           </div>
-        </section>
-
-        <section className="finops-handoff" aria-label="FinOps Agent handoff">
-          <div className="finops-handoff-heading">
-            <span className="eyebrow">Next step</span>
-            <span className="section-tab-status">Planned</span>
+        ) : null}
+        <label className="candidate-review-note">
+          <span>Review note (required to dismiss)</span>
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={2}
+            maxLength={MAX_EVIDENCE_DECISION_NOTE_LENGTH}
+            placeholder="Add a concise operational reason. Do not paste confidential contract text."
+            disabled={!settings.canWrite || settings.mutating}
+          />
+        </label>
+        <label className="candidate-acknowledgement">
+          <input
+            type="checkbox"
+            checked={acknowledged}
+            onChange={(event) => setAcknowledged(event.target.checked)}
+            disabled={!settings.canWrite || settings.mutating}
+          />
+          <span>
+            I reviewed the service scope and current terms. This decision does
+            not establish provider fault or credit eligibility.
+          </span>
+        </label>
+        {saveError ? <div className="candidate-decision-error" role="alert">{saveError}</div> : null}
+        {settings.error ? (
+          <div className="candidate-decision-error" role="status">
+            Evidence decisions are unavailable. Existing evidence remains read-only.
           </div>
-          <strong>FinOps Agent handoff</strong>
-          <p>
-            {decision?.status === "validated"
-              ? "This review is ready for a future evidence handoff."
-              : "Validate the candidate before it can enter a future handoff."}
-          </p>
+        ) : null}
+        <div className="candidate-review-actions">
+          <Button
+            variant="emphasized"
+            color="primary"
+            size="condensed"
+            disabled={!settings.canWrite || settings.mutating || !acknowledged}
+            onClick={() => void save("validated")}
+          >
+            {settings.mutating ? "Saving" : "Validate"}
+          </Button>
           <Button
             size="condensed"
-            disabled
-            title="Planned for a future AppEngine agent release"
-            aria-label="Send to FinOps Agent, planned for a future AppEngine agent release"
+            disabled={!settings.canWrite || settings.mutating}
+            onClick={() => void save("dismissed")}
           >
-            Send to FinOps Agent
+            Dismiss
           </Button>
-        </section>
-      </div>
+          {!settings.loading && !settings.canWrite ? (
+            <span>Read-only. App Settings write access is required.</span>
+          ) : null}
+        </div>
+      </section>
     </article>
   );
 };
@@ -359,11 +305,17 @@ const CandidateWorkspace = ({
   const selected =
     candidates.find((candidate) => candidate.key === selectedKey) ??
     candidates[0];
+  const currentDecisionFor = (candidate: EvidenceCandidate) => {
+    const decision = decisionByKey.get(candidate.key);
+    return decision && evidenceDecisionMatchesCandidate(decision, candidate)
+      ? decision
+      : undefined;
+  };
   const validated = candidates.filter(
-    (candidate) => decisionByKey.get(candidate.key)?.status === "validated",
+    (candidate) => currentDecisionFor(candidate)?.status === "validated",
   ).length;
   const dismissed = candidates.filter(
-    (candidate) => decisionByKey.get(candidate.key)?.status === "dismissed",
+    (candidate) => currentDecisionFor(candidate)?.status === "dismissed",
   ).length;
   const needsReview = candidates.length - validated - dismissed;
 
@@ -415,7 +367,6 @@ const CandidateWorkspace = ({
   return (
     <div className="evidence-candidates-view">
       <dl className="evidence-candidate-summary" aria-label="Evidence candidate status">
-        <div><dt>Candidates</dt><dd>{candidates.length}</dd></div>
         <div><dt>Needs review</dt><dd>{needsReview}</dd></div>
         <div><dt>Validated</dt><dd>{validated}</dd></div>
         <div><dt>Dismissed</dt><dd>{dismissed}</dd></div>
@@ -423,8 +374,8 @@ const CandidateWorkspace = ({
       <div className="evidence-candidate-layout">
         <aside className="candidate-queue" aria-label="Provider review candidates">
           <div className="candidate-queue-heading">
-            <strong>Candidate queue</strong>
-            <span>{candidates.length} found</span>
+            <strong>Candidates</strong>
+            <span>{candidates.length}</span>
           </div>
           <div className="candidate-queue-list">
             {candidates.slice(0, 30).map((candidate) => {
@@ -441,7 +392,13 @@ const CandidateWorkspace = ({
                     <strong>{candidate.problem.title}</strong>
                     <small>{candidate.problem.id} · {formatMappingBasis(candidate)}</small>
                   </span>
-                  <CandidateState decision={decision} />
+                  <CandidateState
+                    decision={
+                      decision && evidenceDecisionMatchesCandidate(decision, candidate)
+                        ? decision
+                        : undefined
+                    }
+                  />
                 </button>
               );
             })}
@@ -501,8 +458,8 @@ export const EvidenceWorkspace = ({
     <div className="evidence-boundary">
       <strong>Review boundary</strong>
       <span>
-        A candidate or validation records an SRE decision for follow-up. The
-        provider determines fault, eligibility, and any service credit.
+        Validation records an SRE decision only. The provider determines fault,
+        eligibility, and any service credit.
       </span>
     </div>
   </Surface>

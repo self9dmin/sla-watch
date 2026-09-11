@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.41
+
+- Replaced four evidence gate cards with one direct explanation of why a candidate appears and links to the supporting incident, coverage, and terms.
+- Kept candidate qualification limited to exact affected-service overlap with confirmed coverage, an exact provider tag, or a Smartscape suggestion.
+- Simplified candidate review to Validate or Dismiss, with acknowledgement required for validation and a reason required for dismissal.
+- Returns a saved decision to Needs review when its mapping basis, affected scope, or provider-service scope changes.
+- Bounded decision notes and added focused coverage for false positives, canonical decision keys, validation rules, and stale decisions.
+
 ## 0.0.40
 
 - Replaced the separate Monitor landing card with Coverage as the default workspace.

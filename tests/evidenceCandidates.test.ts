@@ -1,7 +1,10 @@
 import {
   buildEvidenceCandidates,
   createEvidenceDecisionKey,
+  evidenceDecisionInputError,
+  evidenceDecisionMatchesCandidate,
   evidenceDecisionValue,
+  MAX_EVIDENCE_DECISION_NOTE_LENGTH,
   normalizeEvidenceDecision,
 } from "../ui/app/data/evidenceCandidates";
 import type {
@@ -128,6 +131,51 @@ describe("evidence candidates", () => {
     })).toEqual([]);
   });
 
+  it("does not infer a candidate from a service name", () => {
+    expect(buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [{ ...service, name: "AWS EC2 checkout" }],
+      topology: [],
+      assignments: [],
+      providerLabelKey: "provider",
+    })).toEqual([]);
+  });
+
+  it("does not accept topology from a different provider", () => {
+    expect(buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [service],
+      topology: [{ ...edge, providerSlug: "azure" }],
+      assignments: [],
+      providerLabelKey: "provider",
+    })).toEqual([]);
+  });
+
+  it("accepts only an exact provider tag", () => {
+    const [candidate] = buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [{ ...service, tags: ["provider:aws"] }],
+      topology: [],
+      assignments: [],
+      providerLabelKey: "provider",
+    });
+    expect(candidate).toMatchObject({
+      mappingBasis: "provider-tag",
+      scopeConfirmed: true,
+    });
+    expect(buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [{ ...service, tags: ["provider:aws-dev"] }],
+      topology: [],
+      assignments: [],
+      providerLabelKey: "provider",
+    })).toEqual([]);
+  });
+
   it("creates and normalizes a conservative human review record", () => {
     const [candidate] = buildEvidenceCandidates({
       provider,
@@ -146,5 +194,87 @@ describe("evidence candidates", () => {
     );
     expect(normalizeEvidenceDecision(value)).toEqual(value);
     expect(normalizeEvidenceDecision({ ...value, mappingEvidence: "" })).toBeNull();
+  });
+
+  it("canonicalizes the persisted decision key", () => {
+    const [candidate] = buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [service],
+      topology: [edge],
+      assignments: [assignment],
+      providerLabelKey: "provider",
+    });
+    const value = evidenceDecisionValue(candidate, "aws", "validated", "");
+    expect(normalizeEvidenceDecision({
+      ...value,
+      decisionKey: "untrusted-key",
+    })?.decisionKey).toBe("aws|p-1");
+  });
+
+  it("requires a new review when the evidence boundary changes", () => {
+    const [candidate] = buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [service],
+      topology: [edge],
+      assignments: [assignment],
+      providerLabelKey: "provider",
+    });
+    const value = evidenceDecisionValue(candidate, "aws", "validated", "");
+    expect(evidenceDecisionMatchesCandidate(value, candidate)).toBe(true);
+    expect(evidenceDecisionMatchesCandidate(
+      { ...value, affectedEntityIds: ["SERVICE-OTHER"] },
+      candidate,
+    )).toBe(false);
+    expect(evidenceDecisionMatchesCandidate(
+      { ...value, providerServiceIds: ["s3"] },
+      candidate,
+    )).toBe(false);
+  });
+
+  it("keeps the two decision rules explicit", () => {
+    expect(evidenceDecisionInputError({
+      status: "validated",
+      note: "",
+      acknowledged: false,
+    })).toMatch(/Confirm the review boundary/);
+    expect(evidenceDecisionInputError({
+      status: "dismissed",
+      note: "",
+      acknowledged: true,
+    })).toMatch(/Add a short reason/);
+    expect(evidenceDecisionInputError({
+      status: "dismissed",
+      note: "Not provider-related.",
+      acknowledged: false,
+    })).toBeNull();
+    expect(evidenceDecisionInputError({
+      status: "validated",
+      note: "x".repeat(MAX_EVIDENCE_DECISION_NOTE_LENGTH + 1),
+      acknowledged: true,
+    })).toMatch(/500 characters or fewer/);
+  });
+
+  it("bounds the persisted review note", () => {
+    const [candidate] = buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [service],
+      topology: [edge],
+      assignments: [assignment],
+      providerLabelKey: "provider",
+    });
+    const value = evidenceDecisionValue(
+      candidate,
+      "aws",
+      "validated",
+      "x".repeat(MAX_EVIDENCE_DECISION_NOTE_LENGTH + 10),
+    );
+    expect(value.decisionNote).toHaveLength(MAX_EVIDENCE_DECISION_NOTE_LENGTH);
+    expect(normalizeEvidenceDecision({
+      ...value,
+      decisionNote: "y".repeat(MAX_EVIDENCE_DECISION_NOTE_LENGTH + 10),
+    })?.decisionNote).toHaveLength(MAX_EVIDENCE_DECISION_NOTE_LENGTH);
   });
 });

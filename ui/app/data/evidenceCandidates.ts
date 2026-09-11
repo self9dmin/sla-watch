@@ -14,6 +14,7 @@ import {
 } from "./providerScopeAssignments";
 
 export const EVIDENCE_DECISIONS_SCHEMA_ID = "evidence-decisions";
+export const MAX_EVIDENCE_DECISION_NOTE_LENGTH = 500;
 
 export type EvidenceCandidate = {
   key: string;
@@ -31,13 +32,26 @@ const requiredText = (value: unknown): string | null =>
     ? value.trim()
     : null;
 
-const stringList = (value: unknown): string[] =>
+const stringList = (value: unknown, maximum: number): string[] =>
   Array.isArray(value)
-    ? value
+    ? Array.from(new Set(value
         .filter((item): item is string => typeof item === "string")
         .map((item) => item.trim())
-        .filter(Boolean)
+        .filter(Boolean)))
+        .slice(0, maximum)
     : [];
+
+const comparableList = (values: string[]): string[] =>
+  Array.from(
+    new Set(values.map((value) => value.trim().toLowerCase()).filter(Boolean)),
+  ).sort();
+
+const sameValues = (left: string[], right: string[]): boolean => {
+  const normalizedLeft = comparableList(left);
+  const normalizedRight = comparableList(right);
+  return normalizedLeft.length === normalizedRight.length &&
+    normalizedLeft.every((value, index) => value === normalizedRight[index]);
+};
 
 export const createEvidenceDecisionKey = (
   providerSlug: string,
@@ -78,9 +92,7 @@ export const normalizeEvidenceDecision = (
   ) return null;
 
   return {
-    decisionKey:
-      requiredText(row.decisionKey) ??
-      createEvidenceDecisionKey(providerSlug, problemId),
+    decisionKey: createEvidenceDecisionKey(providerSlug, problemId),
     providerSlug,
     problemId,
     problemTitle,
@@ -88,16 +100,49 @@ export const normalizeEvidenceDecision = (
     problemStatus,
     problemStartedAt: requiredText(row.problemStartedAt),
     problemEndedAt: requiredText(row.problemEndedAt),
-    affectedEntityIds: stringList(row.affectedEntityIds),
-    affectedEntityNames: stringList(row.affectedEntityNames),
-    providerServiceIds: stringList(row.providerServiceIds),
-    providerServiceNames: stringList(row.providerServiceNames),
+    affectedEntityIds: stringList(row.affectedEntityIds, 100),
+    affectedEntityNames: stringList(row.affectedEntityNames, 100),
+    providerServiceIds: stringList(row.providerServiceIds, 50),
+    providerServiceNames: stringList(row.providerServiceNames, 50),
     mappingBasis,
     mappingEvidence,
     status,
-    decisionNote: requiredText(row.decisionNote),
+    decisionNote:
+      requiredText(row.decisionNote)?.slice(
+        0,
+        MAX_EVIDENCE_DECISION_NOTE_LENGTH,
+      ) ?? null,
     reviewedAt,
   };
+};
+
+export const evidenceDecisionMatchesCandidate = (
+  decision: EvidenceDecisionValue,
+  candidate: EvidenceCandidate,
+): boolean =>
+  decision.decisionKey === candidate.key &&
+  createEvidenceDecisionKey(decision.providerSlug, decision.problemId) ===
+    candidate.key &&
+  decision.mappingBasis === candidate.mappingBasis &&
+  sameValues(decision.affectedEntityIds, candidate.problem.affectedEntityIds) &&
+  sameValues(decision.providerServiceIds, candidate.providerServiceIds);
+
+export const evidenceDecisionInputError = ({
+  status,
+  note,
+  acknowledged,
+}: {
+  status: EvidenceDecisionValue["status"];
+  note: string;
+  acknowledged: boolean;
+}): string | null => {
+  if (note.trim().length > MAX_EVIDENCE_DECISION_NOTE_LENGTH)
+    return `Keep the review note to ${MAX_EVIDENCE_DECISION_NOTE_LENGTH} characters or fewer.`;
+  if (status === "validated" && !acknowledged)
+    return "Confirm the review boundary before validating this candidate.";
+  if (status === "dismissed" && note.trim().length === 0)
+    return "Add a short reason before dismissing this candidate.";
+  return null;
 };
 
 export const buildEvidenceCandidates = ({
@@ -207,7 +252,7 @@ export const evidenceDecisionValue = (
   decisionNote: string,
   reviewedAt = new Date().toISOString(),
 ): EvidenceDecisionValue => ({
-  decisionKey: candidate.key,
+  decisionKey: createEvidenceDecisionKey(providerSlug, candidate.problem.id),
   providerSlug: providerSlug.toLowerCase(),
   problemId: candidate.problem.id,
   problemTitle: candidate.problem.title,
@@ -215,13 +260,17 @@ export const evidenceDecisionValue = (
   problemStatus: candidate.problem.status,
   problemStartedAt: candidate.problem.startedAt ?? null,
   problemEndedAt: candidate.problem.endedAt ?? null,
-  affectedEntityIds: candidate.problem.affectedEntityIds,
-  affectedEntityNames: candidate.affectedServices.map((service) => service.name),
-  providerServiceIds: candidate.providerServiceIds,
-  providerServiceNames: candidate.providerServiceNames,
+  affectedEntityIds: stringList(candidate.problem.affectedEntityIds, 100),
+  affectedEntityNames: stringList(
+    candidate.affectedServices.map((service) => service.name),
+    100,
+  ),
+  providerServiceIds: stringList(candidate.providerServiceIds, 50),
+  providerServiceNames: stringList(candidate.providerServiceNames, 50),
   mappingBasis: candidate.mappingBasis,
   mappingEvidence: candidate.mappingEvidence,
   status,
-  decisionNote: decisionNote.trim() || null,
+  decisionNote:
+    decisionNote.trim().slice(0, MAX_EVIDENCE_DECISION_NOTE_LENGTH) || null,
   reviewedAt,
 });
