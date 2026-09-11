@@ -171,13 +171,14 @@ Actor: signed-in Dynatrace user.
 
 Deny behavior: these surfaces do not write app state, Dynatrace entities, telemetry, or external tickets. A disabled Community destination is not keyboard-focusable and cannot open a browser tab.
 
-## Replay onboarding or change appearance
+## Start the walkthrough or change appearance
 
 Actor: signed-in user with user app-state access.
 
-1. The user selects a theme, restarts onboarding, or replays the walkthrough.
-2. The preference is stored in user app state with an expiry just inside the platform's 90-day limit.
-3. A failure falls back to local state without changing workspace configuration.
+1. A first-time or returning user opens directly in Coverage. Provider detection and service matching run against the current environment without a setup wizard.
+2. The user can start the optional walkthrough from the header or Settings. The walkthrough changes no provider, connection, coverage, terms, telemetry, tag, or evidence-decision state.
+3. A selected theme is stored in user app state with an expiry just inside the platform's 90-day limit.
+4. A theme-state failure falls back to local state without changing workspace configuration.
 
 ## External dependency failure
 

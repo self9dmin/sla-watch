@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.46
+
+- Removed the five-step first-run wizard and its duplicate provider confirmation.
+- Opens directly in the live Coverage workspace, where provider detection and service matching already run.
+- Kept provider additions and optional incident connections in Settings for contextual configuration.
+- Retained the product walkthrough as an explicit help action that changes no workspace configuration.
+- Removed obsolete onboarding state while preserving existing theme and workspace settings.
+
 ## 0.0.45
 
 - Changed Coverage to an exception-first worklist that excludes unrelated services from the default review queue.

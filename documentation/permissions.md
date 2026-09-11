@@ -15,8 +15,8 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | `environment-api:credentials:read` | Read the administrator-selected AppEngine Token credential inside the provider AppEngine function | Keep customer-scoped provider notices unavailable; a supported public status source can remain available |
 | `app-settings:objects:read` | Read shared tenant custom terms, provider connections, confirmed provider-service scope mappings, and human evidence decisions | Use public sources where possible and identify shared tenant configuration as unavailable |
 | `app-settings:objects:write` | Create, update, disable, or remove custom terms, scope mappings, provider connections, and human evidence decisions | Keep the corresponding Settings, Coverage, and Evidence actions read-only |
-| `state:user-app-states:read` | Restore theme, onboarding, and walkthrough state | Use browser fallback |
-| `state:user-app-states:write` | Persist personal display and onboarding state | Keep the change in local browser state and show the fallback |
+| `state:user-app-states:read` | Restore the personal theme preference | Use browser fallback |
+| `state:user-app-states:write` | Persist the personal theme preference | Keep the change in local browser state and show the fallback |
 | `state:app-states:read` | Restore shared provider review configuration | Use local browser state and show the fallback |
 | `state:app-states:write` | Persist shared provider review configuration | Keep the change local and show the fallback |
 

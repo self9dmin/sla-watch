@@ -14,8 +14,6 @@ export type SlaPreferences = {
   providerSlug: string;
   providerLabelKey: string;
   lookbackHours: EvidenceLookbackHours;
-  onboardingComplete: boolean;
-  tourCompleted: boolean;
 };
 
 export type ServiceRecord = {
@@ -400,6 +398,4 @@ export const DEFAULT_SLA_PREFERENCES: SlaPreferences = {
   providerSlug: "aws",
   providerLabelKey: "provider",
   lookbackHours: 24,
-  onboardingComplete: false,
-  tourCompleted: false,
 };
