@@ -1,4 +1,9 @@
-export type WatchSection = "overview" | "setup" | "directory" | "incidents" | "provider-notices";
+export type WatchSection =
+  | "overview"
+  | "setup"
+  | "directory"
+  | "incidents"
+  | "provider-notices";
 export type SlaThemePreference = "system" | "light" | "dark";
 export type RecommendationPriority = "high" | "medium" | "low";
 export type EvidenceLookbackHours = 24 | 72 | 168 | 360 | 720 | 1440 | 2160;
@@ -13,7 +18,12 @@ export type SlaPreferences = {
   tourCompleted: boolean;
 };
 
-export type ServiceRecord = { id: string; name: string; type: string; tags: string[] };
+export type ServiceRecord = {
+  id: string;
+  name: string;
+  type: string;
+  tags: string[];
+};
 
 export type ProviderCandidate = {
   serviceId: string;
@@ -72,7 +82,13 @@ export type ProviderNoticeProduct = {
 
 export type ProviderNotice = {
   id: string;
-  source: "aws-health" | "azure-service-health" | "gcp-personalized" | "gcp-public" | "oci-announcement" | "provider-public";
+  source:
+    | "aws-health"
+    | "azure-service-health"
+    | "gcp-personalized"
+    | "gcp-public"
+    | "oci-announcement"
+    | "provider-public";
   sourceScope?: string;
   title: string;
   summary: string;
@@ -102,10 +118,18 @@ export type ProviderNoticesResponse = {
   notices: ProviderNotice[];
 };
 
-export type GcpProviderNoticesResponse = ProviderNoticesResponse & { provider: "gcp" };
-export type OciProviderNoticesResponse = ProviderNoticesResponse & { provider: "oci" };
-export type AwsProviderNoticesResponse = ProviderNoticesResponse & { provider: "aws" };
-export type AzureProviderNoticesResponse = ProviderNoticesResponse & { provider: "azure" };
+export type GcpProviderNoticesResponse = ProviderNoticesResponse & {
+  provider: "gcp";
+};
+export type OciProviderNoticesResponse = ProviderNoticesResponse & {
+  provider: "oci";
+};
+export type AwsProviderNoticesResponse = ProviderNoticesResponse & {
+  provider: "aws";
+};
+export type AzureProviderNoticesResponse = ProviderNoticesResponse & {
+  provider: "azure";
+};
 export type PublicProviderNoticesResponse = ProviderNoticesResponse & {
   source: "public";
   connectionState: "public";
@@ -225,24 +249,76 @@ export type SlaClaimProcess = {
   creditApplication: string | null;
 };
 
+export type SlaMaximumCredit = {
+  kind: string;
+  label: string | null;
+  value: number | null;
+  unit: string;
+};
+
+export type SlaTier = {
+  name: string;
+  requirement: string | null;
+  uptimeCommitment: number;
+  maxCreditPercent: number | null;
+  sourceUrl: string | null;
+};
+
+export type SlaSupport = {
+  tiers: string[];
+  has24x7: boolean;
+  fastestResponse: string | null;
+  responseIsSla: boolean;
+  designatedContact: string;
+  architectureReview: boolean;
+  professionalServices: boolean;
+  successProgram: boolean;
+  training: boolean;
+  pricing: string;
+  sourceUrl: string | null;
+  note: string | null;
+};
+
+export type SlaSupportTier = {
+  name: string;
+  slug: string;
+  price: string | null;
+  slaEligible: boolean;
+  responseTime: string | null;
+};
+
 export type SlaProviderResponse = {
   generatedAt: string;
+  schemaVersion?: string;
+  lastModified?: string;
   provider: {
     slug: string;
     name: string;
+    vendor?: string | null;
     category: string;
+    categorySlug?: string;
+    tags?: string[];
     uptime: number | null;
     status: string;
+    statusCode?: string;
+    statusPage?: string | null;
+    helpWanted?: boolean;
+    needsReview?: boolean;
     lastVerified: string;
     slaUrl?: string | null;
     website?: string | null;
     scope?: string | null;
     maxCreditPercent?: number | null;
+    maximumCredit?: SlaMaximumCredit | null;
     hasAutomaticCredits?: boolean;
     minPlanForSla?: string | null;
     defaultCreditPolicy?: SlaCreditPolicy | null;
     claimProcess?: SlaClaimProcess | null;
     exclusions?: string[];
+    support?: SlaSupport | null;
+    supportTiers?: SlaSupportTier[];
+    slaTiers?: SlaTier[];
+    notes?: string | null;
   };
   services: Array<{
     id: string;
@@ -255,6 +331,7 @@ export type SlaProviderResponse = {
     uptimeScope?: string | null;
     lastVerified?: string | null;
     creditPolicy?: SlaCreditPolicy | null;
+    exclusions?: string[];
   }>;
 };
 
@@ -266,7 +343,8 @@ export type SlaDirectoryConnection = {
 
 export const slaDirectoryConnection: SlaDirectoryConnection = {
   source: "sla.directory API",
-  message: "Provider and service SLA records are loaded from the versioned sla.directory API.",
+  message:
+    "Provider and service SLA records are loaded from the versioned sla.directory API.",
 };
 
 export const DEFAULT_SLA_PREFERENCES: SlaPreferences = {

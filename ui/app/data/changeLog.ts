@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.37",
+    version: "0.0.38",
     label: "Current release",
+    summary: "Unified the operating shell and expanded the provider record.",
+    details: [
+      "Placed Overview, Setup, Incidents, Provider notices, and Directory in one task-ordered shell while reserving the global header for app identity and utilities.",
+      "Expanded Directory with published SLA terms, credit and claim policies, service-level coverage, support plans, response-target boundaries, record provenance, and tenant overrides.",
+      "Added strict parsing for nested support and SLA-tier records before external data reaches the interface.",
+      "Added searchable, expandable service coverage inside a bounded panel that does not extend the page.",
+      "Restored the SLA Watch logo and shortened the first-run explanation and finish-later destination.",
+    ],
+  },
+  {
+    version: "0.0.37",
+    label: "Previous release",
     summary: "Made provider connection setup explicit, optional, and verifiable.",
     details: [
       "Separated automatic public SLA terms and Dynatrace evidence from optional provider-reported incident connections in first-run onboarding.",

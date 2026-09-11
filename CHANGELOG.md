@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.38
+
+- Consolidated Overview, Setup, Incidents, Provider notices, and Directory into one task-ordered operating shell and removed the duplicate Monitor and Directory destinations from the global header.
+- Expanded Directory to expose the complete supported `sla.directory` record across SLA terms, provider services, support plans, source metadata, and tenant overrides.
+- Kept support-response targets visibly separate from availability credits and added strict validation for nested support and SLA-tier data.
+- Added searchable, expandable service coverage while keeping long collections inside bounded panels instead of extending the page.
+- Restored the SLA Watch logo in first-run onboarding and shortened the opening guidance and secondary destination.
+- Updated the walkthrough, automated smoke checks, architecture, setup flow, and operator documentation to match the revised interface.
+
 ## 0.0.37
 
 - Reworked first-run onboarding to distinguish automatic public SLA terms, Dynatrace evidence, and optional provider-reported incident connections.
@@ -153,4 +162,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.37` release.
+- Reserved for changes after the `0.0.38` release.

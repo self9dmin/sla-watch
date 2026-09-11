@@ -73,7 +73,9 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 - Personal preferences and shared watch configuration: Dynatrace app-state services when available.
 - Offline state: browser local storage only as an explicitly surfaced fallback.
 
-The monitored-provider collection determines which contracts can be reviewed. The active provider only controls the focused Monitor, Directory, Setup, and Incidents views. Changing it does not remove another monitored provider, modify service tags, or change a provider connection.
+The monitored-provider collection determines which contracts can be reviewed. The active provider controls the focused Overview, Setup, Incidents, Provider notices, and Directory views inside the shared operating shell. Changing it does not remove another monitored provider, modify service tags, or change a provider connection.
+
+Directory is the normalized presentation of the complete supported `sla.directory` provider response. It keeps published SLA terms, credit policy, claim requirements, exclusions, service-specific coverage, support plans, support-response status, and record provenance visibly separate from tenant-owned overrides. The parser rejects malformed nested support and tier records before they reach this surface.
 
 The app does not alter or copy the public provider record. A tenant override is stored separately, remains traceable to its source reference, and takes precedence only inside its effective date and explicit evidence boundary.
 

@@ -22,7 +22,7 @@
 | `ocistatus.oraclecloud.com` | OCI public regional component status | Server-side outbound host | Fixed function allowlist | Review endpoint availability and response compatibility | Medium: current public provider evidence |
 | `announcements.<region>.oraclecloud.com` | OCI tenancy Announcements | Server-side outbound host | Validated commercial region and environment allowlist | Prefer the exact regional host; rotate the API key separately in OCI and Credential Vault | High: tenancy-specific provider evidence and request-signing boundary |
 | `providerSlugs` | Monitored provider collection | Shared app state | User input and migration from the legacy single-provider value | State expires within 90 days | Low, but controls which provider records and evidence views are available |
-| `providerSlug` | Active provider for the focused Monitor, Directory, Setup, and Incidents views | Shared app state | User input constrained to `providerSlugs` | State expires within 90 days | Low, but controls the current external lookup and attribution view |
+| `providerSlug` | Active provider for the focused Overview, Setup, Incidents, Provider notices, and Directory views | Shared app state | User input constrained to `providerSlugs` | State expires within 90 days | Low, but controls the current external lookup and attribution view |
 | `providerLabelKey` | Provider tag parsing | Shared app state | User input | State expires within 90 days | Low, affects attribution |
 | `lookbackHours` | DQL query construction | Shared app state | Controlled select input | State expires within 90 days | Low |
 | `sla.user.v1` | Theme and walkthrough state | User app state/local fallback | App constants | State expires within 90 days | Low |
