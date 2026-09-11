@@ -6,6 +6,7 @@
 - Placed the compact provider, service, incident, and filing facts above Scope map, with Service tags as the secondary Coverage view.
 - Expanded Evidence into an SRE review workspace with Dynatrace-derived candidates and a separate provider-reports view.
 - Added shared, auditable validate and dismiss decisions with explicit fault, eligibility, and privacy boundaries.
+- Added a repository check for the Dynatrace App Settings 1,000-object schema limit.
 - Added a disabled FinOps Agent handoff marked as planned, without implying an available agent capability.
 - Reduced workspace actions to one Review terms button and kept the redundant refresh and configuration actions out of the header.
 
