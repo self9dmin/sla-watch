@@ -7,19 +7,9 @@ const openWatch = async (page: Page): Promise<FrameLocator> => {
   await page.goto("/ui/apps/my.sla/");
   const app = appFrame(page);
 
-  const skipSetup = app.getByRole("button", {
-    name: /finish later and open (overview|monitor|coverage)/i,
-  });
-  if (await skipSetup.isVisible().catch(() => false)) {
-    await skipSetup.click();
-  }
-
-  const skipWalkthrough = app.getByRole("button", { name: "Skip" });
-  if (await skipWalkthrough.isVisible().catch(() => false)) {
-    await skipWalkthrough.click();
-  }
-
   await expect(app.getByRole("link", { name: "Review terms" })).toBeVisible();
+  await expect(app.getByRole("heading", { name: "Coverage" })).toBeVisible();
+  await expect(app.getByText("Start setup")).toHaveCount(0);
   return app;
 };
 
@@ -224,15 +214,14 @@ test.describe("SLA Review deployed smoke", () => {
       app.getByRole("textbox", { name: /OCI tenancy OCID/i }),
     ).toBeVisible();
 
-    await app.getByRole("link", { name: "Onboarding & walkthrough" }).click();
+    await app.getByRole("link", { name: "Walkthrough" }).click();
     await expect(
-      app.getByText(
-        /It saves the monitored providers and active view as workspace settings/i,
-      ),
+      app.getByRole("heading", { name: "Product walkthrough." }),
     ).toBeVisible();
     await expect(
-      app.getByText(/does not create provider credentials/i),
+      app.getByText(/walkthrough changes nothing/i),
     ).toBeVisible();
+    await expect(app.getByRole("button", { name: "Start walkthrough" })).toBeVisible();
   });
 
   test("keeps new custom terms in Settings and reserves the modal for edits", async ({

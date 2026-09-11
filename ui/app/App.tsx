@@ -8,7 +8,6 @@ import { ProductTour } from "./components/ProductTour";
 import { SlaPreferencesProvider, useSlaPreferences } from "./context/SlaPreferencesContext";
 import { ChangeLogPage } from "./pages/ChangeLogPage";
 import { Dashboard } from "./pages/Dashboard";
-import { OnboardingWizard } from "./pages/OnboardingWizard";
 import { SettingsPage } from "./pages/SettingsPage";
 import "./theme.css";
 
@@ -67,6 +66,7 @@ const AppShell = ({
 };
 
 const AppContent = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const systemTheme = useCurrentTheme() === "dark" ? "dark" : "light";
   const { preferences, loading, saveError, updatePreferences } = useSlaPreferences();
@@ -84,32 +84,18 @@ const AppContent = () => {
   }, [theme]);
 
   useEffect(() => {
-    if (!loading && preferences.onboardingComplete && !preferences.tourCompleted) setTourOpen(true);
-  }, [loading, preferences.onboardingComplete, preferences.tourCompleted]);
-
-  useEffect(() => {
-    if (!preferences.onboardingComplete) setTourOpen(false);
-  }, [preferences.onboardingComplete]);
-
-  const completeOnboarding = async (providerSlugs: string[], manualProviderSlugs: string[], providerSlug: string, destination: "/" | "/settings/provider-connections") => {
-    await updatePreferences({ onboardingComplete: true, tourCompleted: true, providerSlugs, manualProviderSlugs, providerSlug });
-    await navigate(destination);
-  };
-
-  const skipOnboarding = async () => {
-    await updatePreferences({ onboardingComplete: true, tourCompleted: true });
-    await navigate("/");
-  };
+    const search = new URLSearchParams(location.search);
+    if (search.get("walkthrough") !== "1") return;
+    setTourOpen(true);
+    search.delete("walkthrough");
+    void navigate({
+      pathname: location.pathname,
+      search: search.toString() ? `?${search.toString()}` : "",
+    }, { replace: true });
+  }, [location.pathname, location.search, navigate]);
 
   const content = loading ? (
     <LoadingScreen />
-  ) : !preferences.onboardingComplete ? (
-    <OnboardingWizard
-      initialProvider={preferences.providerSlug}
-      initialManualProviders={preferences.manualProviderSlugs}
-      onComplete={completeOnboarding}
-      onSkip={skipOnboarding}
-    />
   ) : (
     <AppShell
       theme={theme}
@@ -128,7 +114,6 @@ const AppContent = () => {
         <ProductTour
           onComplete={() => {
             setTourOpen(false);
-            void updatePreferences({ tourCompleted: true });
           }}
         />
       ) : null}

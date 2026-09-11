@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.45",
+    version: "0.0.46",
     label: "Current release",
+    summary: "Opened directly on live Coverage instead of a setup wizard.",
+    details: [
+      "Removed the five-step first-run wizard and its duplicate provider confirmation.",
+      "Opens every new and returning session in the real Coverage workspace, where Dynatrace provider detection and service matching already run.",
+      "Keeps provider additions and optional incident connections in Settings, where they can be configured when needed.",
+      "Retains the product walkthrough as an explicit help action that does not change workspace configuration.",
+      "Removed obsolete onboarding state while preserving existing theme and workspace settings.",
+    ],
+  },
+  {
+    version: "0.0.45",
+    label: "Previous release",
     summary: "Made Coverage safe for large service inventories.",
     details: [
       "Changed the default worklist to show only ambiguous or unresolved provider evidence instead of treating unrelated services as review work.",

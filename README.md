@@ -24,7 +24,7 @@ SLA Review is a Dynatrace AppEngine app for evidence-first provider attribution.
 - Applies custom terms in the order host, location, service, provider-wide fallback, then public directory baseline.
 - Separates missing telemetry, incomplete entity access, missing coverage, and source tags that do not match the selected provider.
 - Recommends setup actions for provider boundaries, ownership metadata, service naming, and native SLO follow-up.
-- Keeps personal theme and onboarding state separate from shared watch configuration.
+- Keeps the personal theme preference separate from shared provider configuration.
 - Provides a read-only application change log. Dynatrace Community support is visible as coming soon and remains disabled until public launch.
 
 ## Deliberate boundaries
@@ -37,11 +37,11 @@ Custom-term assignments are explicit. An SRE selects the provider service and ex
 
 The runtime data path does not require an MCP server or a user-supplied `sla.directory` credential. The installed app calls the public versioned JSON API automatically through its AppEngine function. `sla.directory` MCP remains useful for agent-assisted research and contract discovery.
 
-## First-run setup
+## First use
 
 1. Install SLA Review and open it from the Dynatrace Apps page.
-2. Use onboarding to confirm the providers detected from this environment. Add a provider manually only when the dependency is not visible in Dynatrace. AWS, Azure, GCP, and OCI remain available as peer options.
-3. Open **Coverage**. Review only ambiguous or unresolved provider evidence. Provider-native matches are already available under Covered, while All loaded supports intentional manual mapping. Existing source tags remain read-only evidence.
+2. The app opens directly in **Coverage** and detects providers from Smartscape topology, cloud dimensions, and source-owned provider tags. Review only ambiguous or unresolved provider evidence. Provider-native matches are already available under Covered, while All loaded supports intentional manual mapping.
+3. If a dependency is not visible in Dynatrace, open **Settings > Provider configuration** and add it explicitly. AWS, Azure, GCP, and OCI remain available as peer options.
 4. Optionally open **Settings > Provider connections**. For each account, subscription, project, or tenancy, create a least-privilege provider identity and store its secret in Dynatrace Credential Vault. SLA Review receives only the credential record ID.
 5. Add the exact provider hosts to Dynatrace External requests, test the connection, and save it only after verification succeeds. A provider connection does not assign services or prove provider fault.
 6. Select **Review terms** to inspect the complete published provider record, service-level coverage, support options, and any tenant overrides before assessing an incident.
@@ -115,7 +115,7 @@ Every change to `app.config.json` requires a new app version before deployment. 
 
 ## State and privacy
 
-User theme and walkthrough state use user app state. Provider selection, tag convention, and lookback use shared app state when the workspace scope is available. The browser fallback is local storage and is clearly surfaced when shared state cannot be written. App-state records expire within the platform's 90-day limit.
+The user theme preference uses user app state. Provider selection, tag convention, and lookback use shared app state when the workspace scope is available. The browser fallback is local storage and is clearly surfaced when shared state cannot be written. App-state records expire within the platform's 90-day limit.
 
 Custom terms use the `contract-overrides` App Settings schema so they are shared and auditable in the Dynatrace environment. The app stores exact target IDs, display names, operational targets, effective dates, and a source reference. App Settings are readable by all authenticated users of the app and persist until changed or removed.
 

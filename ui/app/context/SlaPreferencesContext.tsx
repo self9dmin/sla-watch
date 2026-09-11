@@ -22,10 +22,10 @@ const WORKSPACE_LOCAL_KEY = "sla.workspace.v1.local";
 const LEGACY_LOCAL_KEY = "sla.preferences.v1.local";
 
 type PreferencesPatch = Partial<SlaPreferences>;
-type UserPreferencesState = Pick<SlaPreferences, "theme" | "onboardingComplete" | "tourCompleted">;
+type UserPreferencesState = Pick<SlaPreferences, "theme">;
 type WorkspacePreferencesState = Pick<SlaPreferences, "providerSlugs" | "manualProviderSlugs" | "providerSlug" | "providerLabelKey" | "lookbackHours">;
 
-const USER_FIELDS: ReadonlyArray<keyof UserPreferencesState> = ["theme", "onboardingComplete", "tourCompleted"];
+const USER_FIELDS: ReadonlyArray<keyof UserPreferencesState> = ["theme"];
 const WORKSPACE_FIELDS: ReadonlyArray<keyof WorkspacePreferencesState> = ["providerSlugs", "manualProviderSlugs", "providerSlug", "providerLabelKey", "lookbackHours"];
 
 export interface SlaPreferencesContextValue {
@@ -61,8 +61,6 @@ const normalizePreferences = (value: unknown): SlaPreferences => {
     providerSlug: requestedActiveProvider,
     providerLabelKey: stringOr(item.providerLabelKey, DEFAULT_SLA_PREFERENCES.providerLabelKey),
     lookbackHours: isEvidenceLookbackHours(item.lookbackHours) ? item.lookbackHours : DEFAULT_SLA_PREFERENCES.lookbackHours,
-    onboardingComplete: item.onboardingComplete === true,
-    tourCompleted: item.tourCompleted === true,
   };
 };
 
@@ -97,8 +95,6 @@ const writeLocalState = (value: SlaPreferences): void => {
   try {
     const user: UserPreferencesState = {
       theme: value.theme,
-      onboardingComplete: value.onboardingComplete,
-      tourCompleted: value.tourCompleted,
     };
     const workspace: WorkspacePreferencesState = {
       providerSlugs: value.providerSlugs,
@@ -169,8 +165,6 @@ export const SlaPreferencesProvider = ({ children }: { children: React.ReactNode
               body: {
                 value: JSON.stringify({
                   theme: nextPreferences.theme,
-                  onboardingComplete: nextPreferences.onboardingComplete,
-                  tourCompleted: nextPreferences.tourCompleted,
                 }),
                 validUntilTime: createStateExpiration(),
               },

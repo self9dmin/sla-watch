@@ -23,7 +23,7 @@ const SETUP_LINKS = [
   ["provider-connections", "Provider connections"],
   ["sla-overrides", "Custom terms"],
   ["appearance", "Appearance"],
-  ["intro", "Onboarding & walkthrough"],
+  ["intro", "Walkthrough"],
 ] as const;
 
 const OPERATE_LINKS = [
@@ -45,7 +45,7 @@ const SettingsRail = ({ page }: { page: string }) => {
         <div className="settings-rail-label">SUPPORT</div>
         <CommunityLink className="settings-rail-link" />
       </div>
-      <div className="settings-rail-note">Provider configuration, connections, custom terms, and evidence decisions are shared with the workspace. Theme and walkthrough state stay personal to you. The change log is read-only.</div>
+      <div className="settings-rail-note">Provider configuration, connections, custom terms, and evidence decisions are shared with the workspace. The theme preference stays personal to you. The change log is read-only.</div>
     </aside>
   );
 };
@@ -686,28 +686,16 @@ const AppearanceSettings = () => {
 
 const IntroSettings = () => {
   const navigate = useNavigate();
-  const { preferences, updatePreferences } = useSlaPreferences();
-  const [saved, setSaved] = useState(false);
-  const restartIntro = async () => {
-    await updatePreferences({ onboardingComplete: false, tourCompleted: false });
-    await navigate("/");
-  };
-  const resetTour = async () => {
-    await updatePreferences({ tourCompleted: false });
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2200);
-  };
   return (
     <section className="settings-page">
-      <div className="page-intro"><Text className="eyebrow">Settings · onboarding</Text><Heading level={1}>Review first-run guidance.</Heading><Paragraph>Run onboarding when provider coverage changes. Use the shorter walkthrough when a responder needs a tour of the operating views.</Paragraph></div>
-      <div className="onboarding-status-row"><div><span className="eyebrow">Onboarding</span><strong>{preferences.onboardingComplete ? "Completed" : "Not completed"}</strong></div><div><span className="eyebrow">Walkthrough</span><strong>Available anytime</strong></div><div><span className="eyebrow">Provider discovery</span><strong>Automatic</strong></div></div>
-      <div className="settings-actions"><Button variant="emphasized" onClick={() => void restartIntro()}>Restart onboarding</Button><Button onClick={() => void resetTour()}>Start walkthrough now</Button>{saved ? <SavedNote text="Opening walkthrough" /> : null}</div>
-      <div className="settings-callout"><strong>What onboarding changes</strong><span>It saves manual provider additions and the active view as workspace settings. Detected providers come from the environment. Onboarding does not create credentials, connect a cloud account, change telemetry, add tags, create a claim, or determine provider fault.</span></div>
+      <div className="page-intro"><Text className="eyebrow">Settings · guidance</Text><Heading level={1}>Product walkthrough.</Heading><Paragraph>Coverage is the starting point. Use this short tour when a responder needs an orientation to Coverage, Incidents, Evidence, and provider terms.</Paragraph></div>
+      <div className="settings-actions"><Button variant="emphasized" onClick={() => void navigate("/?walkthrough=1")}>Start walkthrough</Button></div>
+      <div className="settings-callout"><strong>The walkthrough changes nothing</strong><span>It does not change providers, connections, coverage, telemetry, tags, terms, or evidence decisions.</span></div>
     </section>
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">Review workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure providers, optional incident data, evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Provider configuration</span><strong>Review detected providers and add unobserved dependencies.</strong><span>Service assignments are reviewed in Coverage.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Published terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">Custom terms</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one terms record to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Onboarding & walkthrough</span><strong>Review first-run setup or tour the operating views.</strong><span>Use onboarding for provider choices and the walkthrough for responder orientation.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">Review workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure providers, optional incident data, evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Provider configuration</span><strong>Review detected providers and add unobserved dependencies.</strong><span>Service assignments are reviewed in Coverage.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Published terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">Custom terms</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one terms record to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Walkthrough</span><strong>Tour the operating views.</strong><span>Coverage opens first. The walkthrough is optional and changes no workspace configuration.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();

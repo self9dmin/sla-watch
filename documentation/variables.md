@@ -26,7 +26,7 @@
 | `providerSlug` | Active provider for Coverage, Incidents, Evidence, and Directory | Shared app state | User input constrained to the runtime provider collection | State expires within 90 days | Low, but controls the current external lookup and attribution view |
 | `providerLabelKey` | Provider tag parsing | Shared app state | User input | State expires within 90 days | Low, affects attribution |
 | `lookbackHours` | DQL query construction | Shared app state | Controlled select input | State expires within 90 days | Low |
-| `sla.user.v1` | Theme and walkthrough state | User app state/local fallback | App constants | State expires within 90 days | Low |
+| `sla.user.v1` | Theme preference | User app state/local fallback | App constants | State expires within 90 days | Low |
 | `sla.workspace.v1` | Provider review configuration | Shared app state/local fallback | App constants | State expires within 90 days | Medium: shared operator context |
 | `contract-overrides` | Tenant custom terms and exact evidence targets | Environment-shared App Settings | Authorized user input | Persists until updated or removed; Settings keeps version history | High: changes which contract terms are applied during review |
 | `provider-connections` | Provider, account, subscription, project, or tenancy scope; OCI region; Credential Vault ID; and enabled state | Environment-shared App Settings | Authorized administrator input | Persists until updated or removed | High: selects which provider scope is queried, but contains no secret value |

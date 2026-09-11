@@ -1,6 +1,20 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.44`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.45`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.45 verified scenarios
+
+The `0.0.45` artifact from source commit `7818b5c` was deployed to the designated Dynatrace target environment on 2026-09-11 and exercised through a fresh Chrome session. No provider configuration, provider credential, Credential Vault record, service mapping, custom terms record, evidence decision, Dynatrace entity, or cloud resource was created or changed.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.45` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and fresh Chrome smoke; source commit `7818b5c` |
+| Release gate | Type checks, lint, 19 test suites with 121 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed | Release commands completed locally with zero production dependency vulnerabilities |
+| Environment-driven providers | The production provider control enabled AWS from tenant evidence and did not present unavailable providers as active choices | Installed production Coverage and Settings smoke |
+| Provider-native coverage | Coverage showed two AWS services matched from provider-native topology without requiring an operator confirmation step | Installed production Coverage smoke |
+| Settings clarity | Provider Settings showed AWS as Detected and the remaining supported providers as Available, preserving deliberate opt-in for dependencies not visible in the environment | Installed production Settings smoke |
+| Release history | Change log showed `0.0.45` as the current release with the environment-driven provider and coverage changes | Installed production change-log smoke |
+| Runtime quality | Production startup, navigation, Coverage, Settings, and change log completed without an application error | Fresh Chrome interaction smoke |
 
 ## 0.0.44 verified scenarios
 

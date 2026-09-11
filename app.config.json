@@ -3,7 +3,7 @@
   "environmentUrl": "https://your-environment.apps.dynatrace.com/",
   "app": {
     "name": "SLA Review",
-    "version": "0.0.45",
+    "version": "0.0.46",
     "icon": "ui/assets/sla-watch-icon.svg",
     "description": "Review provider terms against Dynatrace evidence and service ownership",
     "id": "my.sla",
@@ -17,8 +17,8 @@
       { "name": "storage:smartscape:read", "comment": "Read service-to-runtime topology for contract scope selection" },
       { "name": "app-settings:objects:read", "comment": "Read custom terms, provider connections, confirmed scope mappings, and evidence decisions" },
       { "name": "app-settings:objects:write", "comment": "Manage custom terms, scope mappings, provider connections, and human evidence decisions" },
-      { "name": "state:user-app-states:read", "comment": "Restore personal theme and onboarding preferences" },
-      { "name": "state:user-app-states:write", "comment": "Save personal theme and onboarding preferences" },
+      { "name": "state:user-app-states:read", "comment": "Restore the personal theme preference" },
+      { "name": "state:user-app-states:write", "comment": "Save the personal theme preference" },
       { "name": "state:app-states:read", "comment": "Read shared provider review configuration" },
       { "name": "state:app-states:write", "comment": "Save shared provider review configuration" }
     ]
