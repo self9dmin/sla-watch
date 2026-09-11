@@ -153,4 +153,4 @@
 
 ## Unreleased
 
-- Reserved for changes after the `0.0.37` release candidate.
+- Reserved for changes after the `0.0.37` release.

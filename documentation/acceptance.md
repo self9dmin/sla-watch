@@ -1,6 +1,25 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.36`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.37`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.37 verified scenarios
+
+The `0.0.37` artifact from source commit `5c59e1e` was deployed to the designated Dynatrace target environment on 2026-09-10 and exercised through the installed application. No provider credential, Credential Vault record, provider connection, tag, scope mapping, monitor setting, or SLA override was created or changed.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.37` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully; the installed change log reports `0.0.37 Current release` | Installed production deployment and Chrome smoke; source commit `5c59e1e` |
+| Release gate | Type checks, lint, 16 test suites with 91 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed | `npm run verify:release`; production dependency audit reported zero vulnerabilities |
+| Setup landing | Setup opens directly on Scope map. The installed tenant returned eight services and four exact AWS service-to-runtime relationships without requiring a provider tag | Installed production Setup smoke |
+| Recommended mapping | Smartscape runtime metadata selected Amazon EC2 as a recommendation, labeled it `Recommended match`, and presented `Confirm Amazon EC2` as the primary action | Installed production Scope map smoke; production remained at `0 of 4 confirmed` |
+| Mapping boundary | An unconfirmed recommendation is described as a setup aid only. A confirmed exact scope can be reused by SLA Watch, but neither state establishes provider fault, customer impact, or credit eligibility | Installed Scope map copy and automated recommendation coverage |
+| Secondary provider tags | `Service tags` is a secondary Setup view and states that confirmed Scope map assignments already work inside SLA Watch. Tagging remains available only for reuse by other Dynatrace features | Installed production Service tags smoke; no tag was applied |
+| Exact SLA handoff | `Add SLA override` opened the full Settings editor with Amazon EC2, `Selected hosts or runtimes`, and the chosen runtime preselected | Installed production Chrome smoke; the editor was cancelled without saving |
+| Optional provider connections | AWS, Microsoft Azure, Google Cloud, and OCI are peer connection types. The tenant reported `0 saved`, and the UI states that public SLA terms work without these optional read-only sources | Installed production Provider connections smoke |
+| Connection guardrails | Every empty provider form disabled both Test and Save. Google Cloud displayed both required roles and both fixed outbound hosts | Installed production provider-form smoke; no provider identity or secret was entered |
+| Onboarding truth | The installed guidance distinguishes monitored-provider preferences from credentials, telemetry, tags, claims, and fault decisions. The full local first-run flow routes users to Provider connections or Scope map and does not auto-start the responder walkthrough | Installed production guidance page plus tenant-hosted local first-run smoke |
+| Desktop fit and themes | Scope map and Service tags had equal body client and scroll dimensions of 1646 by 800 CSS pixels in both light and dark themes, with no horizontal overflow | Installed production visual and dimension smoke |
+| Live cloud connections | Not exercised because no disposable AWS, Azure, Google Cloud, or OCI identity, Credential Vault record, or provider event fixture was introduced | Open guarded acceptance items; production and personal provider accounts remain unchanged |
 
 ## 0.0.36 verified scenarios
 
