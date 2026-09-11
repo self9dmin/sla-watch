@@ -24,6 +24,16 @@ export type ServiceRecord = {
   tags: string[];
 };
 
+export type CoverageInventoryStatus = {
+  serviceTotal: number | null;
+  loadedServices: number;
+  relationshipTotal: number | null;
+  loadedRelationships: number;
+  incomplete: boolean;
+  unverified: boolean;
+  reasons: string[];
+};
+
 export type ProviderCandidate = {
   serviceId: string;
   providerSlug: string;
@@ -57,6 +67,7 @@ export type EvidenceDecisionStatus = "validated" | "dismissed";
 export type EvidenceMappingBasis =
   | "confirmed-scope"
   | "provider-tag"
+  | "smartscape-observed"
   | "smartscape-candidate";
 
 export type EvidenceDecisionValue = {
@@ -212,6 +223,8 @@ export type SmartscapeScopeEdge = {
   targetType: string;
   relationship: "runs_on" | "belongs_to";
   location?: string;
+  region?: string;
+  availabilityZone?: string;
   providerSlug?: string;
   providerEvidence?: string;
   accountId?: string;

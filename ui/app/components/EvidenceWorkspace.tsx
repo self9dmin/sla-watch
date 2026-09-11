@@ -65,7 +65,9 @@ const formatMappingBasis = (candidate: EvidenceCandidate): string =>
     ? "Confirmed scope"
     : candidate.mappingBasis === "provider-tag"
       ? "Provider tag"
-      : "Smartscape candidate";
+      : candidate.mappingBasis === "smartscape-observed"
+        ? "Observed topology"
+        : "Smartscape candidate";
 
 const CandidateState = ({
   decision,
@@ -378,7 +380,7 @@ const CandidateWorkspace = ({
         <strong>No provider-review candidates were found.</strong>
         <span>
           No Problem in the last {formatEvidenceLookback(lookbackHours)} overlaps
-          a confirmed provider scope, provider tag, or Smartscape suggestion for
+          an observed or confirmed provider scope, provider tag, or Smartscape suggestion for
           {` ${provider.provider.name}`}.
         </span>
         <div className="evidence-empty-actions">

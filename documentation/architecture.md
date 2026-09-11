@@ -28,8 +28,11 @@ The application has five write paths, including personal and shared preferences:
 Settings -> SlaPreferencesContext -> user/app state service
                                      \-> browser local fallback when state access is unavailable
 
-Coverage -> Smartscape service-to-runtime scope -> provider-service suggestion -> operator confirmation
-         -> App Settings V2 -> exact service and runtime mapping reused by Incidents and Evidence
+Coverage -> Smartscape service-to-runtime scope -> fixed provider-native service match
+         -> observed terms selection reused by Incidents and Evidence without a per-service write
+
+Coverage -> ambiguous or manually selected scope -> operator confirmation
+         -> App Settings V2 -> exact service and runtime override reused by Incidents and Evidence
 
 Coverage -> service without runtime context -> operator confirmation
          -> App Settings V2 -> exact service mapping reused by Incidents and Evidence
@@ -64,7 +67,8 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 - Tenant services and telemetry: Dynatrace Grail, queried at runtime.
 - Provider contract and directory metadata: the selected `sla.directory` API response.
 - Tenant-specific operational terms: the `contract-overrides` App Settings schema.
-- Confirmed provider-service mappings: the `provider-scope-assignments` App Settings schema. Smartscape supplies candidate evidence, and an operator supplies the confirmation.
+- Observed provider-service mappings: fixed provider-specific recognition of native Smartscape runtime types at query time. This state is read-only and is not persisted per service.
+- Operator provider-service overrides: the `provider-scope-assignments` App Settings schema. An exact saved service or runtime mapping takes precedence over observed topology.
 - Human evidence decisions: the `evidence-decisions` App Settings schema. A validated or dismissed record captures an SRE review outcome for follow-up, not provider fault or credit eligibility. It remains current only while the mapping basis, affected entities, and provider-service scope still match.
 - Provider connection metadata: the `provider-connections` App Settings schema. Provider secrets: Dynatrace Credential Vault.
 - AWS provider notices: account-specific AWS Health events after STS account verification. There is no credential-free AWS source in this release.
@@ -76,7 +80,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 - Personal preferences and shared provider review configuration: Dynatrace app-state services when available.
 - Offline state: browser local storage only as an explicitly surfaced fallback.
 
-The monitored-provider collection determines which contracts can be reviewed. The active provider controls Coverage, Incidents, Evidence, and Directory inside the shared operating shell. Coverage is the landing workspace and combines Smartscape-backed scopes with services that have no usable runtime relationship in one worklist. Evidence contains both Dynatrace-derived review candidates and separately labeled provider reports. Changing the active provider does not remove another monitored provider, modify entity metadata, or change a provider connection.
+The monitored-provider collection determines which contracts can be reviewed. The active provider controls Coverage, Incidents, Evidence, and Directory inside the shared operating shell. Coverage is the landing workspace. Its default queue contains only ambiguous or unresolved provider evidence, while Covered exposes automatic and saved matches and All loaded permits intentional manual mapping. Evidence contains both Dynatrace-derived review candidates and separately labeled provider reports. Changing the active provider does not remove another monitored provider, modify entity metadata, or change a provider connection.
 
 Directory is the normalized presentation of the complete supported `sla.directory` provider response. It keeps published terms, credit policy, claim requirements, exclusions, service-specific coverage, support plans, support-response status, and record provenance visibly separate from tenant-owned overrides. The parser rejects malformed nested support and tier records before they reach this surface.
 
@@ -84,8 +88,9 @@ The app does not alter or copy the public provider record. A tenant override is 
 
 ## Known risks and assumptions
 
-- Provider service identifiers are joined to Dynatrace entities through either an explicit terms assignment or a provider-service scope mapping confirmed in Coverage. Candidates require an exact service entity ID connected by Smartscape to cloud-provider metadata. Names are display context and never create the join. A candidate still requires operator confirmation and remains a review aid, not proof of fault (`README.md`, `ui/app/components/CoverageWorkspace.tsx`, `ui/app/data/providerScopeAssignments.ts`).
+- Provider service identifiers are joined to Dynatrace entities through an explicit terms assignment, an exact operator override, or one unique provider-native Smartscape runtime match. Hostname-only and conflicting matches stay unresolved until reviewed. Names are display context and never create the join. Every mapping selects terms only and remains evidence for human review, not proof of fault (`README.md`, `ui/app/components/CoverageWorkspace.tsx`, `ui/app/data/providerScopeAssignments.ts`).
 - Smartscape topology identifies a service-to-runtime or location relationship, but does not prove that a provider caused an incident or publishes a host-level SLA. Incident review applies the most specific matching record and leaves equally specific ambiguity to the operator.
+- Global service and preferred-anchor queries are intentionally bounded. Separate aggregate counts detect truncation, the UI refuses to claim complete coverage when a count cannot be verified, and recent Problem service IDs trigger a sanitized incident-scoped topology query. Processes and containers remain supporting incident evidence rather than primary Coverage rows.
 - Logs and spans are counted at the tenant level rather than joined to a selected service. This is intentionally described as environment signal presence and is not sufficient for provider attribution (`ui/app/data/queries.ts`).
 - `sla.directory` is an external availability dependency. The UI reports unavailable or unknown states and never converts a failed request into a healthy result (`api/slaDirectory.function.ts`, `ui/app/pages/Dashboard.tsx`).
 - Shared app-state writes are workspace-wide and scope-controlled. A user with write permission can change shared provider configuration (`documentation/permissions.md`).

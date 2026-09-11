@@ -5,6 +5,7 @@ import {
   inferProviderServiceCandidate,
   isServiceScopeAssignment,
   normalizeProviderScopeAssignment,
+  resolveProviderServiceCandidates,
   resolveUniqueProviderServiceCandidate,
 } from "../ui/app/data/providerScopeAssignments";
 import type { SlaProviderResponse, SmartscapeScopeEdge } from "../ui/app/types";
@@ -108,12 +109,14 @@ describe("provider scope assignments", () => {
       providerServiceId: "ec2",
       providerServiceName: "Amazon EC2",
       evidence: "EC2 runtime metadata suggests Amazon EC2",
+      confidence: "observed",
     });
   });
 
   it("recognizes an EC2 private hostname only inside an AWS provider boundary", () => {
     const host = edge({ targetType: "HOST", targetName: "ip-10-20-10-102.ec2.internal" });
     expect(inferProviderServiceCandidate(host, provider("aws", [{ id: "ec2", name: "Amazon EC2" }]))?.providerServiceId).toBe("ec2");
+    expect(inferProviderServiceCandidate(host, provider("aws", [{ id: "ec2", name: "Amazon EC2" }]))?.confidence).toBe("review");
     expect(inferProviderServiceCandidate({ ...host, providerSlug: "gcp" }, provider("aws", [{ id: "ec2", name: "Amazon EC2" }]))).toBeNull();
   });
 
@@ -123,22 +126,72 @@ describe("provider scope assignments", () => {
     expect(inferProviderServiceCandidate(compute, provider("gcp", [{ id: "cloud-storage", name: "Cloud Storage" }]))).toBeNull();
   });
 
+  it("distinguishes AWS Aurora and Fargate from their parent services", () => {
+    const aws = provider("aws", [
+      { id: "rds", name: "Amazon RDS" },
+      { id: "aurora", name: "Amazon Aurora" },
+      { id: "ecs", name: "Amazon ECS" },
+      { id: "fargate", name: "AWS Fargate" },
+    ]);
+
+    expect(inferProviderServiceCandidate(edge({ targetType: "AWS_RDS_AURORA_CLUSTER" }), aws)?.providerServiceId).toBe("aurora");
+    expect(inferProviderServiceCandidate(edge({ targetType: "AWS_ECS_FARGATE_TASK" }), aws)?.providerServiceId).toBe("fargate");
+  });
+
+  it("recognizes the Azure virtual machine scale set runtime type", () => {
+    const vmss = edge({
+      providerSlug: "azure",
+      targetType: "AZURE_MICROSOFT_COMPUTE_VIRTUALMACHINESCALESETS",
+      targetName: "checkout-vmss",
+    });
+
+    expect(inferProviderServiceCandidate(vmss, provider("azure", [
+      { id: "virtual-machines", name: "Virtual Machines" },
+    ]))).toMatchObject({ providerServiceId: "virtual-machines", confidence: "observed" });
+  });
+
+  it("does not classify an OCI database instance as Compute", () => {
+    const database = edge({
+      providerSlug: "oci",
+      targetType: "OCI_AUTONOMOUS_DATABASE_INSTANCE",
+      targetName: "orders-database",
+    });
+
+    expect(inferProviderServiceCandidate(database, provider("oci", [
+      { id: "compute-multiad", name: "Compute Multi-AD" },
+    ]))).toBeNull();
+  });
+
   it("collapses matching runtime candidates to one service scope for Incident review", () => {
     expect(resolveUniqueProviderServiceCandidate([
-      { providerServiceId: "ec2", scopeKey: "host:SERVICE-1:AWS_EC2_INSTANCE-1", serviceEntityId: "SERVICE-1", evidence: "EC2 instance" },
-      { providerServiceId: "ec2", scopeKey: "host:SERVICE-1:HOST-1", serviceEntityId: "SERVICE-1", evidence: "EC2 host" },
+      { providerServiceId: "ec2", scopeKey: "host:SERVICE-1:AWS_EC2_INSTANCE-1", serviceEntityId: "SERVICE-1", evidence: "EC2 instance", confidence: "observed" },
+      { providerServiceId: "ec2", scopeKey: "host:SERVICE-1:HOST-1", serviceEntityId: "SERVICE-1", evidence: "EC2 host", confidence: "review" },
     ])).toEqual({
       providerServiceId: "ec2",
       scopeKey: "service:SERVICE-1",
       serviceEntityId: "SERVICE-1",
       evidence: "EC2 instance",
+      confidence: "observed",
+    });
+  });
+
+  it("uses one provider-native service match without requiring one saved mapping per runtime", () => {
+    const resolutions = resolveProviderServiceCandidates([
+      edge(),
+      edge({ targetNodeId: "host-node", targetClassicId: "HOST-1", targetType: "HOST", targetName: "ip-10-20-10-102.ec2.internal" }),
+    ], provider("aws", [{ id: "ec2", name: "Amazon EC2" }]));
+
+    expect(resolutions.get("SERVICE-1")).toMatchObject({
+      ambiguous: false,
+      evidenceCount: 2,
+      candidate: { providerServiceId: "ec2", confidence: "observed" },
     });
   });
 
   it("does not choose between conflicting provider-service candidates", () => {
     expect(resolveUniqueProviderServiceCandidate([
-      { providerServiceId: "ec2", scopeKey: "service:SERVICE-1", serviceEntityId: "SERVICE-1", evidence: "EC2" },
-      { providerServiceId: "lambda", scopeKey: "service:SERVICE-1", serviceEntityId: "SERVICE-1", evidence: "Lambda" },
+      { providerServiceId: "ec2", scopeKey: "service:SERVICE-1", serviceEntityId: "SERVICE-1", evidence: "EC2", confidence: "observed" },
+      { providerServiceId: "lambda", scopeKey: "service:SERVICE-1", serviceEntityId: "SERVICE-1", evidence: "Lambda", confidence: "observed" },
     ])).toBeUndefined();
   });
 });

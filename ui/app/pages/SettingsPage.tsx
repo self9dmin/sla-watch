@@ -134,7 +134,7 @@ const WatchSettings = () => {
       </div>
       <fieldset className="provider-monitor-fieldset">
         <legend>Monitored providers</legend>
-        <p>Keep more than one provider in scope. Smartscape detections are suggestions until a service mapping is confirmed.</p>
+        <p>Keep more than one provider in scope. Provider-native Smartscape matches apply automatically; ambiguous matches remain for review in Coverage.</p>
         <div className="provider-monitor-grid">
           {providerOptions.map((slug) => {
             const monitored = providerSlugs.includes(slug);

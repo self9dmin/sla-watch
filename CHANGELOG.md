@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.45
+
+- Changed Coverage to an exception-first worklist that excludes unrelated services from the default review queue.
+- Automatically applies one unique provider-native Smartscape service match without storing a mapping for every service; hostname-only and conflicting matches remain for review.
+- Reduced global topology to host, cluster, and provider-native anchors while retaining incident-scoped topology for exact affected service IDs.
+- Added search, 50-row paging, aggregate inventory checks, and an explicit incomplete state so bounded data is never presented as complete coverage.
+- Reused observed topology in Incidents and Evidence while keeping saved mappings as exact operator overrides and preserving the provider-fault and credit boundaries.
+
 ## 0.0.44
 
 - Combined Smartscape-backed scopes and services without runtime context into one Coverage worklist.

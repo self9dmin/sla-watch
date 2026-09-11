@@ -25,14 +25,24 @@ const provider: SlaProviderResponse = {
     status: "verified",
     lastVerified: "2026-09-10",
   },
-  services: [{
-    id: "ec2",
-    name: "Amazon EC2",
-    category: "Compute",
-    uptime: 99.99,
-    eligible: true,
-    slaUrl: "https://example.test/ec2",
-  }],
+  services: [
+    {
+      id: "ec2",
+      name: "Amazon EC2",
+      category: "Compute",
+      uptime: 99.99,
+      eligible: true,
+      slaUrl: "https://example.test/ec2",
+    },
+    {
+      id: "lambda",
+      name: "AWS Lambda",
+      category: "Compute",
+      uptime: 99.95,
+      eligible: true,
+      slaUrl: "https://example.test/lambda",
+    },
+  ],
 };
 
 const service: ServiceRecord = {
@@ -105,7 +115,7 @@ describe("evidence candidates", () => {
     });
   });
 
-  it("keeps a Smartscape-only match visibly unconfirmed", () => {
+  it("uses provider-native Smartscape topology without a saved mapping", () => {
     const [candidate] = buildEvidenceCandidates({
       provider,
       problems: [problem],
@@ -115,9 +125,59 @@ describe("evidence candidates", () => {
       providerLabelKey: "provider",
     });
     expect(candidate).toMatchObject({
+      mappingBasis: "smartscape-observed",
+      scopeConfirmed: true,
+      providerServiceIds: ["ec2"],
+    });
+  });
+
+  it("keeps a hostname-only inference visibly unconfirmed", () => {
+    const [candidate] = buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [service],
+      topology: [{
+        ...edge,
+        targetClassicId: "HOST-1",
+        targetName: "ip-10-20-10-102.ec2.internal",
+        targetType: "HOST",
+      }],
+      assignments: [],
+      providerLabelKey: "provider",
+    });
+    expect(candidate).toMatchObject({
       mappingBasis: "smartscape-candidate",
       scopeConfirmed: false,
     });
+  });
+
+  it("accepts distinct provider-native services across one Problem", () => {
+    const lambdaService = { ...service, id: "SERVICE-2", name: "Worker" };
+    const [candidate] = buildEvidenceCandidates({
+      provider,
+      problems: [{ ...problem, affectedEntityIds: [service.id, lambdaService.id] }],
+      services: [service, lambdaService],
+      topology: [
+        edge,
+        {
+          ...edge,
+          serviceNodeId: "service-node-2",
+          serviceClassicId: lambdaService.id,
+          serviceName: lambdaService.name,
+          targetNodeId: "lambda-node",
+          targetClassicId: "AWS_LAMBDA_FUNCTION-1",
+          targetName: "checkout-worker",
+          targetType: "AWS_LAMBDA_FUNCTION",
+        },
+      ],
+      assignments: [],
+      providerLabelKey: "provider",
+    });
+    expect(candidate).toMatchObject({
+      mappingBasis: "smartscape-observed",
+      scopeConfirmed: true,
+    });
+    expect(candidate.providerServiceIds).toEqual(["ec2", "lambda"]);
   });
 
   it("does not turn an unrelated Problem into a provider candidate", () => {
