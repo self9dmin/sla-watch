@@ -1,6 +1,19 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.42`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.43`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.43 verified scenarios
+
+The `0.0.43` artifact from source commit `7143467` was deployed to the designated Dynatrace target environment on 2026-09-11 and exercised through the installed application. No provider configuration, provider credential, Credential Vault record, service mapping, custom terms record, evidence decision, Dynatrace entity, or cloud resource was created or changed. Personal theme state was switched to light for visual verification and restored to dark.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.43` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `7143467` |
+| Release gate | Type checks, lint, 18 test suites with 105 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed | `npm run verify:release`; zero production dependency vulnerabilities; [GitHub Actions run 34598900843](https://github.com/self9dmin/sla-watch/actions/runs/34598900843) |
+| Coverage focus | The production AWS Manual coverage view showed one recommended ownership action instead of counting two optional SLO and cross-product tag suggestions as open work | Installed production Coverage smoke |
+| Incident-relevant priority | `wayfinder-engage-api-inter`, the exact service affected by eleven recent Problems, appeared first in the six-service manual queue and displayed its Problem count. Services without affected-entity overlap followed alphabetically | Installed production Coverage smoke plus exact-ID unit coverage |
+| Conservative evidence boundary | Eleven observed Problems still produced no AWS candidate because none overlapped the confirmed AWS boundary. Prioritizing setup did not change provider attribution or create evidence | Installed production Evidence smoke |
+| Themes | The focused Coverage queue and recommendation panel remained readable in light and dark themes. The original dark preference was restored | Installed production visual smoke |
 
 ## 0.0.42 verified scenarios
 
