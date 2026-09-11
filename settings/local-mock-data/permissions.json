@@ -10,5 +10,9 @@
   "provider-scope-assignments": [
     { "permission": "app-settings:objects:read", "granted": "true" },
     { "permission": "app-settings:objects:write", "granted": "true" }
+  ],
+  "evidence-decisions": [
+    { "permission": "app-settings:objects:read", "granted": "true" },
+    { "permission": "app-settings:objects:write", "granted": "true" }
   ]
 }

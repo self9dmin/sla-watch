@@ -40,7 +40,7 @@ const PROVIDER_PRESETS = [
   },
 ];
 
-type OnboardingDestination = "/setup" | "/settings/provider-connections";
+type OnboardingDestination = "/" | "/settings/provider-connections";
 
 type OnboardingWizardProps = {
   initialProvider: string;
@@ -54,7 +54,7 @@ type OnboardingWizardProps = {
 };
 
 const StepIndicator = ({ step }: { step: number }) => (
-  <div className="onboarding-steps" aria-label={`Setup step ${step + 1} of 5`}>
+  <div className="onboarding-steps" aria-label={`Onboarding step ${step + 1} of 5`}>
     {["Start", "Providers", "Connections", "Evidence", "Next"].map(
       (label, index) => (
         <div
@@ -136,7 +136,7 @@ export const OnboardingWizard = ({
             </div>
             <div
               className="onboarding-proof-grid"
-              aria-label="Setup summary"
+              aria-label="Onboarding summary"
             >
               <div>
                 <strong>Published terms</strong>
@@ -149,7 +149,7 @@ export const OnboardingWizard = ({
                 </small>
               </div>
               <div>
-                <strong>Provider notices</strong>
+                <strong>Provider evidence</strong>
                 <small>
                   Cloud incident connections are optional and read-only.
                 </small>
@@ -157,7 +157,7 @@ export const OnboardingWizard = ({
             </div>
             <div className="onboarding-footer-row">
               <span className="muted-copy">
-                Setup saves provider choices only. It does not change cloud
+                Onboarding saves provider choices only. It does not change cloud
                 resources, telemetry, tags, or SLAs.
               </span>
               <Button variant="emphasized" onClick={() => setStep(1)}>
@@ -176,7 +176,7 @@ export const OnboardingWizard = ({
               <Paragraph>
                 Select every hyperscaler used by this environment. The most
                 recently selected provider opens first. Other sla.directory
-                providers can be added later from Monitor configuration.
+                providers can be added later from Provider configuration.
               </Paragraph>
             </div>
             <div className="provider-preset-grid">
@@ -293,7 +293,7 @@ export const OnboardingWizard = ({
                 Provider attribution requires evidence.
               </Heading>
               <Paragraph>
-                The monitor evaluates provider attribution in stages. Review
+                The app evaluates provider attribution in stages. Review
                 each stage before treating a service symptom as
                 provider-related.
               </Paragraph>
@@ -389,9 +389,9 @@ export const OnboardingWizard = ({
               <Button
                 variant="emphasized"
                 disabled={saving}
-                onClick={() => void complete("/setup")}
+                onClick={() => void complete("/")}
               >
-                {saving ? "Saving setup" : "Open Scope map"}
+                {saving ? "Saving setup" : "Open Coverage"}
               </Button>
             </div>
           </div>
@@ -403,7 +403,7 @@ export const OnboardingWizard = ({
           disabled={saving}
           onClick={() => void skip()}
         >
-          Finish later and open Overview
+          Finish later and open Coverage
         </button>
       </section>
     </main>

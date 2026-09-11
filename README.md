@@ -10,16 +10,15 @@ SLA Review is a Dynatrace AppEngine app for evidence-first provider attribution.
 - Presents the active provider's published terms, credit policy, claim process, exclusions, service catalog, support plans, support-response boundary, source metadata, and tenant overrides in one read-only Directory workspace.
 - Treats AWS, Microsoft Azure, Google Cloud, and Oracle Cloud Infrastructure as four peer cloud providers. A fresh workspace monitors all four and opens AWS first only as the initial focused view.
 - Monitors more than one provider at a time and keeps the active provider as a focused view rather than a tenant-wide replacement.
-- Lets administrators add multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies for customer-scoped provider notices. Credentials remain in Dynatrace Credential Vault.
+- Lets administrators add multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies for customer-scoped provider evidence. Credentials remain in Dynatrace Credential Vault.
 - Reads credential-free public status for Google Cloud and OCI, plus optional OpenAI, Anthropic, and ElevenLabs sources. Public records remain explicitly non-customer-specific.
-- Presents a compact Overview with the current state, supporting facts, and one recommended next action.
-- Opens Setup on a Smartscape-backed service scope map, with provider-tag review as a secondary path for reuse by other Dynatrace features.
+- Opens on a compact Coverage workspace with provider, service, incident, and filing facts above a Smartscape-backed scope map. Provider-tag review remains a secondary path for reuse by other Dynatrace features.
 - Uses exact service-to-cloud-runtime relationships from Smartscape to suggest provider candidates. Suggestions are never created from service names and require operator confirmation before a tag is written.
 - Lets an operator confirm the provider service for an exact Smartscape service-to-runtime scope. Confirmed mappings are stored separately from entity tags and reused automatically in Incident review.
 - Lets an authorized user add the configured provider tag to explicitly selected service entities after a confirmation step. Existing tags remain in place, conflicts are held for review, and the last app action can be undone.
 - Provides an Incidents view with an observed Problem queue, provider-published credit terms, filing guidance, required evidence, and exclusions.
-- Provides a separate Provider notices view so provider-reported events are never presented as Dynatrace Problems or proof of local impact.
-- Keeps the operating sequence inside one shell: Overview, Setup, Incidents, Provider notices, then Directory. The global header is reserved for the app identity and utility actions.
+- Provides an Evidence workspace that combines Dynatrace-derived review candidates with a separate provider-reports view. An SRE can validate or dismiss a candidate without turning either source into proof of provider fault or local impact.
+- Keeps the operating sequence inside one shell: Coverage, Incidents, then Evidence. Published and tenant-specific terms are available through Review terms. FinOps Agent is visible as planned and disabled until the platform supports the intended capability.
 - Stores tenant-owned custom terms in Dynatrace App Settings while retaining the public `sla.directory` record as the comparison baseline.
 - Assigns one custom terms record to one or more exact Dynatrace services, hosts, runtimes, or observed locations. Smartscape relationships supply service-to-runtime context, and entity IDs establish the boundary.
 - Applies custom terms in the order host, location, service, provider-wide fallback, then public directory baseline.
@@ -30,7 +29,7 @@ SLA Review is a Dynatrace AppEngine app for evidence-first provider attribution.
 
 ## Deliberate boundaries
 
-SLA Review does not issue credits, prove provider fault, create SLOs, or silently infer ownership from a service name. It changes a provider tag only after an authorized user reviews and confirms exact service entities in Setup. A matching tag, Smartscape relationship, contract assignment, provider notice, and active Problem are only inputs to a human review. Provider terms and filing dates are planning references, not an automated eligibility or approval decision.
+SLA Review does not issue credits, prove provider fault, create SLOs, or silently infer ownership from a service name. It changes a provider tag only after an authorized user reviews and confirms exact service entities in Coverage. A matching tag, Smartscape relationship, contract assignment, provider report, and active Problem are only inputs to a human review. A validated candidate records an SRE decision for operational follow-up. It does not establish provider fault, credit eligibility, or claim approval.
 
 Provider incident integrations are intentionally optional and read-only. Administrators may configure more than one AWS account, Azure subscription, Google Cloud project, or OCI tenancy. AWS Health events are account-specific, Azure Service Health events are subscription-specific, Google Personalized Service Health is project-relevant, and OCI Announcements are tenancy-specific. Google Cloud and OCI also have deliberately selected public-status views that the app labels non-customer-specific. No provider source establishes local impact. The app still requires Dynatrace telemetry and an explicit service boundary before an SRE can assess an incident. This release does not create notifications, tickets, Problems, or claims.
 
@@ -42,11 +41,11 @@ The runtime data path does not require an MCP server or a user-supplied `sla.dir
 
 1. Install SLA Review and open it from the Dynatrace Apps page.
 2. Use onboarding to choose the providers monitored by the workspace. A fresh workspace includes AWS, Azure, GCP, and OCI, with AWS only as the initial focused view.
-3. Continue to **Setup > Scope map** to review Smartscape recommendations and confirm the exact service-to-provider-service relationships used by incident review.
+3. Open **Coverage**, then use **Scope map** to review Smartscape recommendations and confirm the exact service-to-provider-service relationships used by Incidents and Evidence.
 4. Add provider service tags only when other Dynatrace dashboards, alerts, management zones, or workflows should reuse the same provider boundary.
 5. Optionally open **Settings > Provider connections**. For each account, subscription, project, or tenancy, create a least-privilege provider identity and store its secret in Dynatrace Credential Vault. SLA Review receives only the credential record ID.
 6. Add the exact provider hosts to Dynatrace External requests, test the connection, and save it only after verification succeeds. A provider connection does not assign services or prove provider fault.
-7. Use **Directory** to review the complete published provider record, service-level coverage, support options, and any tenant overrides before assessing an incident.
+7. Select **Review terms** to inspect the complete published provider record, service-level coverage, support options, and any tenant overrides before assessing an incident.
 
 Provider connections are configured independently in every installing Dynatrace environment. They are not bundled with the app, inherited from this repository, or shared with the development tenant. See the [provider incident connection guide](documentation/provider-connections.md) for the complete AWS, Azure, GCP, and OCI setup.
 
@@ -62,8 +61,8 @@ Provider connections are configured independently in every installing Dynatrace 
 - For each OCI tenancy connection, allow the exact regional host `announcements.<region>.oraclecloud.com`. Dynatrace supports a wildcard host pattern such as `*.oraclecloud.com`, but the exact hostname is the least-privilege default.
 - For OCI tenancy notices, create a dedicated API-signing user, grant its group `Allow group AnnouncementListers to inspect announcements in tenancy`, and store JSON containing only `userOcid`, `fingerprint`, and the unencrypted RSA `privateKey` as a Token credential. Give the credential AppEngine scope, restrict application access to SLA Review, and grant only the intended users access.
 - For personalized Google Cloud notices, enable the Service Health API, grant a dedicated service account both `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer` on the selected project, and store its JSON key as a Token credential with AppEngine scope. Restrict application access to SLA Review and grant only the intended users access.
-- Users who apply or undo provider tags need the Dynatrace permission to manage entity settings. Users without it keep a read-only Setup experience.
-- Users who create or edit custom SLAs need App Settings write access for the `contract-overrides` schema. Users who confirm provider-service scope mappings need write access for `provider-scope-assignments`. All authenticated app users can read these settings, so records must contain operational values and concise evidence references, not private contract text or credentials.
+- Users who apply or undo provider tags need the Dynatrace permission to manage entity settings. Users without it keep a read-only Coverage experience.
+- Users who create or edit custom terms need App Settings write access for the `contract-overrides` schema. Users who confirm provider-service scope mappings need write access for `provider-scope-assignments`. Users who validate or dismiss review candidates need write access for `evidence-decisions`. All authenticated app users can read these settings, so records must contain operational values and concise evidence references, not private contract text or credentials.
 - Node.js 24 for the supported local and CI toolchain.
 
 The app requests read access to Dynatrace telemetry, Smartscape, and an administrator-selected Credential Vault record, read/write access to user state, shared app state, and tenant configuration, plus `environment-api:entities:write` for the confirmed provider-tag action. It does not request credential-vault write, ticketing, SLO-write, or Problem-write permissions. See [`documentation/permissions.md`](documentation/permissions.md) for the complete boundary.
@@ -124,7 +123,9 @@ Custom terms use the `contract-overrides` App Settings schema so they are shared
 
 Provider connection metadata uses the `provider-connections` App Settings schema. It stores the provider, the applicable account, subscription, project, or tenancy identifier, an OCI region when required, and the Credential Vault record ID. It never stores an AWS secret access key, Azure client secret, Google service-account key, OCI private key, or access token. The AppEngine functions read the selected secret at request time, authenticate only to fixed provider endpoints, and return normalized provider notices to the browser.
 
-Confirmed service-to-provider-service mappings use the `provider-scope-assignments` App Settings schema. Each record contains exact Dynatrace service and runtime IDs, display context, the selected provider-service ID, and a short evidence note. The Setup landing page is Scope map. Incident review checks exact tenant contract scopes first, then confirmed scope mappings, then a unique Smartscape candidate. Any candidate remains visibly unconfirmed until an operator saves it in Setup. Provider tags are optional after that confirmation and remain available in the secondary Service tags view for wider Dynatrace reuse.
+Confirmed service-to-provider-service mappings use the `provider-scope-assignments` App Settings schema. Each record contains exact Dynatrace service and runtime IDs, display context, the selected provider-service ID, and a short evidence note. Coverage is the app landing page and opens on Scope map. Incident review checks exact tenant contract scopes first, then confirmed scope mappings, then a unique Smartscape candidate. Any candidate remains visibly unconfirmed until an operator saves it in Coverage. Provider tags are optional after that confirmation and remain available in the secondary Service tags view for wider Dynatrace reuse.
+
+Human candidate decisions use the `evidence-decisions` App Settings schema. Each record stores a bounded Problem snapshot, exact affected entity IDs, the provider and mapping basis, the decision, a concise operational note, and the review time. These records are shared operational context. They do not establish root cause, provider liability, SLA eligibility, or credit approval. Do not store confidential contract text, credentials, or personal data in a decision note.
 
 Do not enter secrets, credentials, or unnecessary personal data into app state. No secret is bundled in the app or stored in this repository.
 

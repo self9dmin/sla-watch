@@ -13,6 +13,7 @@ import { providerDisplayName } from "../data/providers";
 type ProviderNoticesProps = {
   providerSlug: string;
   lookbackHours: EvidenceLookbackHours;
+  embedded?: boolean;
 };
 
 type Tone = "neutral" | "warning" | "positive";
@@ -76,7 +77,7 @@ const NoticeDetail = ({ notice, providerName }: { notice: ProviderNotice; provid
   </article>
 );
 
-export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNoticesProps) => {
+export const ProviderNotices = ({ providerSlug, lookbackHours, embedded = false }: ProviderNoticesProps) => {
   const connectionSettings = useProviderConnections();
   const savedConnections = useMemo(() => connectionSettings.connections
     .filter((item) => item.providerSlug === providerSlug && item.enabled)
@@ -188,12 +189,12 @@ export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNotices
   const sourceScope = connection?.displayName ?? response?.scopeLabel ?? response?.projectId ?? "Public provider status";
   const connectionKind = awsSupported ? "account" : azureSupported ? "subscription" : ociSupported ? "tenancy" : "project";
 
-  return (
-    <Surface className="panel-card provider-notices-panel">
+  const content = (
+    <>
       <div className="provider-notices-heading">
         <div>
-          <Heading level={2}>Provider notices</Heading>
-          <Paragraph>Review provider-owned service health separately from Dynatrace-observed Problems.</Paragraph>
+          <Heading level={embedded ? 3 : 2}>{embedded ? "Provider reports" : "Evidence"}</Heading>
+          <Paragraph>Review provider-owned events as supporting evidence. A report does not establish local impact.</Paragraph>
         </div>
         <div className="provider-notices-actions">
           {response ? <SourceLabel response={response} /> : null}
@@ -210,15 +211,15 @@ export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNotices
       {!supported ? (
         <div className="provider-notices-empty">
           <strong>No provider-owned incident source is configured for this provider.</strong>
-          <span>{providerSlug.toUpperCase()} remains available for published terms, service attribution, and Dynatrace incident review. Optional provider connections are separate from monitored-provider setup.</span>
+          <span>{providerSlug.toUpperCase()} remains available for published terms, service attribution, and Dynatrace incident review. Optional provider connections are managed separately in workspace settings.</span>
           <Button as={Link} to="/settings/provider-connections" size="condensed">Review provider connections</Button>
         </div>
       ) : !(accountConnectionSupported && connectionSettings.loading) && configuredSourceRequired ? (
         <div className="provider-notices-empty"><strong>Connect an account-specific {providerName} source.</strong><span>{providerName} does not expose a credential-free public incident API used by this app. Add a read-only {connectionKind} connection to review provider-owned events. Dynatrace Problems and sla.directory terms remain available without it.</span><Button as={Link} to="/settings/provider-connections" size="condensed">Add {providerName} connection</Button></div>
       ) : !(accountConnectionSupported && connectionSettings.loading) && query.error ? (
-        <div className="error-box provider-notice-error"><strong>Provider notices are unavailable.</strong><span>{query.error.message}</span><Button size="condensed" onClick={() => void query.refetch()}>Try again</Button></div>
+        <div className="error-box provider-notice-error"><strong>Provider evidence is unavailable.</strong><span>{query.error.message}</span><Button size="condensed" onClick={() => void query.refetch()}>Try again</Button></div>
       ) : (accountConnectionSupported && connectionSettings.loading) || query.isLoading || !response ? (
-        <div className="provider-notices-empty" role="status"><strong>Reading provider notices</strong><span>{connection ? `Checking the configured ${connectionKind} source.` : `Checking the public ${providerName} status source.`}</span></div>
+        <div className="provider-notices-empty" role="status"><strong>Reading provider evidence</strong><span>{connection ? `Checking the configured ${connectionKind} source.` : `Checking the public ${providerName} status source.`}</span></div>
       ) : response ? (
         <>
           <dl className="provider-notices-summary">
@@ -232,7 +233,7 @@ export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNotices
             <div className="provider-notices-empty"><strong>{currentStateOnly ? "No current public OCI disruptions were returned." : `No ${providerName} notices were returned in the selected window.`}</strong><span>This means the provider source returned no matching event. It does not establish that the monitored services were healthy.</span></div>
           ) : (
             <div className="provider-notices-layout">
-              <aside className="provider-notice-queue" aria-label={`${providerName} provider notices`}>
+              <aside className="provider-notice-queue" aria-label={`${providerName} provider evidence`}>
                 <div className="provider-notice-queue-title"><strong>Notice queue</strong><span>{response.notices.length} returned</span></div>
                 <div className="provider-notice-queue-list">
                   {response.notices.slice(0, 20).map((notice) => (
@@ -249,7 +250,17 @@ export const ProviderNotices = ({ providerSlug, lookbackHours }: ProviderNotices
         </>
       ) : null}
 
-      <div className="provider-notices-boundary"><strong>Correlation boundary</strong><span>A provider notice can support a review. It does not prove that a Dynatrace service was affected or that a service credit is due.</span></div>
+      <div className="provider-notices-boundary"><strong>Correlation boundary</strong><span>Provider-reported evidence can support a review. It does not prove that a Dynatrace service was affected or that a service credit is due.</span></div>
+    </>
+  );
+
+  return embedded ? (
+    <section className="provider-notices-panel provider-notices-embedded">
+      {content}
+    </section>
+  ) : (
+    <Surface className="panel-card provider-notices-panel">
+      {content}
     </Surface>
   );
 };

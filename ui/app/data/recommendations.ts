@@ -129,7 +129,7 @@ export const buildSetupRecommendations = ({
         ? `${providerCandidateServices} topology candidate${providerCandidateServices === 1 ? "" : "s"}; ${services.length - providerCandidateServices} service${services.length - providerCandidateServices === 1 ? " has" : "s have"} no matching ${directoryData.provider.name} runtime evidence.`
         : `${services.length} service${services.length === 1 ? "" : "s"} returned, but no provider tags were found.`,
       action: providerCandidateServices > 0 ? "Open scope map" : "Review service tags",
-      href: providerCandidateServices > 0 ? "/setup" : "/setup?view=tags&review=provider#provider-service-tags",
+      href: providerCandidateServices > 0 ? "/" : "/?view=tags&review=provider#provider-service-tags",
     });
   } else if (directoryData && providerLabels.length > 0 && matchedProviderServices === 0) {
     add(recommendations, {
@@ -139,7 +139,7 @@ export const buildSetupRecommendations = ({
       detail: `Dynatrace has provider tags, but none resolve to ${directoryData.provider.name}. Confirm the intended provider before reviewing the contract.`,
       evidence: `Detected tags: ${providerLabels.slice(0, 3).join(", ")}. Selected contract: ${directoryData.provider.name}.`,
       action: "Review service tags",
-      href: "/setup?view=tags&review=provider#provider-service-tags",
+      href: "/?view=tags&review=provider#provider-service-tags",
     });
   } else if (directoryData && matchedProviderServices > 0 && taggedProviderServices === 0) {
     add(recommendations, {
@@ -149,7 +149,7 @@ export const buildSetupRecommendations = ({
       detail: `The confirmed scope mapping is sufficient for this review. Add ${providerLabelKey}:${selectedProviderSlug} only when dashboards, alerts, management zones, or workflows should reuse the same boundary.`,
       evidence: `${matchedProviderServices} service${matchedProviderServices === 1 ? " is" : "s are"} mapped without an explicit provider tag.`,
       action: "Review service tags",
-      href: "/setup?view=tags&review=provider#provider-service-tags",
+      href: "/?view=tags&review=provider#provider-service-tags",
     });
   }
 

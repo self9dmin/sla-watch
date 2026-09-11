@@ -1,0 +1,150 @@
+{
+  "$schema": "https://developer.dynatrace.com/docs-assets/schema_strict_apps.json",
+  "dynatrace": "1",
+  "schemaId": "evidence-decisions",
+  "version": "1.0.0",
+  "displayName": "Evidence review decisions",
+  "description": "Human validation or dismissal of provider-review candidates discovered from Dynatrace evidence.",
+  "documentation": "A validated candidate is approved for operational follow-up only. It does not establish provider fault, SLA eligibility, or a service credit. Store concise operational notes only. Do not include credentials, confidential contract text, or personal data.",
+  "multiObject": true,
+  "maxObjects": 2000,
+  "summaryPattern": "{problemId} · {status}",
+  "searchPattern": "{providerSlug} {problemId} {problemTitle} {status} {providerServiceNames}",
+  "ordered": false,
+  "maturity": "GENERAL_AVAILABILITY",
+  "ownerBasedAccessControl": false,
+  "enums": {
+    "DecisionStatus": {
+      "type": "enum",
+      "displayName": "Review decision",
+      "items": [
+        { "value": "validated", "displayName": "Validated for follow-up" },
+        { "value": "dismissed", "displayName": "Dismissed" }
+      ]
+    },
+    "MappingBasis": {
+      "type": "enum",
+      "displayName": "Provider mapping basis",
+      "items": [
+        { "value": "confirmed-scope", "displayName": "Confirmed scope" },
+        { "value": "provider-tag", "displayName": "Provider tag" },
+        { "value": "smartscape-candidate", "displayName": "Smartscape candidate" }
+      ]
+    }
+  },
+  "properties": {
+    "decisionKey": {
+      "displayName": "Decision key",
+      "type": "text",
+      "default": "",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "providerSlug": {
+      "displayName": "Provider slug",
+      "type": "text",
+      "default": "",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "problemId": {
+      "displayName": "Dynatrace Problem ID",
+      "type": "text",
+      "default": "",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "problemTitle": {
+      "displayName": "Problem title",
+      "type": "text",
+      "default": "",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "problemCategory": {
+      "displayName": "Problem category",
+      "type": "text",
+      "default": "UNKNOWN",
+      "nullable": false
+    },
+    "problemStatus": {
+      "displayName": "Problem status at review",
+      "type": "text",
+      "default": "UNKNOWN",
+      "nullable": false
+    },
+    "problemStartedAt": {
+      "displayName": "Observed start",
+      "type": "text",
+      "nullable": true
+    },
+    "problemEndedAt": {
+      "displayName": "Observed end",
+      "type": "text",
+      "nullable": true
+    },
+    "affectedEntityIds": {
+      "displayName": "Affected Dynatrace entity IDs",
+      "type": "set",
+      "items": { "type": "text" },
+      "default": [],
+      "nullable": false,
+      "maxObjects": 100
+    },
+    "affectedEntityNames": {
+      "displayName": "Affected service names",
+      "type": "list",
+      "items": { "type": "text" },
+      "default": [],
+      "nullable": false,
+      "maxObjects": 100
+    },
+    "providerServiceIds": {
+      "displayName": "Provider service IDs",
+      "type": "set",
+      "items": { "type": "text" },
+      "default": [],
+      "nullable": false,
+      "maxObjects": 50
+    },
+    "providerServiceNames": {
+      "displayName": "Provider services",
+      "type": "list",
+      "items": { "type": "text" },
+      "default": [],
+      "nullable": false,
+      "maxObjects": 50
+    },
+    "mappingBasis": {
+      "displayName": "Provider mapping basis",
+      "type": { "$ref": "#/enums/MappingBasis" },
+      "default": "smartscape-candidate",
+      "nullable": false
+    },
+    "mappingEvidence": {
+      "displayName": "Mapping evidence",
+      "type": "text",
+      "default": "",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "status": {
+      "displayName": "Review decision",
+      "type": { "$ref": "#/enums/DecisionStatus" },
+      "default": "validated",
+      "nullable": false
+    },
+    "decisionNote": {
+      "displayName": "Operational review note",
+      "type": "text",
+      "nullable": true
+    },
+    "reviewedAt": {
+      "displayName": "Reviewed at",
+      "type": "text",
+      "default": "",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    }
+  }
+}

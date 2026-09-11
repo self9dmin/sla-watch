@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAppFunction, useDql } from "@dynatrace-sdk/react-hooks";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -6,14 +6,13 @@ import { Surface } from "@dynatrace/strato-components/layouts";
 import {
   Heading,
   Paragraph,
-  Text,
 } from "@dynatrace/strato-components/typography";
 import { SetupAdvisor } from "../components/SetupAdvisor";
+import { EvidenceWorkspace } from "../components/EvidenceWorkspace";
 import { IncidentReview } from "../components/IncidentReview";
 import { ProviderTagSetup } from "../components/ProviderTagSetup";
 import { ProviderScopeMap } from "../components/ProviderScopeMap";
 import { ProviderDirectoryWorkspace } from "../components/ProviderDirectoryWorkspace";
-import { ProviderNotices } from "../components/ProviderNotices";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
 import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
 import { providerTagValue } from "../data/providerTags";
@@ -129,8 +128,7 @@ const WATCH_LINKS: ReadonlyArray<{
   to: string;
   tour: string;
 }> = [
-  { section: "overview", label: "Overview", to: "/", tour: "overview" },
-  { section: "setup", label: "Setup", to: "/setup", tour: "setup" },
+  { section: "coverage", label: "Coverage", to: "/", tour: "coverage" },
   {
     section: "incidents",
     label: "Incidents",
@@ -138,16 +136,10 @@ const WATCH_LINKS: ReadonlyArray<{
     tour: "incidents",
   },
   {
-    section: "provider-notices",
-    label: "Provider notices",
-    to: "/provider-notices",
-    tour: "provider-notices",
-  },
-  {
-    section: "directory",
-    label: "Directory",
-    to: "/directory",
-    tour: "directory",
+    section: "evidence",
+    label: "Evidence",
+    to: "/evidence",
+    tour: "evidence",
   },
 ];
 
@@ -166,46 +158,40 @@ const WatchNavigation = ({ section }: { section: WatchSection }) => (
         {item.label}
       </Link>
     ))}
+    <span
+      className="section-tab-future"
+      title="Planned for a future AppEngine agent release"
+    >
+      <button
+        type="button"
+        className="section-tab section-tab-disabled"
+        disabled
+        aria-label="FinOps Agent, planned for a future AppEngine agent release"
+      >
+        FinOps Agent
+        <span className="section-tab-status" aria-hidden="true">
+          Planned
+        </span>
+      </button>
+    </span>
   </nav>
 );
 
-const EvidenceStep = ({
-  number,
-  title,
-  detail,
-  state,
-}: {
-  number: number;
-  title: string;
-  detail: string;
-  state: Tone;
-}) => (
-  <div className="evidence-step" role="listitem">
-    <span
-      className={`evidence-step-marker evidence-step-${state}`}
-      aria-hidden="true"
-    >
-      {number}
-    </span>
-    <div className="evidence-step-copy">
-      <strong>{title}</strong>
-      <span>{detail}</span>
-    </div>
-  </div>
-);
-
-export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
+export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const section = initialSection;
   const location = useLocation();
-  const setupView =
+  const coverageView =
     new URLSearchParams(location.search).get("view") === "tags"
       ? "tags"
       : "scope";
+  const evidenceView =
+    new URLSearchParams(location.search).get("view") === "provider-reports"
+      ? "provider-reports"
+      : "candidates";
   const { preferences, updatePreferences } = useSlaPreferences();
   const scopeSettings = useProviderScopeAssignments();
   const { providerSlugs, providerSlug, providerLabelKey, lookbackHours } =
     preferences;
-  const [providerNoticeRefresh, setProviderNoticeRefresh] = useState(0);
   const problemsQuery = useMemo(
     () => createProblemsQuery(lookbackHours),
     [lookbackHours],
@@ -237,25 +223,21 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     data: problemData,
     error: problemError,
     isLoading: problemsLoading,
-    refetch: refetchProblems,
   } = useDql({ query: problemsQuery });
   const {
     data: logsData,
     error: logsError,
     isLoading: logsLoading,
-    refetch: refetchLogs,
   } = useDql({ query: logsQuery });
   const {
     data: spansData,
     error: spansError,
     isLoading: spansLoading,
-    refetch: refetchSpans,
   } = useDql({ query: spansQuery });
   const {
     data: metricsData,
     error: metricsError,
     isLoading: metricsLoading,
-    refetch: refetchMetrics,
   } = useDql({ query: metricsQuery });
   const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
   const directoryQuery = useAppFunction<SlaProviderResponse>({
@@ -271,7 +253,6 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
   const directoryLoading =
     directoryQuery.isLoading ||
     Boolean(!directoryQuery.error && directoryQuery.data && !directoryData);
-  const refetchDirectory = directoryQuery.refetch;
 
   const entityServices = useMemo<ServiceRecord[]>(() => {
     const records = Array.isArray(serviceData?.records)
@@ -396,9 +377,6 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
       confirmedScopeServiceIds.has(service.id),
   ).length;
   const taggedProviderServices = taggedProviderServiceIds.size;
-  const confirmedScopeServices = services.filter((service) =>
-    confirmedScopeServiceIds.has(service.id),
-  ).length;
   const activeProviderCandidates = providerCandidates.filter(
     (candidate) => candidate.providerSlug === selectedProviderSlug,
   );
@@ -428,103 +406,6 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     (logCount !== null && logCount > 0) ||
     (spanCount !== null && spanCount > 0) ||
     hasMetricSeries(metricsData);
-  const telemetryState = telemetryLoading
-    ? {
-        tone: "neutral" as Tone,
-        title: "Checking telemetry",
-        detail:
-          "Reading the service inventory and recent signals before making a diagnosis.",
-      }
-    : telemetryError
-      ? {
-          tone: "warning" as Tone,
-          title: "Access incomplete",
-          detail:
-            "At least one telemetry read was denied or failed. This is not evidence that telemetry is absent.",
-        }
-      : services.length === 0 && telemetrySignalsPresent
-        ? {
-            tone: "warning" as Tone,
-            title: "Entity inventory incomplete",
-            detail:
-              "Telemetry exists, but no service entities were returned. Check entity permissions or entity mapping before evaluating provider responsibility.",
-          }
-        : telemetrySignalsPresent
-          ? {
-              tone: "positive" as Tone,
-              title: "Telemetry detected",
-              detail:
-                "Dynatrace has service entities or signals that can support an evidence review.",
-            }
-          : {
-              tone: "warning" as Tone,
-              title: "Telemetry missing",
-              detail: `No Problems, logs, spans, or service request series were detected in the last ${formatEvidenceLookback(lookbackHours)}.`,
-            };
-  const providerState =
-    directoryLoading || scopeSettings.loading
-      ? {
-          tone: "neutral" as Tone,
-          title: "Checking provider scope",
-          detail: `Loading the ${providerSlug} contract and confirmed service mappings.`,
-        }
-      : !directoryData
-        ? {
-            tone: "warning" as Tone,
-            title: "Directory unavailable",
-            detail:
-              directoryError?.message ??
-              "Load a provider contract before checking provider identity.",
-          }
-        : telemetryLoading
-          ? {
-              tone: "neutral" as Tone,
-              title: "Waiting for service inventory",
-              detail:
-                "Provider matching will be evaluated after the tenant service list finishes loading.",
-            }
-          : telemetryError
-            ? {
-                tone: "warning" as Tone,
-                title: "Provider check blocked",
-                detail:
-                  "Telemetry access is incomplete, so provider tagging cannot be judged reliably yet.",
-              }
-            : services.length === 0 && telemetrySignalsPresent
-              ? {
-                  tone: "warning" as Tone,
-                  title: "Identify service first",
-                  detail:
-                    "The tenant has telemetry, but the affected service inventory is incomplete. Provider tagging cannot be evaluated yet.",
-                }
-              : services.length === 0
-                ? {
-                    tone: "warning" as Tone,
-                    title: "No service entities",
-                    detail:
-                      "There is no service inventory to tag. Fix instrumentation or entity access before identifying a provider.",
-                  }
-                : matchedProviderServices > 0
-                  ? {
-                      tone: "positive" as Tone,
-                      title: "Provider scope confirmed",
-                      detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? " is" : "s are"} identified by ${confirmedScopeServices > 0 ? `${confirmedScopeServices} scope mapping${confirmedScopeServices === 1 ? "" : "s"}` : ""}${confirmedScopeServices > 0 && taggedProviderServices > 0 ? " and " : ""}${taggedProviderServices > 0 ? `${taggedProviderServices} provider tag${taggedProviderServices === 1 ? "" : "s"}` : ""}. This still does not prove a provider outage.`,
-                    }
-                  : providerLabels.length === 0
-                    ? {
-                        tone: "warning" as Tone,
-                        title: "Provider tags missing",
-                        detail:
-                          suggestedServiceCount > 0
-                            ? `Smartscape found ${suggestedServiceCount} ${directoryData.provider.name} service candidate${suggestedServiceCount === 1 ? "" : "s"}. Confirm each assignment in Setup.`
-                            : `Services exist, but no explicit provider tag was found. Review the services that depend on ${directoryData.provider.name} in Setup.`,
-                      }
-                    : {
-                        tone: "warning" as Tone,
-                        title: "Provider identification needed",
-                        detail: `Provider tags were found (${providerLabels.slice(0, 3).join(", ")}), but none resolves to ${directoryData.provider.name}. Select the correct provider or update the Dynatrace tags.`,
-                      };
-
   const claimReadiness =
     telemetryLoading || directoryLoading || scopeSettings.loading
       ? {
@@ -554,7 +435,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
               ? providerLabels.length === 0
                 ? {
                     tone: "warning" as Tone,
-                    value: "Needs setup",
+                    value: "Needs coverage",
                     detail:
                       "Confirm which services depend on the selected provider.",
                   }
@@ -579,88 +460,12 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
                   };
 
   const providerName = directoryData?.provider.name ?? providerSlug;
-  const overviewAssessment =
-    telemetryLoading || directoryLoading || scopeSettings.loading
-      ? {
-          title: "Checking this environment",
-          detail:
-            "Dynatrace telemetry and the selected provider contract are still loading.",
-          action: "Open setup",
-          href: "/setup",
-        }
-      : telemetryError
-        ? {
-            title: "Complete the Dynatrace evidence read",
-            detail: telemetryState.detail,
-            action: "Review app access",
-            href: "/setup",
-          }
-        : !directoryData
-          ? {
-              title: "Restore the provider contract connection",
-              detail:
-                directoryError?.message ??
-                `The ${providerSlug} contract could not be loaded from sla.directory.`,
-              action: "Review provider connection",
-              href: "/setup",
-            }
-          : !telemetrySignalsPresent
-            ? {
-                title: "Add a recent service signal",
-                detail: `No Problems, logs, spans, or service request series were detected in the last ${formatEvidenceLookback(lookbackHours)}.`,
-                action: "Review evidence scope",
-                href: "/setup",
-              }
-            : services.length === 0
-              ? {
-                  title: "Expose the affected service boundary",
-                  detail:
-                    "Telemetry is present, but no service entities were returned. Provider attribution should wait until the service boundary is visible.",
-                  action: "Review service access",
-                  href: "/settings/watch",
-                }
-              : matchedProviderServices > 0
-                ? activeProblems === 0
-                  ? {
-                      title: "No incident requires provider review",
-                      detail: `${matchedProviderServices} service${matchedProviderServices === 1 ? " matches" : "s match"} ${providerName}. No active Problems were found in the last ${formatEvidenceLookback(lookbackHours)}.`,
-                      action: "Review provider terms",
-                      href: "/directory",
-                    }
-                  : {
-                      title:
-                        "Review the active Problem before considering a claim",
-                      detail: `${activeProblems} active Problem${activeProblems === 1 ? "" : "s"} and ${matchedProviderServices} provider-matched service${matchedProviderServices === 1 ? "" : "s"} require human review.`,
-                      action: "Review incident evidence",
-                      href: "/incidents",
-                    }
-                : providerLabels.length === 0 && suggestedServiceCount > 0
-                  ? {
-                      title: `Confirm ${suggestedServiceCount} ${providerName} service candidate${suggestedServiceCount === 1 ? "" : "s"}`,
-                      detail: `Smartscape links ${suggestedServiceCount === 1 ? "this service" : "these services"} to ${providerName} runtime metadata. Confirm the provider service before using the mapping in incident review.`,
-                      action: "Open scope map",
-                      href: "/setup",
-                    }
-                  : providerLabels.length === 0
-                    ? {
-                        title: `Identify which services depend on ${providerName}`,
-                        detail: `${services.length} service${services.length === 1 ? " is" : "s are"} visible, but no explicit provider tag was found.`,
-                        action: "Review service tags",
-                        href: "/setup?view=tags",
-                      }
-                    : {
-                        title: `Resolve provider tags to ${providerName}`,
-                        detail: `${providerLabels.length} provider tag${providerLabels.length === 1 ? " is" : "s are"} visible, but none resolves to the selected contract.`,
-                        action: "Review service tags",
-                        href: "/setup?view=tags",
-                      };
-
-  const setupStatus =
+  const coverageStatus =
     telemetryLoading ||
     directoryLoading ||
     topologyQuery.isLoading ||
     scopeSettings.loading
-      ? "Checking setup"
+      ? "Checking coverage"
       : telemetryError
         ? "Access incomplete"
         : !directoryData
@@ -703,22 +508,6 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
     ],
   );
 
-  const handleRefresh = () => {
-    if (section === "provider-notices") {
-      setProviderNoticeRefresh((current) => current + 1);
-      return;
-    }
-    void Promise.all([
-      refetchServices(),
-      refetchProblems(),
-      refetchLogs(),
-      refetchSpans(),
-      refetchMetrics(),
-      topologyQuery.refetch(),
-      refetchDirectory(),
-    ]);
-  };
-
   return (
     <div className="dashboard-shell">
       <section className="hero-row">
@@ -746,79 +535,45 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
               ))}
             </select>
           </label>
-          <div className="hero-action-buttons">
+          <nav className="hero-action-buttons" aria-label="Workspace tools">
             <Button
-              className="hero-action-secondary"
-              onClick={handleRefresh}
-              disabled={telemetryLoading || directoryLoading}
-              size="condensed"
-            >
-              {telemetryLoading || directoryLoading
-                ? "Refreshing"
-                : "Refresh data"}
-            </Button>
-            <Button
-              className="hero-action-primary"
+              className={`hero-tool-button${section === "directory" ? " active" : ""}`}
               as={Link}
-              to="/settings/watch"
-              variant="emphasized"
+              to="/directory"
               size="condensed"
+              data-tour="directory"
+              aria-current={section === "directory" ? "page" : undefined}
             >
-              Configure
+              Review terms
             </Button>
-          </div>
+          </nav>
         </div>
       </section>
 
       <WatchNavigation section={section} />
 
       <div className={`watch-view watch-view-${section}`}>
-        {section === "overview" ? (
-          <Surface
-            className={`panel-card overview-status-panel overview-status-panel-${claimReadiness.tone}`}
-            data-tour="overview-status"
-          >
-            <div className="overview-status-main">
-              <div className="overview-status-copy">
-                <StatusPill tone={claimReadiness.tone}>
-                  {claimReadiness.value}
-                </StatusPill>
-                <Heading level={2}>{overviewAssessment.title}</Heading>
-                <Paragraph>{overviewAssessment.detail}</Paragraph>
+        {section === "coverage" ? (
+          <Surface className="panel-card setup-panel coverage-panel">
+            <div className="setup-heading" data-tour="coverage-summary">
+              <div>
+                <Heading level={2}>Coverage</Heading>
+                <Paragraph>
+                  Confirm which provider service applies to each Dynatrace
+                  service and runtime.
+                </Paragraph>
               </div>
-              <div className="overview-status-actions">
-                <Button
-                  className="overview-primary-action"
-                  as={Link}
-                  to={overviewAssessment.href}
-                  variant="emphasized"
-                  color="primary"
-                >
-                  {overviewAssessment.action}
-                </Button>
-                {overviewAssessment.href !== "/setup" &&
-                setupRecommendations.length > 0 ? (
-                  <Link className="text-action" to="/setup">
-                    View {setupRecommendations.length} setup check
-                    {setupRecommendations.length === 1 ? "" : "s"}
-                  </Link>
-                ) : setupRecommendations.length > 0 ? (
-                  <Text className="overview-check-count">
-                    {setupRecommendations.length} setup check
-                    {setupRecommendations.length === 1 ? "" : "s"} open
-                  </Text>
-                ) : null}
-              </div>
+              <StatusPill tone={claimReadiness.tone}>{coverageStatus}</StatusPill>
             </div>
-            <div className="overview-facts" aria-label="Current monitor facts">
+            <div className="overview-facts coverage-facts" aria-label="Coverage status">
               <OverviewFact
-                label="Providers monitored"
+                label="Providers"
                 value={`${providerSlugs.length}`}
                 detail={
                   directoryLoading
                     ? `checking ${providerDisplayName(providerSlug)}`
                     : directoryData
-                      ? `${providerName} active`
+                      ? `${providerName} selected`
                       : `${providerDisplayName(providerSlug)} unavailable`
                 }
                 tone={
@@ -830,13 +585,17 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
                 }
               />
               <OverviewFact
-                label="Services mapped"
+                label="Services covered"
                 value={
                   servicesLoading || scopeSettings.loading
                     ? "Checking"
                     : `${matchedProviderServices} / ${services.length}`
                 }
-                detail="confirmed scope or provider tag"
+                detail={
+                  suggestedServiceCount > 0
+                    ? `${suggestedServiceCount} suggestion${suggestedServiceCount === 1 ? "" : "s"} to review`
+                    : "confirmed scope or provider tag"
+                }
                 tone={
                   servicesLoading || scopeSettings.loading
                     ? "neutral"
@@ -860,7 +619,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
                 }
               />
               <OverviewFact
-                label="Filing window"
+                label="Filing reference"
                 value={
                   directoryData?.provider.claimProcess?.deadlineDays
                     ? `${directoryData.provider.claimProcess.deadlineDays} days`
@@ -878,100 +637,24 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
                 }
               />
             </div>
-            <div className="overview-boundary-note">
-              <strong>Assessment boundary</strong>
-              <span>
-                Dynatrace provides observed tenant evidence. The provider
-                determines fault, eligibility, and any service credit.
-              </span>
-            </div>
-          </Surface>
-        ) : section === "setup" ? (
-          <Surface className="panel-card setup-panel">
-            <div className="setup-heading">
-              <div>
-                <Heading level={2}>Setup</Heading>
-                <Paragraph>
-                  Confirm each service scope in Smartscape. Add provider tags
-                  only when other Dynatrace workflows should reuse the boundary.
-                </Paragraph>
-              </div>
-              <StatusPill tone={claimReadiness.tone}>{setupStatus}</StatusPill>
-            </div>
-            <div
-              className="evidence-ladder"
-              role="list"
-              aria-label="Setup stages"
-            >
-              <EvidenceStep
-                number={1}
-                title="Telemetry"
-                detail={telemetryState.title}
-                state={telemetryState.tone}
-              />
-              <EvidenceStep
-                number={2}
-                title="Services"
-                detail={
-                  servicesLoading
-                    ? "Checking inventory"
-                    : `${services.length} detected`
-                }
-                state={
-                  services.length > 0 && !servicesLoading
-                    ? "positive"
-                    : telemetryLoading
-                      ? "neutral"
-                      : "warning"
-                }
-              />
-              <EvidenceStep
-                number={3}
-                title="Provider scope"
-                detail={
-                  directoryLoading ||
-                  topologyQuery.isLoading ||
-                  scopeSettings.loading
-                    ? "Checking mapping"
-                    : matchedProviderServices > 0
-                      ? `${matchedProviderServices} confirmed`
-                      : suggestedServiceCount > 0
-                        ? `${suggestedServiceCount} candidate${suggestedServiceCount === 1 ? "" : "s"}`
-                        : "0 confirmed"
-                }
-                state={
-                  matchedProviderServices > 0 && !directoryLoading
-                    ? "positive"
-                    : providerState.tone
-                }
-              />
-              <EvidenceStep
-                number={4}
-                title="Contract"
-                detail={
-                  directoryData ? `${providerName} loaded` : "Unavailable"
-                }
-                state={directoryData ? "positive" : "neutral"}
-              />
-            </div>
-            <nav className="setup-view-tabs" aria-label="Setup views">
+            <nav className="setup-view-tabs" aria-label="Coverage views">
               <Link
                 className={
-                  setupView === "scope"
+                  coverageView === "scope"
                     ? "setup-view-tab active"
                     : "setup-view-tab"
                 }
-                to="/setup"
+                to="/"
               >
                 Scope map
               </Link>
               <Link
                 className={
-                  setupView === "tags"
+                  coverageView === "tags"
                     ? "setup-view-tab active"
                     : "setup-view-tab"
                 }
-                to="/setup?view=tags"
+                to="/?view=tags"
               >
                 Service tags
               </Link>
@@ -981,7 +664,7 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
                 Telemetry scan incomplete. Check the current user's data access.
               </div>
             ) : null}
-            {setupView === "tags" ? (
+            {coverageView === "tags" ? (
               <div className="setup-content-grid">
                 <ProviderTagSetup
                   services={services}
@@ -1043,10 +726,29 @@ export const Dashboard = ({ initialSection = "overview" }: DashboardProps) => {
             error={problemError ?? undefined}
           />
         ) : (
-          <ProviderNotices
-            key={providerNoticeRefresh}
+          <EvidenceWorkspace
+            view={evidenceView}
+            provider={directoryData}
             providerSlug={selectedProviderSlug}
+            providerLabelKey={providerLabelKey}
+            problems={problems}
+            services={services}
+            topology={topology}
+            assignments={scopeSettings.assignments}
             lookbackHours={lookbackHours}
+            loading={
+              problemsLoading ||
+              topologyQuery.isLoading ||
+              directoryLoading ||
+              scopeSettings.loading
+            }
+            error={
+              problemError ??
+              topologyQuery.error ??
+              directoryError ??
+              scopeSettings.error ??
+              undefined
+            }
           />
         )}
       </div>

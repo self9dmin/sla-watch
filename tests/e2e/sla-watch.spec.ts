@@ -8,7 +8,7 @@ const openWatch = async (page: Page): Promise<FrameLocator> => {
   const app = appFrame(page);
 
   const skipSetup = app.getByRole("button", {
-    name: /finish later and open (overview|monitor)/i,
+    name: /finish later and open (overview|monitor|coverage)/i,
   });
   if (await skipSetup.isVisible().catch(() => false)) {
     await skipSetup.click();
@@ -19,7 +19,7 @@ const openWatch = async (page: Page): Promise<FrameLocator> => {
     await skipWalkthrough.click();
   }
 
-  await expect(app.getByRole("link", { name: "Directory" })).toBeVisible();
+  await expect(app.getByRole("link", { name: "Review terms" })).toBeVisible();
   return app;
 };
 
@@ -49,14 +49,16 @@ test.describe("SLA Review deployed smoke", () => {
       name: "Review sections",
     });
     await expect(sectionNavigation.getByRole("link")).toHaveText([
-      "Overview",
-      "Setup",
+      "Coverage",
       "Incidents",
-      "Provider notices",
-      "Directory",
+      "Evidence",
     ]);
     await expect(
-      app.locator(".sla-header").getByRole("link", { name: "Monitor" }),
+      sectionNavigation.getByRole("button", { name: /FinOps Agent/i }),
+    ).toBeDisabled();
+    await expect(sectionNavigation.getByText("Planned")).toBeVisible();
+    await expect(
+      app.locator(".sla-header").getByRole("link", { name: "Coverage" }),
     ).toHaveCount(0);
     await expect(
       app.locator(".sla-header").getByRole("link", { name: "Directory" }),
@@ -64,15 +66,22 @@ test.describe("SLA Review deployed smoke", () => {
 
     await expect(
       app.getByRole("button", { name: "Refresh data" }),
-    ).toBeVisible();
-    await expect(app.getByRole("link", { name: "Configure" })).toBeVisible();
+    ).toHaveCount(0);
+    await expect(app.getByRole("link", { name: "Configure" })).toHaveCount(0);
+    await expect(
+      app.getByRole("link", { name: "Set up services" }),
+    ).toHaveCount(0);
+    await expect(
+      app.getByRole("link", { name: "Open directory" }),
+    ).toHaveCount(0);
+    await expect(app.getByRole("link", { name: "Review terms" })).toBeVisible();
     await expect(
       app.getByRole("combobox", { name: "Active provider" }),
     ).toBeVisible();
     await expect(
       app
         .getByText(
-          /Needs setup|Needs telemetry|Needs service boundary|Needs mapping|No incident in scope|Candidate|Blocked/i,
+          /Checking coverage|Access incomplete|Contract unavailable|Action required|Boundary ready|Review available/i,
         )
         .first(),
     ).toBeVisible();
@@ -81,15 +90,8 @@ test.describe("SLA Review deployed smoke", () => {
         /The provider determines fault, eligibility, and any service credit/i,
       ),
     ).toBeVisible();
-    await expectNoPageScroll(app);
-
-    await app.getByRole("link", { name: "Setup" }).click();
-    await expect(app.getByRole("heading", { name: "Setup" })).toBeVisible();
-    const setupStages = app.getByRole("list", {
-      name: "Setup stages",
-    });
-    await expect(setupStages).toBeVisible();
-    await expect(setupStages.getByRole("listitem")).toHaveCount(4);
+    await expect(app.getByRole("heading", { name: "Coverage" })).toBeVisible();
+    await expect(app.getByLabel("Coverage status").locator(".overview-fact")).toHaveCount(4);
     await expect(app.getByRole("link", { name: "Scope map" })).toHaveClass(
       /active/,
     );
@@ -123,16 +125,25 @@ test.describe("SLA Review deployed smoke", () => {
     ).toBeVisible();
     await expectNoPageScroll(app);
 
-    await app.getByRole("link", { name: "Provider notices" }).click();
+    await app.getByRole("link", { name: "Evidence" }).click();
     await expect(
-      app.getByRole("heading", { name: "Provider notices" }),
+      app.getByRole("heading", { name: "Evidence" }),
     ).toBeVisible();
+    await expect(app.getByRole("link", { name: "Review candidates" })).toHaveClass(/active/);
+    await expect(app.getByRole("link", { name: "Provider reports" })).toBeVisible();
     await expect(
-      app.getByText(/does not prove that a Dynatrace service was affected/i),
+      app.getByText(/provider determines fault, eligibility, and any service credit/i),
     ).toBeVisible();
     await expectNoPageScroll(app);
 
-    await app.getByRole("link", { name: "Directory" }).click();
+    await app.getByRole("link", { name: "Provider reports" }).click();
+    await expect(app.getByRole("heading", { name: "Provider reports" })).toBeVisible();
+    await expect(
+      app.getByText(/supporting evidence and does not establish local impact/i),
+    ).toBeVisible();
+    await expectNoPageScroll(app);
+
+    await app.getByRole("link", { name: "Review terms" }).click();
     await expect(
       app.getByRole("heading", { name: /terms/ }),
     ).toBeVisible();
@@ -144,9 +155,9 @@ test.describe("SLA Review deployed smoke", () => {
   }) => {
     const app = await openWatch(page);
 
-    await app.getByRole("button", { name: "Open monitor settings" }).click();
+    await app.getByRole("button", { name: "Open workspace settings" }).click();
     await expect(
-      app.getByRole("heading", { name: "Configure monitor defaults." }),
+      app.getByRole("heading", { name: "Configure provider defaults." }),
     ).toBeVisible();
     await expect(
       app.getByRole("group", { name: "Monitored providers" }),
@@ -222,7 +233,7 @@ test.describe("SLA Review deployed smoke", () => {
   }) => {
     const app = await openWatch(page);
 
-    await app.getByRole("link", { name: "Directory" }).click();
+    await app.getByRole("link", { name: "Review terms" }).click();
     await expect(
       app.getByRole("heading", { name: /terms/ }),
     ).toBeVisible();
@@ -280,7 +291,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(app.getByText("1 exact target")).toBeVisible();
   });
 
-  test("switches themes without losing the compact watch", async ({ page }) => {
+  test("switches themes without losing the compact coverage view", async ({ page }) => {
     const app = await openWatch(page);
 
     const lightTheme = app.getByRole("button", {
@@ -299,7 +310,9 @@ test.describe("SLA Review deployed smoke", () => {
       await expect(lightTheme).toBeVisible();
     }
 
-    await expect(app.getByRole("link", { name: "Directory" })).toBeVisible();
+    await expect(
+      app.getByRole("link", { name: "Review terms" }),
+    ).toBeVisible();
     await expectNoPageScroll(app);
   });
 
@@ -320,7 +333,7 @@ test.describe("SLA Review deployed smoke", () => {
     await page.mouse.move(0, 100);
 
     const tooltipCases = [
-      { action: "Open monitor settings", tooltip: "Open monitor settings" },
+      { action: "Open workspace settings", tooltip: "Open workspace settings" },
       {
         action: "Start or replay product walkthrough",
         tooltip: "Start or replay walkthrough",
@@ -376,7 +389,7 @@ test.describe("SLA Review deployed smoke", () => {
       app.getByRole("link", { name: /Dynatrace Community/i }),
     ).toHaveCount(0);
 
-    await app.getByRole("button", { name: "Open monitor settings" }).click();
+    await app.getByRole("button", { name: "Open workspace settings" }).click();
     await expect(
       app.locator(
         '[aria-disabled="true"][aria-label="Dynatrace Community, coming soon"]',
