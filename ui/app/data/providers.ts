@@ -16,10 +16,67 @@ export const normalizeProviderSlug = (value: unknown): string | null => {
   return PROVIDER_SLUG_PATTERN.test(normalized) ? normalized : null;
 };
 
-export const normalizeProviderSlugs = (value: unknown, fallback: string[] = ["aws", "azure", "gcp", "oci"]): string[] => {
+export const normalizeProviderSlugs = (value: unknown, fallback: string[] = ["aws"]): string[] => {
   const values = Array.isArray(value) ? value : [];
   const normalized = Array.from(new Set(values.map(normalizeProviderSlug).filter((item): item is string => Boolean(item))));
   return normalized.length > 0 ? normalized.slice(0, 12) : fallback;
+};
+
+const PROVIDER_ALIASES: Readonly<Record<string, string>> = {
+  amazon: "aws",
+  amazon_web_services: "aws",
+  microsoft: "azure",
+  microsoft_azure: "azure",
+  google: "gcp",
+  google_cloud: "gcp",
+  oracle: "oci",
+  oracle_cloud: "oci",
+};
+
+export const canonicalProviderSlug = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  const canonical = PROVIDER_ALIASES[normalized] ?? normalized;
+  return PROVIDER_SLUG_PATTERN.test(canonical) ? canonical : null;
+};
+
+const providerOrder = new Map<string, number>(
+  PROVIDER_CATALOG.map((provider, index) => [provider.slug, index]),
+);
+
+export const sortProviderSlugs = (values: string[]): string[] => Array.from(new Set(
+  values.map(canonicalProviderSlug).filter((value): value is string => Boolean(value)),
+)).sort((left, right) => {
+  const leftOrder = providerOrder.get(left) ?? Number.MAX_SAFE_INTEGER;
+  const rightOrder = providerOrder.get(right) ?? Number.MAX_SAFE_INTEGER;
+  return leftOrder - rightOrder || left.localeCompare(right);
+}).slice(0, 12);
+
+export const resolveEnvironmentProviderSlugs = ({
+  detected = [],
+  tagged = [],
+  assigned = [],
+  connected = [],
+  manual = [],
+  fallback,
+}: {
+  detected?: string[];
+  tagged?: string[];
+  assigned?: string[];
+  connected?: string[];
+  manual?: string[];
+  fallback?: string;
+}): string[] => {
+  const providers = sortProviderSlugs([
+    ...detected,
+    ...tagged,
+    ...assigned,
+    ...connected,
+    ...manual,
+  ]);
+  if (providers.length > 0) return providers;
+  const fallbackProvider = canonicalProviderSlug(fallback);
+  return fallbackProvider ? [fallbackProvider] : [];
 };
 
 export const providerDisplayName = (slug: string): string => (

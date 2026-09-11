@@ -164,10 +164,10 @@ test.describe("SLA Review deployed smoke", () => {
 
     await app.getByRole("button", { name: "Open workspace settings" }).click();
     await expect(
-      app.getByRole("heading", { name: "Configure provider defaults." }),
+      app.getByRole("heading", { name: "Configure providers." }),
     ).toBeVisible();
     await expect(
-      app.getByRole("group", { name: "Monitored providers" }),
+      app.getByRole("group", { name: "Providers in scope" }),
     ).toBeVisible();
     await expect(
       app.getByRole("checkbox", { name: /Monitor AWS/i }),

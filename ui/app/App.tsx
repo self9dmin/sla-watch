@@ -91,8 +91,8 @@ const AppContent = () => {
     if (!preferences.onboardingComplete) setTourOpen(false);
   }, [preferences.onboardingComplete]);
 
-  const completeOnboarding = async (providerSlugs: string[], providerSlug: string, destination: "/" | "/settings/provider-connections") => {
-    await updatePreferences({ onboardingComplete: true, tourCompleted: true, providerSlugs, providerSlug });
+  const completeOnboarding = async (providerSlugs: string[], manualProviderSlugs: string[], providerSlug: string, destination: "/" | "/settings/provider-connections") => {
+    await updatePreferences({ onboardingComplete: true, tourCompleted: true, providerSlugs, manualProviderSlugs, providerSlug });
     await navigate(destination);
   };
 
@@ -106,7 +106,7 @@ const AppContent = () => {
   ) : !preferences.onboardingComplete ? (
     <OnboardingWizard
       initialProvider={preferences.providerSlug}
-      initialProviders={preferences.providerSlugs}
+      initialManualProviders={preferences.manualProviderSlugs}
       onComplete={completeOnboarding}
       onSkip={skipOnboarding}
     />

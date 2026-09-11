@@ -10,6 +10,7 @@ export type EvidenceLookbackHours = 24 | 72 | 168 | 360 | 720 | 1440 | 2160;
 export type SlaPreferences = {
   theme: SlaThemePreference;
   providerSlugs: string[];
+  manualProviderSlugs: string[];
   providerSlug: string;
   providerLabelKey: string;
   lookbackHours: EvidenceLookbackHours;
@@ -394,7 +395,8 @@ export const slaDirectoryConnection: SlaDirectoryConnection = {
 
 export const DEFAULT_SLA_PREFERENCES: SlaPreferences = {
   theme: "system",
-  providerSlugs: ["aws", "azure", "gcp", "oci"],
+  providerSlugs: ["aws"],
+  manualProviderSlugs: [],
   providerSlug: "aws",
   providerLabelKey: "provider",
   lookbackHours: 24,

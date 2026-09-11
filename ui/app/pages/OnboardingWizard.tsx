@@ -1,8 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { useDql } from "@dynatrace-sdk/react-hooks";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import { CONNECTED_PROVIDER_OPTIONS } from "../data/providerConnections";
-import { providerDisplayName } from "../data/providers";
+import { createServiceMetricsQuery, SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
+import { detectedProviderTagSlugs } from "../data/providerTags";
+import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
+import { detectedProviderSlugs, parseServiceCloudContexts, parseSmartscapeScopeEdges } from "../data/topology";
+import { DEFAULT_SLA_PREFERENCES } from "../types";
 
 const AppMark = () => (
   <svg className="sla-brand-logo" viewBox="0 0 64 64" aria-hidden="true">
@@ -44,9 +49,10 @@ type OnboardingDestination = "/" | "/settings/provider-connections";
 
 type OnboardingWizardProps = {
   initialProvider: string;
-  initialProviders: string[];
+  initialManualProviders: string[];
   onComplete: (
     providerSlugs: string[],
+    manualProviderSlugs: string[],
     providerSlug: string,
     destination: OnboardingDestination,
   ) => Promise<void>;
@@ -71,15 +77,36 @@ const StepIndicator = ({ step }: { step: number }) => (
 
 export const OnboardingWizard = ({
   initialProvider,
-  initialProviders,
+  initialManualProviders,
   onComplete,
   onSkip,
 }: OnboardingWizardProps) => {
   const [step, setStep] = useState(0);
   const [providerSlug, setProviderSlug] = useState(initialProvider || "aws");
-  const [providerSlugs, setProviderSlugs] = useState(
-    initialProviders.length > 0 ? initialProviders : [initialProvider || "aws"],
+  const [manualProviderSlugs, setManualProviderSlugs] = useState(
+    initialManualProviders,
   );
+  const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
+  const serviceCloudQueryText = useMemo(
+    () => createServiceMetricsQuery(DEFAULT_SLA_PREFERENCES.lookbackHours),
+    [],
+  );
+  const serviceCloudQuery = useDql({ query: serviceCloudQueryText });
+  const providerEvidence = useMemo(() => [
+    ...parseSmartscapeScopeEdges(topologyQuery.data),
+    ...parseServiceCloudContexts(serviceCloudQuery.data),
+  ], [serviceCloudQuery.data, topologyQuery.data]);
+  const detectedProviders = useMemo(() => resolveEnvironmentProviderSlugs({
+    detected: detectedProviderSlugs(providerEvidence),
+    tagged: detectedProviderTagSlugs(providerEvidence.map((edge) => edge.serviceTags), DEFAULT_SLA_PREFERENCES.providerLabelKey),
+  }), [providerEvidence]);
+  const detectionLoading = topologyQuery.isLoading || serviceCloudQuery.isLoading;
+  const detectionUnavailable = Boolean(topologyQuery.error && serviceCloudQuery.error);
+  const providerSlugs = useMemo(() => resolveEnvironmentProviderSlugs({
+    detected: detectedProviders,
+    manual: manualProviderSlugs,
+    fallback: detectionLoading ? initialProvider : undefined,
+  }), [detectedProviders, detectionLoading, initialProvider, manualProviderSlugs]);
   const [saving, setSaving] = useState(false);
   const connectionOptions = CONNECTED_PROVIDER_OPTIONS.filter((provider) =>
     providerSlugs.includes(provider.slug),
@@ -89,23 +116,26 @@ export const OnboardingWizard = ({
     setSaving(true);
     await onComplete(
       providerSlugs,
+      manualProviderSlugs,
       providerSlug.trim().toLowerCase(),
       destination,
     );
   };
 
   const toggleProvider = (slug: string) => {
-    setProviderSlugs((current) => {
+    if (detectedProviders.includes(slug)) return;
+    setManualProviderSlugs((current) => {
       if (current.includes(slug)) {
-        if (current.length === 1) return current;
-        const next = current.filter((item) => item !== slug);
-        if (providerSlug === slug) setProviderSlug(next[0]);
-        return next;
+        return current.filter((item) => item !== slug);
       }
       setProviderSlug(slug);
       return [...current, slug];
     });
   };
+
+  useEffect(() => {
+    if (providerSlugs.length > 0 && !providerSlugs.includes(providerSlug)) setProviderSlug(providerSlugs[0]);
+  }, [providerSlug, providerSlugs]);
 
   const skip = async () => {
     setSaving(true);
@@ -171,22 +201,29 @@ export const OnboardingWizard = ({
           <div className="onboarding-panel">
             <div className="onboarding-title-block">
               <Heading level={2}>
-                Choose the cloud providers to monitor.
+                Confirm providers for this environment.
               </Heading>
               <Paragraph>
-                Select every hyperscaler used by this environment. The most
-                recently selected provider opens first. Other sla.directory
-                providers can be added later from Provider configuration.
+                Dynatrace enables providers found in topology, cloud dimensions,
+                or provider tags. Add only dependencies that are not visible in
+                this environment.
               </Paragraph>
             </div>
+            {detectionLoading ? <div className="provider-detection-note" role="status">Checking this environment for providers.</div> : null}
+            {detectionUnavailable ? <div className="provider-detection-note" role="status">Automatic detection is unavailable. Select the providers used by this environment.</div> : null}
             <div className="provider-preset-grid">
-              {PROVIDER_PRESETS.map((provider) => (
+              {PROVIDER_PRESETS.map((provider) => {
+                const detected = detectedProviders.includes(provider.slug);
+                const manuallyAdded = manualProviderSlugs.includes(provider.slug);
+                const selected = detected || manuallyAdded;
+                return (
                 <button
                   type="button"
                   key={provider.slug}
-                  className={`provider-preset ${providerSlugs.includes(provider.slug) ? "selected" : ""}`}
+                  className={`provider-preset ${selected ? "selected" : ""}`}
                   onClick={() => toggleProvider(provider.slug)}
-                  aria-pressed={providerSlugs.includes(provider.slug)}
+                  aria-pressed={selected}
+                  disabled={detectionLoading || detected}
                 >
                   <span className="provider-preset-dot">
                     {provider.slug.slice(0, 2).toUpperCase()}
@@ -196,17 +233,18 @@ export const OnboardingWizard = ({
                     <small>{provider.note}</small>
                   </span>
                   <span className="provider-preset-check" aria-hidden="true">
-                    {providerSlugs.includes(provider.slug) ? "Selected" : ""}
+                    {detected ? "Detected" : manuallyAdded ? "Added" : ""}
                   </span>
                 </button>
-              ))}
+                );
+              })}
             </div>
             <div className="onboarding-selected-providers">
               <span>Opens first</span>
               <strong>{providerDisplayName(providerSlug)}</strong>
               <small>
                 {providerSlugs.length} provider
-                {providerSlugs.length === 1 ? "" : "s"} monitored
+                {providerSlugs.length === 1 ? "" : "s"} enabled
               </small>
             </div>
             <div className="onboarding-actions">

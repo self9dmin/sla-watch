@@ -16,6 +16,7 @@ export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
       "Focuses global topology on host, cluster, and provider-native anchors, then loads exact affected-service topology for recent Problems.",
       "Adds search, 50-row paging, and explicit incomplete-inventory reporting so bounded data is never presented as complete coverage.",
       "Keeps saved mappings as exact operator overrides and preserves the provider-fault, local-impact, and credit boundaries.",
+      "Limits the active-provider list to providers detected in Dynatrace or explicitly added through a mapping, incident connection, or workspace setting.",
     ],
   },
   {

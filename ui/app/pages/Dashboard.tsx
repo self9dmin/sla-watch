@@ -12,8 +12,9 @@ import { IncidentReview } from "../components/IncidentReview";
 import { CoverageWorkspace } from "../components/CoverageWorkspace";
 import { ProviderDirectoryWorkspace } from "../components/ProviderDirectoryWorkspace";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
+import { useProviderConnections } from "../hooks/useProviderConnections";
 import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
-import { providerTagValue } from "../data/providerTags";
+import { detectedProviderTagSlugs, providerTagValue } from "../data/providerTags";
 import { buildSetupRecommendations } from "../data/recommendations";
 import { formatEvidenceLookback } from "../data/lookback";
 import {
@@ -27,8 +28,9 @@ import {
   runtimeEntityIdForEdge,
   serviceEntityIdForEdge,
 } from "../data/providerScopeAssignments";
-import { providerDisplayName } from "../data/providers";
+import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
 import {
+  detectedProviderSlugs,
   mergeSmartscapeScopeEdges,
   parseServiceCloudContexts,
   parseSmartscapeScopeEdges,
@@ -214,8 +216,13 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
       : "candidates";
   const { preferences, updatePreferences } = useSlaPreferences();
   const scopeSettings = useProviderScopeAssignments();
-  const { providerSlugs, providerSlug, providerLabelKey, lookbackHours } =
-    preferences;
+  const providerConnections = useProviderConnections();
+  const {
+    manualProviderSlugs,
+    providerSlug: requestedProviderSlug,
+    providerLabelKey,
+    lookbackHours,
+  } = preferences;
   const problemsQuery = useMemo(
     () => createProblemsQuery(lookbackHours),
     [lookbackHours],
@@ -232,11 +239,6 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     () => createServiceMetricsQuery(lookbackHours),
     [lookbackHours],
   );
-  const directoryRequest = useMemo(
-    () => ({ vendor: providerSlug }),
-    [providerSlug],
-  );
-
   const {
     data: serviceData,
     error: serviceError,
@@ -265,20 +267,6 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   } = useDql({ query: metricsQuery });
   const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
   const topologyCountQuery = useDql({ query: SMARTSCAPE_COVERAGE_COUNT_QUERY });
-  const directoryQuery = useAppFunction<SlaProviderResponse>({
-    name: "slaDirectory",
-    data: directoryRequest,
-    responseType: "json",
-  });
-  const directoryData =
-    directoryQuery.data?.provider.slug === providerSlug
-      ? directoryQuery.data
-      : undefined;
-  const directoryError = directoryQuery.error;
-  const directoryLoading =
-    directoryQuery.isLoading ||
-    Boolean(!directoryQuery.error && directoryQuery.data && !directoryData);
-
   const globalEntityServices = useMemo<ServiceRecord[]>(
     () => parseServiceRecords(serviceData),
     [serviceData],
@@ -370,6 +358,64 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     () => mergeServiceInventory(entityServices, providerEvidence),
     [entityServices, providerEvidence],
   );
+  const topologyDetectedProviders = useMemo(
+    () => detectedProviderSlugs(providerEvidence),
+    [providerEvidence],
+  );
+  const tagDetectedProviders = useMemo(
+    () => detectedProviderTagSlugs(services.map((service) => service.tags), providerLabelKey),
+    [providerLabelKey, services],
+  );
+  const assignedProviders = useMemo(
+    () => scopeSettings.assignments
+      .filter((assignment) => assignment.enabled)
+      .map((assignment) => assignment.providerSlug),
+    [scopeSettings.assignments],
+  );
+  const connectedProviders = useMemo(
+    () => providerConnections.connections
+      .filter((connection) => connection.enabled)
+      .map((connection) => connection.providerSlug),
+    [providerConnections.connections],
+  );
+  const enabledProviderSlugs = useMemo(
+    () => resolveEnvironmentProviderSlugs({
+      detected: topologyDetectedProviders,
+      tagged: tagDetectedProviders,
+      assigned: assignedProviders,
+      connected: connectedProviders,
+      manual: manualProviderSlugs,
+      fallback: requestedProviderSlug,
+    }),
+    [
+      assignedProviders,
+      connectedProviders,
+      manualProviderSlugs,
+      requestedProviderSlug,
+      tagDetectedProviders,
+      topologyDetectedProviders,
+    ],
+  );
+  const providerSlug = enabledProviderSlugs.includes(requestedProviderSlug)
+    ? requestedProviderSlug
+    : enabledProviderSlugs[0] ?? requestedProviderSlug;
+  const directoryRequest = useMemo(
+    () => ({ vendor: providerSlug }),
+    [providerSlug],
+  );
+  const directoryQuery = useAppFunction<SlaProviderResponse>({
+    name: "slaDirectory",
+    data: directoryRequest,
+    responseType: "json",
+  });
+  const directoryData =
+    directoryQuery.data?.provider.slug === providerSlug
+      ? directoryQuery.data
+      : undefined;
+  const directoryError = directoryQuery.error;
+  const directoryLoading =
+    directoryQuery.isLoading ||
+    Boolean(!directoryQuery.error && directoryQuery.data && !directoryData);
   const providerCandidates = useMemo(
     () => buildProviderCandidates(services, providerEvidence),
     [providerEvidence, services],
@@ -602,8 +648,9 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 void updatePreferences({ providerSlug: event.target.value })
               }
               aria-label="Active provider"
+              title="Providers detected in this environment or added in Settings"
             >
-              {providerSlugs.map((slug) => (
+              {enabledProviderSlugs.map((slug) => (
                 <option key={slug} value={slug}>
                   {providerDisplayName(slug)}
                 </option>
@@ -643,7 +690,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             <div className="overview-facts coverage-facts" aria-label="Coverage status">
               <OverviewFact
                 label="Providers"
-                value={`${providerSlugs.length}`}
+                value={`${enabledProviderSlugs.length}`}
                 detail={
                   directoryLoading
                     ? `checking ${providerDisplayName(providerSlug)}`

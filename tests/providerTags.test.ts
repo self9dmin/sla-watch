@@ -1,4 +1,4 @@
-import { providerTagValue, providerTagValues } from "../ui/app/data/providerTags";
+import { detectedProviderTagSlugs, providerTagValue, providerTagValues } from "../ui/app/data/providerTags";
 
 describe("provider tag helpers", () => {
   it.each([
@@ -19,6 +19,13 @@ describe("provider tag helpers", () => {
   it("does not treat an unrelated contextless tag as a provider conflict", () => {
     expect(providerTagValues(["[production]", "team:sre"], "provider", "aws")).toEqual([]);
     expect(providerTagValues(["[fastly]"], "provider", "fastly")).toEqual(["fastly"]);
+  });
+
+  it("finds canonical environment providers across service tag groups", () => {
+    expect(detectedProviderTagSlugs([
+      ["provider:amazon", "team:checkout"],
+      ["cloud.provider:google", "provider:openai"],
+    ], "provider")).toEqual(["aws", "gcp", "openai"]);
   });
 
 });
