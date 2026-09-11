@@ -1,9 +1,8 @@
 export type WatchSection =
-  | "overview"
-  | "setup"
+  | "coverage"
   | "directory"
   | "incidents"
-  | "provider-notices";
+  | "evidence";
 export type SlaThemePreference = "system" | "light" | "dark";
 export type RecommendationPriority = "high" | "medium" | "low";
 export type EvidenceLookbackHours = 24 | 72 | 168 | 360 | 720 | 1440 | 2160;
@@ -48,6 +47,39 @@ export type ProviderScopeAssignmentValue = {
 };
 
 export type ProviderScopeAssignmentRecord = ProviderScopeAssignmentValue & {
+  objectId: string;
+  version: string;
+  lastModifiedBy?: string;
+  lastModifiedTime?: string;
+};
+
+export type EvidenceDecisionStatus = "validated" | "dismissed";
+export type EvidenceMappingBasis =
+  | "confirmed-scope"
+  | "provider-tag"
+  | "smartscape-candidate";
+
+export type EvidenceDecisionValue = {
+  decisionKey: string;
+  providerSlug: string;
+  problemId: string;
+  problemTitle: string;
+  problemCategory: string;
+  problemStatus: string;
+  problemStartedAt?: string | null;
+  problemEndedAt?: string | null;
+  affectedEntityIds: string[];
+  affectedEntityNames: string[];
+  providerServiceIds: string[];
+  providerServiceNames: string[];
+  mappingBasis: EvidenceMappingBasis;
+  mappingEvidence: string;
+  status: EvidenceDecisionStatus;
+  decisionNote?: string | null;
+  reviewedAt: string;
+};
+
+export type EvidenceDecisionRecord = EvidenceDecisionValue & {
   objectId: string;
   version: string;
   lastModifiedBy?: string;

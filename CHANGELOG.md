@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.40
+
+- Replaced the separate Monitor landing card with Coverage as the default workspace.
+- Placed the compact provider, service, incident, and filing facts above Scope map, with Service tags as the secondary Coverage view.
+- Expanded Evidence into an SRE review workspace with Dynatrace-derived candidates and a separate provider-reports view.
+- Added shared, auditable validate and dismiss decisions with explicit fault, eligibility, and privacy boundaries.
+- Added a disabled FinOps Agent handoff marked as planned, without implying an available agent capability.
+- Reduced workspace actions to one Review terms button and kept the redundant refresh and configuration actions out of the header.
+
 ## 0.0.39
 
 - Renamed the app to SLA Review while keeping the existing application ID and tenant configuration intact.

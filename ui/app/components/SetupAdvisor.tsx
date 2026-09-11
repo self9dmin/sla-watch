@@ -22,7 +22,7 @@ export const SetupAdvisor = ({
   <section className="setup-checks" data-tour="advisor" aria-labelledby="setup-checks-title">
     <div className="setup-section-heading">
       <div>
-        <h3 id="setup-checks-title">Setup checks</h3>
+        <h3 id="setup-checks-title">Coverage checks</h3>
         <p>Resolve telemetry and ownership gaps before reviewing an incident.</p>
       </div>
       {!loading ? <span className="advisor-count">{recommendations.length} open</span> : null}
@@ -31,7 +31,7 @@ export const SetupAdvisor = ({
       <div className="advisor-empty" role="status">Reading the tenant boundary before making recommendations...</div>
     ) : recommendations.length === 0 ? (
       <div className="advisor-empty">
-        <strong>No setup gaps detected in this scan.</strong>
+        <strong>No coverage gaps detected in this scan.</strong>
         <span>The current provider scope is ready for incident review.</span>
       </div>
     ) : (

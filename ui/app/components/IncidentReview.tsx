@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import type { ContractContext, ContractOverrideRecord, EffectiveContractTerms, EvidenceLookbackHours, ProblemRecord, ServiceRecord, SlaClaimProcess, SlaProviderResponse, SmartscapeScopeEdge } from "../types";
@@ -193,7 +193,7 @@ const IncidentDetail = ({
           {mappingSource === "contract" ? "Contract scope match" : mappingSource === "confirmed" ? "Confirmed mapping" : mappingSource === "candidate" ? "Smartscape candidate" : mappingSource === "manual" ? "Manual selection" : "No service match"}
         </StatusPill>
         <span>{mappingDetail}</span>
-        <Link to="/setup">Review scope map</Link>
+        <Link to="/">Review coverage</Link>
       </div>
 
       <dl className="incident-facts">
@@ -235,7 +235,10 @@ const IncidentDetail = ({
 };
 
 export const IncidentReview = ({ provider, problems, services, topology, topologyLoading, topologyError, lookbackHours, onLookbackChange, loading, error }: IncidentReviewProps) => {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const location = useLocation();
+  const requestedProblemId = new URLSearchParams(location.search).get("problem");
+  const [selectedId, setSelectedId] = useState<string | null>(requestedProblemId);
+  const lastRequestedProblem = useRef<string | null>(null);
   const [providerServiceId, setProviderServiceId] = useState("*");
   const [scopeKey, setScopeKey] = useState("provider");
   const [mappingSource, setMappingSource] = useState<MappingSource>("none");
@@ -247,9 +250,22 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
   const activeProblems = problems.filter((problem) => problem.status.toUpperCase() === "ACTIVE").length;
 
   useEffect(() => {
-    if (problems.length === 0) setSelectedId(null);
-    else if (!problems.some((problem) => problem.id === selectedId)) setSelectedId(problems[0].id);
-  }, [problems, selectedId]);
+    if (problems.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+    if (
+      requestedProblemId &&
+      requestedProblemId !== lastRequestedProblem.current &&
+      problems.some((problem) => problem.id === requestedProblemId)
+    ) {
+      lastRequestedProblem.current = requestedProblemId;
+      setSelectedId(requestedProblemId);
+      return;
+    }
+    if (!problems.some((problem) => problem.id === selectedId))
+      setSelectedId(problems[0].id);
+  }, [problems, requestedProblemId, selectedId]);
 
   const selectedServiceNames = selectedProblem
     ? selectedProblem.affectedEntityIds.map((id) => serviceNamesById.get(id)).filter((name): name is string => Boolean(name))
@@ -389,9 +405,9 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
   const mappingDetail = mappingSource === "contract"
     ? "A matching tenant scope selected this provider service and Dynatrace scope."
     : mappingSource === "confirmed"
-      ? confirmedDecision?.evidence ?? "A mapping confirmed in Setup was reused for this incident."
+      ? confirmedDecision?.evidence ?? "A mapping confirmed in Coverage was reused for this incident."
       : mappingSource === "candidate"
-        ? `${topologyDecision?.evidence ?? "Smartscape runtime metadata suggests this provider service"}. Confirm it in Setup before relying on it.`
+        ? `${topologyDecision?.evidence ?? "Smartscape runtime metadata suggests this provider service"}. Confirm it in Coverage before relying on it.`
         : mappingSource === "manual"
           ? "This selection applies only to the current review and has not been saved as a scope mapping."
           : "No unique confirmed mapping or Smartscape provider-service candidate was found for the affected services.";
@@ -416,7 +432,7 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
         </div>
         <div className="incidents-heading-actions">
           <StatusPill tone={activeProblems > 0 ? "warning" : "neutral"}>{loading ? "Checking" : `${activeProblems} active`}</StatusPill>
-          {provider?.provider.slaUrl ? <a className="inline-action" href={provider.provider.slaUrl} target="_blank" rel="noreferrer">Open provider terms</a> : <Link className="inline-action" to="/directory">Open directory</Link>}
+          {provider?.provider.slaUrl ? <a className="inline-action" href={provider.provider.slaUrl} target="_blank" rel="noreferrer">Open provider terms</a> : <Link className="inline-action" to="/directory">Review terms</Link>}
         </div>
       </div>
 

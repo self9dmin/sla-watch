@@ -22,14 +22,15 @@
 | `ocistatus.oraclecloud.com` | OCI public regional component status | Server-side outbound host | Fixed function allowlist | Review endpoint availability and response compatibility | Medium: current public provider evidence |
 | `announcements.<region>.oraclecloud.com` | OCI tenancy Announcements | Server-side outbound host | Validated commercial region and environment allowlist | Prefer the exact regional host; rotate the API key separately in OCI and Credential Vault | High: tenancy-specific provider evidence and request-signing boundary |
 | `providerSlugs` | Monitored provider collection | Shared app state | User input and migration from the legacy single-provider value | State expires within 90 days | Low, but controls which provider records and evidence views are available |
-| `providerSlug` | Active provider for the focused Overview, Setup, Incidents, Provider notices, and Directory views | Shared app state | User input constrained to `providerSlugs` | State expires within 90 days | Low, but controls the current external lookup and attribution view |
+| `providerSlug` | Active provider for Coverage, Incidents, Evidence, and Directory | Shared app state | User input constrained to `providerSlugs` | State expires within 90 days | Low, but controls the current external lookup and attribution view |
 | `providerLabelKey` | Provider tag parsing | Shared app state | User input | State expires within 90 days | Low, affects attribution |
 | `lookbackHours` | DQL query construction | Shared app state | Controlled select input | State expires within 90 days | Low |
 | `sla.user.v1` | Theme and walkthrough state | User app state/local fallback | App constants | State expires within 90 days | Low |
-| `sla.workspace.v1` | Provider and watch configuration | Shared app state/local fallback | App constants | State expires within 90 days | Medium: shared operator context |
+| `sla.workspace.v1` | Provider review configuration | Shared app state/local fallback | App constants | State expires within 90 days | Medium: shared operator context |
 | `contract-overrides` | Tenant custom terms and exact evidence targets | Environment-shared App Settings | Authorized user input | Persists until updated or removed; Settings keeps version history | High: changes which contract terms are applied during review |
 | `provider-connections` | Provider, account, subscription, project, or tenancy scope; OCI region; Credential Vault ID; and enabled state | Environment-shared App Settings | Authorized administrator input | Persists until updated or removed | High: selects which provider scope is queried, but contains no secret value |
-| `provider-scope-assignments` | Confirmed provider service for an exact Dynatrace service-to-runtime relationship | Environment-shared App Settings | Authorized operator confirmation in Setup | Persists until updated or removed; Settings keeps version history | High: controls which provider-service terms Incident review applies |
+| `provider-scope-assignments` | Confirmed provider service for an exact Dynatrace service-to-runtime relationship | Environment-shared App Settings | Authorized operator confirmation in Coverage | Persists until updated or removed; Settings keeps version history | High: controls which provider-service terms Incidents and Evidence apply |
+| `evidence-decisions` | Human validation or dismissal of a provider-review candidate | Environment-shared App Settings | Authorized SRE decision in Evidence | Persists until updated or removed; Settings keeps version history | High: operational follow-up state that must not be represented as provider fault or credit approval |
 | `COMMUNITY_PROFILE.availability` | Community support destination | Bundled UI configuration | `ui/app/data/externalLinks.ts` | Keep `coming-soon` until public launch approval; change to `live` only with an approved support destination | Medium: controls whether users can leave the app for support |
 
 ## Secret handling
@@ -46,8 +47,8 @@ No API token, OAuth secret, password, private key, or private endpoint is bundle
 - Confirm each OCI API user has only summary announcement access, each private key is unencrypted and rotated according to tenant policy, and removing a connection also revokes the OCI key and deletes its Credential Vault record.
 - Confirm app-state records expire and that operators know the browser fallback is not shared.
 - Confirm app-state fields do not contain PII or secrets beyond the configured provider and tag convention.
-- Confirm custom records contain only operational terms, exact target IDs, effective dates, and a concise source reference. Do not store private contract text, credentials, or personal data because all authenticated app users can read App Settings.
-- Confirm App Settings read and write policies are separated and that a read-only responder cannot mutate `contract-overrides`.
+- Confirm custom records contain only operational terms, exact target IDs, effective dates, and a concise source reference. Confirm evidence decisions contain only bounded incident context and a concise operational note. Do not store private contract text, credentials, or personal data because all authenticated app users can read App Settings.
+- Confirm App Settings read and write policies are separated and that a read-only responder cannot mutate `contract-overrides`, `provider-scope-assignments`, or `evidence-decisions`.
 - Confirm a read-only responder cannot create, update, or remove `provider-scope-assignments`, and that an unavailable mapping store is never presented as a confirmed match.
 - Confirm provider credentials use AppEngine scope, restrict app access to SLA Review, grant only intended users access, and have no contextless access.
 - Confirm removal instructions delete both the provider key and Credential Vault entry when a connection is retired. Removing connection metadata alone does not revoke the provider key.

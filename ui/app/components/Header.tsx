@@ -58,7 +58,7 @@ export const Header = ({
           </Tooltip>
           <Tooltip
             className="header-action-tooltip"
-            text="Open monitor settings"
+            text="Open workspace settings"
             placement="bottom"
           >
             <AppHeader.ActionButton
@@ -66,7 +66,7 @@ export const Header = ({
                 void navigate("/settings/watch");
               }}
               className={isSettings ? "active" : undefined}
-              aria-label="Open monitor settings"
+              aria-label="Open workspace settings"
               data-tour="settings"
             >
               <Button.Prefix>
@@ -179,26 +179,20 @@ export const Header = ({
             </button>
           </div>
           <p>
-            Use Overview for current state, Setup for provider scope, Incidents
-            for Dynatrace Problems, Provider notices for provider-reported
-            events, and Directory for the applicable terms.
+            Use Coverage to confirm the provider boundary, Incidents to inspect
+            Dynatrace Problems, and Evidence to validate review candidates or
+            compare provider reports. FinOps Agent is planned and is not
+            available in this release.
           </p>
           <section>
-            <h3>1. Set up</h3>
+            <h3>1. Confirm coverage</h3>
             <p>
-              Select a provider, verify telemetry, and explicitly map the
-              services that depend on it.
+              Select a provider and confirm the service-to-runtime scope in
+              Smartscape. Provider tags remain optional for wider Dynatrace use.
             </p>
           </section>
           <section>
-            <h3>2. Check current state</h3>
-            <p>
-              Overview keeps the provider, mapped services, active Problems, and
-              published filing window in one place.
-            </p>
-          </section>
-          <section>
-            <h3>3. Review incidents</h3>
+            <h3>2. Review incidents</h3>
             <p>
               Select one Problem at a time and compare its observed impact with
               provider terms. A matching service does not prove provider fault
@@ -206,22 +200,22 @@ export const Header = ({
             </p>
           </section>
           <section>
-            <h3>4. Review provider notices</h3>
+            <h3>3. Validate evidence</h3>
             <p>
-              Use project-specific provider events when configured. Public
-              status is broader and is never treated as evidence that this
-              tenant was affected.
+              Evidence lists Problems that overlap confirmed or suggested
+              provider coverage. Record a human validation or dismissal, then
+              review any provider-owned report as separate supporting evidence.
             </p>
           </section>
           <section>
-            <h3>5. Review provider terms</h3>
+            <h3>4. Review provider terms</h3>
             <p>
               Directory separates availability terms, service-level coverage,
               support options, and tenant overrides for the active provider.
             </p>
           </section>
           <section>
-            <h3>6. Get support</h3>
+            <h3>5. Get support</h3>
             <p>
               {communityLive
                 ? "The change log documents application releases. Questions and issue discussion belong on the Dynatrace Community profile."
@@ -237,7 +231,7 @@ export const Header = ({
                 void navigate("/settings/watch");
               }}
             >
-              Open monitor settings
+              Open workspace settings
             </button>
             <CommunityLink
               className="link-button"

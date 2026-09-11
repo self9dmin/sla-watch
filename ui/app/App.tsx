@@ -18,11 +18,16 @@ const LoadingScreen = () => (
   <div className="sla-loading-screen">
     <ProgressCircle aria-label="Loading SLA Review" />
     <div>
-      <Heading level={3}>Loading your monitor setup</Heading>
+      <Heading level={3}>Loading provider coverage</Heading>
       <Paragraph>Restoring provider, theme, and workflow preferences.</Paragraph>
     </div>
   </div>
 );
+
+const LegacyCoverageRedirect = () => {
+  const location = useLocation();
+  return <Navigate to={`/${location.search}`} replace />;
+};
 
 const AppShell = ({
   theme,
@@ -36,7 +41,7 @@ const AppShell = ({
   saveError: string | null;
 }) => {
   const location = useLocation();
-  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents" || location.pathname === "/provider-notices" || location.pathname === "/directory";
+  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents" || location.pathname === "/provider-notices" || location.pathname === "/evidence" || location.pathname === "/directory";
   return (
     <div className="sla-app">
       <header className="sla-header">
@@ -46,10 +51,10 @@ const AppShell = ({
         {saveError ? <div className="save-status" role="status">{saveError}</div> : null}
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/setup" element={<Dashboard initialSection="setup" />} />
+          <Route path="/setup" element={<LegacyCoverageRedirect />} />
           <Route path="/incidents" element={<Dashboard initialSection="incidents" />} />
-          <Route path="/provider-notices" element={<Dashboard initialSection="provider-notices" />} />
-          <Route path="/evidence" element={<Navigate to="/setup" replace />} />
+          <Route path="/provider-notices" element={<Navigate to="/evidence?view=provider-reports" replace />} />
+          <Route path="/evidence" element={<Dashboard initialSection="evidence" />} />
           <Route path="/review" element={<Navigate to="/incidents" replace />} />
           <Route path="/directory" element={<Dashboard initialSection="directory" />} />
           <Route path="/changes" element={<ChangeLogPage />} />
@@ -86,7 +91,7 @@ const AppContent = () => {
     if (!preferences.onboardingComplete) setTourOpen(false);
   }, [preferences.onboardingComplete]);
 
-  const completeOnboarding = async (providerSlugs: string[], providerSlug: string, destination: "/setup" | "/settings/provider-connections") => {
+  const completeOnboarding = async (providerSlugs: string[], providerSlug: string, destination: "/" | "/settings/provider-connections") => {
     await updatePreferences({ onboardingComplete: true, tourCompleted: true, providerSlugs, providerSlug });
     await navigate(destination);
   };

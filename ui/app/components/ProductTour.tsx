@@ -10,14 +10,9 @@ type TourStep = { target: string; title: string; body: string };
 
 const STEPS: TourStep[] = [
   {
-    target: '[data-tour="overview"]',
-    title: "Review the monitor",
-    body: "Overview shows the current provider-attribution state and the next defensible action for this environment.",
-  },
-  {
-    target: '[data-tour="setup"]',
-    title: "Complete provider setup",
-    body: "Setup opens on the Smartscape scope map. Confirm the provider service for each exact runtime relationship, then use Service tags only when other Dynatrace workflows should reuse the boundary.",
+    target: '[data-tour="coverage"]',
+    title: "Confirm provider coverage",
+    body: "Coverage is the starting point. Use Scope map to confirm exact service-to-runtime assignments, or Service tags when other Dynatrace features need the same boundary.",
   },
   {
     target: '[data-tour="incidents"]',
@@ -25,14 +20,14 @@ const STEPS: TourStep[] = [
     body: "Incidents presents a Problem queue and one focused review. It compares observed dates with provider terms without making an eligibility or credit decision.",
   },
   {
-    target: '[data-tour="provider-notices"]',
-    title: "Keep provider notices separate",
-    body: "Provider notices shows optional AWS account, Azure subscription, Google Cloud project, or OCI tenancy events. Configure these sources under Settings. Public feeds are labeled separately.",
+    target: '[data-tour="evidence"]',
+    title: "Validate review candidates",
+    body: "Evidence combines SLA Review findings with a separate provider-report view. Human validation approves operational follow-up only. It does not determine provider fault or credit eligibility.",
   },
   {
     target: '[data-tour="directory"]',
-    title: "Review provider records",
-    body: "Directory contains published terms, service coverage, claim requirements, support options, and tenant overrides for the active provider.",
+    title: "Open provider records",
+    body: "Review terms opens the directory record for the active provider, including published terms, service coverage, claim requirements, support options, and tenant overrides.",
   },
   {
     target: '[data-tour="settings"]',

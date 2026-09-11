@@ -7,8 +7,21 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.39",
+    version: "0.0.40",
     label: "Current release",
+    summary: "Made Coverage the landing workspace and consolidated evidence review.",
+    details: [
+      "Replaced the separate Monitor landing card with Coverage as the default workspace.",
+      "Placed compact provider, service, incident, and filing facts above Scope map, with Service tags as the secondary Coverage view.",
+      "Expanded Evidence with Dynatrace-derived review candidates and a separate provider-reports view.",
+      "Added shared validate and dismiss decisions with explicit fault, eligibility, and privacy boundaries.",
+      "Added a disabled FinOps Agent handoff marked as planned without exposing an unavailable capability.",
+      "Reduced workspace actions to one Review terms button and kept redundant refresh and configuration actions out of the header.",
+    ],
+  },
+  {
+    version: "0.0.39",
+    label: "Previous release",
     summary: "Renamed the app and simplified its operational language.",
     details: [
       "Renamed the product to SLA Review while keeping the existing application ID and tenant configuration intact.",

@@ -7,7 +7,7 @@ An installed copy of SLA Review can keep multiple AWS accounts, Azure subscripti
 ## What works without a provider connection
 
 - Published terms load automatically from `sla.directory`. The user does not supply an API key or configure the `sla.directory` MCP server.
-- Overview, Setup, Smartscape scope mapping, Directory, Incidents, custom terms, and Dynatrace telemetry review remain available.
+- Coverage, Smartscape scope mapping, Incidents, Evidence, Directory, custom terms, and Dynatrace telemetry review remain available.
 - Google Cloud and OCI can use clearly labeled public status sources. Those feeds are not project- or tenancy-specific.
 - AWS and Azure remain available for contracts and Dynatrace evidence, but account-specific provider notices require a configured connection.
 
@@ -51,7 +51,7 @@ OCI Announcements are retained by Oracle for 90 days. The app reads summary anno
 7. Enter an operator-facing name, the exact provider scope identifier, the OCI region when applicable, and the Credential Vault record ID. Never paste the secret into app settings.
 8. Select **Test connection**. The app validates the identifier, Credential Vault access, provider authentication, and provider scope. A failed test is not saved as a usable connection.
 9. After the test reports **Connection verified**, select **Save connection**.
-10. Open **Provider notices** and select the saved source when more than one source exists.
+10. Open **Evidence** and select the saved source when more than one source exists.
 
 Repeat the process for every required account scope. Adding a second account, subscription, project, or tenancy does not replace the first.
 
