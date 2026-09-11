@@ -66,7 +66,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 - Provider contract and directory metadata: the selected `sla.directory` API response.
 - Tenant-specific operational terms: the `contract-overrides` App Settings schema.
 - Confirmed provider-service mappings: the `provider-scope-assignments` App Settings schema. Smartscape supplies candidate evidence, and an operator supplies the confirmation.
-- Human evidence decisions: the `evidence-decisions` App Settings schema. A validated or dismissed record captures an SRE review outcome for follow-up, not provider fault or credit eligibility.
+- Human evidence decisions: the `evidence-decisions` App Settings schema. A validated or dismissed record captures an SRE review outcome for follow-up, not provider fault or credit eligibility. It remains current only while the mapping basis, affected entities, and provider-service scope still match.
 - Provider connection metadata: the `provider-connections` App Settings schema. Provider secrets: Dynatrace Credential Vault.
 - AWS provider notices: account-specific AWS Health events after STS account verification. There is no credential-free AWS source in this release.
 - Azure provider notices: subscription-specific Azure Service Health events. There is no credential-free Azure source in this release.

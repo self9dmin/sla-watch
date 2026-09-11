@@ -140,11 +140,11 @@ Actor: signed-in user with `app-settings:objects:read`; saving a decision also r
 
 1. Evidence compares each returned Problem with exact confirmed scope mappings, explicit provider tags, and Smartscape provider suggestions for the active provider.
 2. A Problem enters the candidate queue only when at least one exact affected service overlaps one of those boundaries. Confirmed mappings take precedence over provider tags, which take precedence over Smartscape suggestions.
-3. The detail view keeps four gates visible: Dynatrace impact, Coverage, provider report, and current terms. Provider reports stay separate and do not establish local impact.
-4. The SRE reviews the incident, coverage, terms, and any provider report. A Smartscape-only candidate remains visibly unconfirmed.
+3. The detail view gives one direct explanation of why the candidate appears, identifies the mapping basis, and links to the incident, Coverage, and current terms. Provider reports stay separate and do not establish local impact.
+4. The SRE reviews those records. A Smartscape-only candidate remains visibly unconfirmed.
 5. Validation requires an explicit acknowledgement that the service scope and current terms were reviewed. Dismissal requires a concise operational reason.
-6. App Settings stores a bounded Problem snapshot, exact affected entity IDs, provider services, mapping basis, decision, review time, and concise note.
-7. A validated record becomes eligible only for a future FinOps Agent handoff. The handoff control remains disabled and labeled Planned in this release.
+6. App Settings stores one bounded Problem snapshot, exact affected entity IDs, provider services, mapping basis, decision, review time, and concise note.
+7. A saved decision remains current only while the mapping basis, affected entities, and provider-service scope still match. A changed boundary returns the candidate to Needs review.
 
 Deny or degraded behavior: a failed Problem, topology, directory, or decision-store read is shown as incomplete rather than empty. A read-only user can inspect candidates and saved decisions but cannot validate or dismiss. A decision does not establish provider fault, SLA eligibility, credit approval, or claim submission.
 

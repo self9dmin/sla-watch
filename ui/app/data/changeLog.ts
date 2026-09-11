@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.40",
+    version: "0.0.41",
     label: "Current release",
+    summary: "Reduced Evidence to one explainable SRE decision loop.",
+    details: [
+      "Replaced the four evidence gate cards with one direct explanation of why a candidate appears and links to its supporting records.",
+      "Kept candidates limited to exact affected-service overlap with confirmed coverage, an exact provider tag, or a Smartscape suggestion.",
+      "Simplified each review to Validate or Dismiss, with acknowledgement required for validation and a reason required for dismissal.",
+      "Returns a saved decision to Needs review when its mapping basis, affected scope, or provider-service scope changes.",
+      "Bounded review notes and added focused false-positive and stale-decision tests.",
+    ],
+  },
+  {
+    version: "0.0.40",
+    label: "Previous release",
     summary: "Made Coverage the landing workspace and consolidated evidence review.",
     details: [
       "Replaced the separate Monitor landing card with Coverage as the default workspace.",
