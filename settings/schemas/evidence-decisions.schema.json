@@ -7,7 +7,7 @@
   "description": "Human validation or dismissal of provider-review candidates discovered from Dynatrace evidence.",
   "documentation": "A validated candidate is approved for operational follow-up only. It does not establish provider fault, SLA eligibility, or a service credit. Store concise operational notes only. Do not include credentials, confidential contract text, or personal data.",
   "multiObject": true,
-  "maxObjects": 2000,
+  "maxObjects": 1000,
   "summaryPattern": "{problemId} · {status}",
   "searchPattern": "{providerSlug} {problemId} {problemTitle} {status} {providerServiceNames}",
   "ordered": false,
