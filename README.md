@@ -7,6 +7,7 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 - Reads the tenant service inventory with DQL.
 - Reads Davis Problems, logs, spans, and service-request telemetry for a selectable 24-hour to 90-day window.
 - Retrieves provider and service contract data from the versioned `sla.directory` JSON API through an AppEngine function.
+- Presents the active provider's published SLA terms, credit policy, claim process, exclusions, service catalog, support plans, support-response boundary, source metadata, and tenant overrides in one read-only Directory workspace.
 - Treats AWS, Microsoft Azure, Google Cloud, and Oracle Cloud Infrastructure as four peer cloud providers. A fresh workspace monitors all four and opens AWS first only as the initial focused view.
 - Monitors more than one provider at a time and keeps the active provider as a focused view rather than a tenant-wide replacement.
 - Lets administrators add multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies for customer-scoped provider notices. Credentials remain in Dynatrace Credential Vault.
@@ -18,6 +19,7 @@ SLA Watch is a Dynatrace AppEngine app for evidence-first provider SLA attributi
 - Lets an authorized user add the configured provider tag to explicitly selected service entities after a confirmation step. Existing tags remain in place, conflicts are held for review, and the last app action can be undone.
 - Provides an Incidents view with an observed Problem queue, provider-published credit terms, filing guidance, required evidence, and exclusions.
 - Provides a separate Provider notices view so provider-reported events are never presented as Dynatrace Problems or proof of local impact.
+- Keeps the operating sequence inside one shell: Overview, Setup, Incidents, Provider notices, then Directory. The global header is reserved for the app identity and utility actions.
 - Stores tenant-owned custom SLA terms in Dynatrace App Settings while retaining the public `sla.directory` record as the comparison baseline.
 - Assigns one custom SLA to one or more exact Dynatrace services, hosts, runtimes, or observed locations. Smartscape relationships supply service-to-runtime context, and entity IDs establish the boundary.
 - Applies custom terms in the order host, location, service, provider-wide fallback, then public directory baseline.
@@ -44,6 +46,7 @@ The runtime data path does not require an MCP server or a user-supplied `sla.dir
 4. Add provider service tags only when other Dynatrace dashboards, alerts, management zones, or workflows should reuse the same provider boundary.
 5. Optionally open **Settings > Provider connections**. For each account, subscription, project, or tenancy, create a least-privilege provider identity and store its secret in Dynatrace Credential Vault. SLA Watch receives only the credential record ID.
 6. Add the exact provider hosts to Dynatrace External requests, test the connection, and save it only after verification succeeds. A provider connection does not assign services or prove provider fault.
+7. Use **Directory** to review the complete published provider record, service-level coverage, support options, and any tenant overrides before assessing an incident.
 
 Provider connections are configured independently in every installing Dynatrace environment. They are not bundled with the app, inherited from this repository, or shared with the development tenant. See the [provider incident connection guide](documentation/provider-connections.md) for the complete AWS, Azure, GCP, and OCI setup.
 
