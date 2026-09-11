@@ -1,6 +1,21 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.43`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.44`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.44 verified scenarios
+
+The `0.0.44` artifact from source commit `6934d0b` was deployed to the designated Dynatrace target environment on 2026-09-11 and exercised through the installed application. No provider configuration, provider credential, Credential Vault record, service mapping, custom terms record, evidence decision, Dynatrace entity, or cloud resource was created or changed. The production theme remained dark.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.44` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `6934d0b` |
+| Release gate | Type checks, lint, 18 test suites with 105 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed | Release commands completed locally with zero production dependency vulnerabilities; [GitHub Actions run 34618336974](https://github.com/self9dmin/sla-watch/actions/runs/34618336974) |
+| Unified Coverage workflow | Smartscape-backed scopes and services without runtime context appeared in one `Provider coverage worklist` with one shared terms panel. The former Coverage view navigation, `Scope map`, and `Manual coverage` links were absent | Installed production accessibility-tree and interaction smoke |
+| Incident-relevant priority | `wayfinder-engage-api-inter`, the exact service affected by eleven recent Problems, appeared first under Needs review. Confirmed Smartscape relationships remained available under Covered in the same list | Installed production Coverage smoke plus exact-ID unit coverage |
+| Mapping continuity | Selecting a confirmed `content-pipeline-engage` runtime relationship showed its saved Amazon EC2 mapping, evidence note, effective terms, and update or removal actions without changing the record | Installed production Coverage interaction |
+| Custom terms handoff | Selecting the service-only `wayfinder-engage-api-inter` row and opening Custom terms selected the service evidence boundary and exact `SERVICE-AA147ED7BD41422D` target | Installed production route and form-state smoke; the editor was left without saving |
+| Desktop fit | The installed Coverage body reported equal client and scroll dimensions of 1659 by 769 CSS pixels. One worklist and one details panel were present, with no document scrolling | Installed production dimension check |
+| Runtime quality | Production navigation, list selection, and the settings handoff completed without an application error | Installed production browser log and interaction smoke |
 
 ## 0.0.43 verified scenarios
 
@@ -204,9 +219,9 @@ The `0.0.30` artifact from source commit `c8d3b6f` was deployed to the designate
 ## Not proven by this record
 
 - A separate least-privilege user for every declared telemetry and state scope.
-- Manual coverage and evidence-decision behavior under denied, read-only, or management-zone-limited permissions.
+- Service-scoped coverage and evidence-decision behavior under denied, read-only, or management-zone-limited permissions.
 - Automated Playwright coverage against a disposable authenticated tenant.
-- Manual coverage update behavior and evidence dismissal with a non-confidential note.
+- Service-scoped coverage update behavior and evidence dismissal with a non-confidential note.
 - Target-environment outbound-host access for every optional public provider-status adapter.
 - Live customer-scoped AWS, Azure, Google Cloud, and OCI connections using disposable least-privilege identities.
 - Automated credit eligibility or provider-side approval.
