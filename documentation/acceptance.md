@@ -1,6 +1,24 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.39`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.40`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.40 verified scenarios
+
+The `0.0.40` artifact from source commit `dfa0a6e` was deployed to the designated Dynatrace target environment on 2026-09-10 and exercised through the installed application. No provider configuration, provider credential, Credential Vault record, tag, scope mapping, custom terms record, or evidence decision was created or changed. Personal theme state was switched to dark for visual verification and restored to light.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.40` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `dfa0a6e` |
+| Release gate | Type checks, lint, 18 test suites with 100 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24 | `npm run verify:release`; production dependency audit reported zero vulnerabilities; [GitHub Actions run 34557378292](https://github.com/self9dmin/sla-watch/actions/runs/34557378292) |
+| Coverage landing | The root route opens Coverage directly. The former Monitor summary page is absent, the four operational facts appear above the work area, and Scope map is the default view with Service tags secondary | Installed production navigation and accessibility-tree smoke |
+| Coverage reuse | The live AWS view returned eight services and four Smartscape relationships. Four exact relationships were already confirmed as Amazon EC2, and the UI states that Incidents and Evidence reuse confirmed mappings | Installed production Coverage smoke; no mapping was changed |
+| Evidence review | Evidence separates Review candidates from Provider reports and only offers validate or dismiss actions after an exact service overlap with confirmed scope, an explicit provider tag, or a Smartscape suggestion | Installed production Evidence smoke plus candidate unit tests |
+| Conservative empty state | Sixteen Problems were observed in seven days, but none overlapped the current confirmed AWS scopes, explicit provider tags, or Smartscape provider-service suggestions. Evidence therefore showed no review candidates instead of inferring one from a name | Installed production Evidence and Incidents smoke |
+| Directory completeness | `AWS terms` exposes Published terms, all 62 Services, Support, and Custom terms. The public reference, credit policy, filing process, required evidence, exclusions, provenance, official SLA, and claim destination remain source-labeled | Installed production Directory smoke against the live `sla.directory` response |
+| Provider settings | Settings keeps AWS, Azure, GCP, OCI, OpenAI, Anthropic, and ElevenLabs configured together, keeps AWS as the active focused view, shows the `sla.directory` connection, and routes service assignment back to Coverage | Installed production settings smoke; no setting was saved |
+| Desktop fit and themes | Coverage, Incidents, Evidence, and Directory each had equal body client and scroll dimensions of 1646 by 747 CSS pixels. Coverage remained readable in light and dark themes, and icon-only header actions retained accessible tooltips | Installed production visual, dimension, and accessibility-tree smoke |
+| Settings schema guardrail | Dynatrace's App Settings maximum of 1,000 objects is enforced by a repository test across all committed schemas | `tests/settingsSchemas.test.ts`; the corrected `evidence-decisions` schema registered during deployment |
+| Open mutation acceptance | No current Problem qualified as an Evidence candidate, so a live evidence-decision write was deliberately not forced. Least-privilege validate, dismiss, update, and read-only behavior remain open acceptance items | Target environment remained unchanged; automated decision-store and candidate coverage passed |
 
 ## 0.0.39 verified scenarios
 
