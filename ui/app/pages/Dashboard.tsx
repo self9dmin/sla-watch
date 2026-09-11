@@ -7,11 +7,9 @@ import {
   Heading,
   Paragraph,
 } from "@dynatrace/strato-components/typography";
-import { SetupAdvisor } from "../components/SetupAdvisor";
 import { EvidenceWorkspace } from "../components/EvidenceWorkspace";
 import { IncidentReview } from "../components/IncidentReview";
-import { ProviderTagSetup } from "../components/ProviderTagSetup";
-import { ProviderScopeMap } from "../components/ProviderScopeMap";
+import { CoverageWorkspace } from "../components/CoverageWorkspace";
 import { ProviderDirectoryWorkspace } from "../components/ProviderDirectoryWorkspace";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
 import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
@@ -181,10 +179,6 @@ const WatchNavigation = ({ section }: { section: WatchSection }) => (
 export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const section = initialSection;
   const location = useLocation();
-  const coverageView =
-    new URLSearchParams(location.search).get("view") === "tags"
-      ? "tags"
-      : "scope";
   const evidenceView =
     new URLSearchParams(location.search).get("view") === "provider-reports"
       ? "provider-reports"
@@ -380,14 +374,6 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const taggedProviderServices = taggedProviderServiceIds.size;
   const activeProviderCandidates = providerCandidates.filter(
     (candidate) => candidate.providerSlug === selectedProviderSlug,
-  );
-  const activeTopologyServiceIds = useMemo(
-    () => Array.from(new Set(
-      topology
-        .filter((edge) => edge.providerSlug === selectedProviderSlug)
-        .map(serviceEntityIdForEdge),
-    )),
-    [selectedProviderSlug, topology],
   );
   const suggestedServiceCount = new Set(
     activeProviderCandidates
@@ -646,63 +632,27 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 }
               />
             </div>
-            <nav className="setup-view-tabs" aria-label="Coverage views">
-              <Link
-                className={
-                  coverageView === "scope"
-                    ? "setup-view-tab active"
-                    : "setup-view-tab"
-                }
-                to="/"
-              >
-                Scope map
-              </Link>
-              <Link
-                className={
-                  coverageView === "tags"
-                    ? "setup-view-tab active"
-                    : "setup-view-tab"
-                }
-                to="/?view=tags"
-              >
-                Manual coverage
-              </Link>
-            </nav>
             {telemetryError ? (
               <div className="error-box setup-error">
                 Telemetry scan incomplete. Check the current user's data access.
               </div>
             ) : null}
-            {coverageView === "tags" ? (
-              <div className="setup-content-grid">
-                <ProviderTagSetup
-                  services={services}
-                  problems={problems}
-                  provider={directoryData}
-                  providerSlug={selectedProviderSlug}
-                  providerTagKey={providerLabelKey}
-                  topologyServiceIds={activeTopologyServiceIds}
-                  loading={servicesLoading || directoryLoading}
-                  scopeSettings={scopeSettings}
-                />
-                <SetupAdvisor
-                  recommendations={setupRecommendations}
-                  loading={telemetryLoading || directoryLoading}
-                  limitedContext={Boolean(
-                    telemetryError ||
-                      (services.length === 0 && telemetrySignalsPresent),
-                  )}
-                />
-              </div>
-            ) : (
-              <ProviderScopeMap
-                provider={directoryData}
-                topology={topology}
-                loading={topologyQuery.isLoading || directoryLoading}
-                error={topologyQuery.error ?? directoryError ?? undefined}
-                scopeSettings={scopeSettings}
-              />
-            )}
+            <CoverageWorkspace
+              provider={directoryData}
+              topology={topology}
+              services={services}
+              problems={problems}
+              providerTagKey={providerLabelKey}
+              loading={servicesLoading || topologyQuery.isLoading || directoryLoading}
+              error={topologyQuery.error ?? directoryError ?? undefined}
+              scopeSettings={scopeSettings}
+              recommendations={setupRecommendations}
+              recommendationsLoading={telemetryLoading || directoryLoading}
+              limitedContext={Boolean(
+                telemetryError ||
+                  (services.length === 0 && telemetrySignalsPresent),
+              )}
+            />
           </Surface>
         ) : section === "directory" ? (
           <Surface className="panel-card directory-panel">

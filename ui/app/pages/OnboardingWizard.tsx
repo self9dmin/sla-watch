@@ -353,9 +353,9 @@ export const OnboardingWizard = ({
             <div className="ready-check">✓</div>
             <Heading level={2}>Choose the next setup task.</Heading>
             <Paragraph>
-              Start with Scope map to confirm which Dynatrace services use each
-              provider. Provider incident connections are optional and can be
-              configured now or later.
+              Start in Coverage to confirm which provider terms apply to each
+              Dynatrace service. Provider incident connections are optional and
+              can be configured now or later.
             </Paragraph>
             <div className="ready-summary">
               <span>

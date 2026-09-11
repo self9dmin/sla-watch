@@ -92,26 +92,26 @@ test.describe("SLA Review deployed smoke", () => {
     ).toBeVisible();
     await expect(app.getByRole("heading", { name: "Coverage" })).toBeVisible();
     await expect(app.getByLabel("Coverage status").locator(".overview-fact")).toHaveCount(4);
-    await expect(app.getByRole("link", { name: "Scope map" })).toHaveClass(
-      /active/,
-    );
-    await expect(app.getByText("Service scope map")).toBeVisible();
+    await expect(
+      app.getByRole("navigation", { name: "Coverage views" }),
+    ).toHaveCount(0);
+    await expect(app.getByText("Service coverage")).toBeVisible();
+    await expect(
+      app.getByRole("listbox", { name: "Provider coverage worklist" }),
+    ).toBeVisible();
     await expect(
       app.getByText(/A confirmed mapping is reused in Incidents/i),
-    ).toBeVisible();
-    await app.getByRole("link", { name: "Manual coverage" }).click();
-    await expect(
-      app.getByText(/Confirm services that Smartscape does not place in the scope map/i),
-    ).toBeVisible();
+    ).toHaveCount(0);
     await expect(
       app.getByText(
-        /This does not change service names, tags, telemetry, or cloud resources/i,
+        /Saving a mapping changes only SLA Review/i,
       ),
     ).toBeVisible();
+    await expect(app.getByRole("link", { name: "Manual coverage" })).toHaveCount(0);
+    await expect(app.getByRole("link", { name: "Scope map" })).toHaveCount(0);
     await expect(app.locator(".advisor-count")).toHaveText(/required|recommended|No blockers/i);
     await expect(app.getByText("Reuse coverage outside SLA Review")).toHaveCount(0);
     await expect(app.getByText("Review native SLO coverage next")).toHaveCount(0);
-    await app.getByRole("link", { name: "Scope map" }).click();
     await expectNoPageScroll(app);
 
     await app.getByRole("link", { name: "Incidents" }).click();
