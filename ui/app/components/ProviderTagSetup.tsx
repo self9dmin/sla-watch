@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@dynatrace/strato-components/buttons";
-import type { ServiceRecord, SlaProviderResponse } from "../types";
+import type { ProblemRecord, ServiceRecord, SlaProviderResponse } from "../types";
+import { prioritizeServicesByProblemActivity } from "../data/providerAttribution";
 import { providerTagValues } from "../data/providerTags";
 import {
   createServiceScopeAssignment,
@@ -15,6 +16,7 @@ type WriteFeedback = { tone: "positive" | "warning" | "neutral"; title: string; 
 
 export const ProviderTagSetup = ({
   services,
+  problems,
   provider,
   providerSlug,
   providerTagKey,
@@ -23,6 +25,7 @@ export const ProviderTagSetup = ({
   scopeSettings,
 }: {
   services: ServiceRecord[];
+  problems: ProblemRecord[];
   provider?: SlaProviderResponse;
   providerSlug: string;
   providerTagKey: string;
@@ -50,9 +53,11 @@ export const ProviderTagSetup = ({
   }, [location.hash, location.search, services.length]);
 
   const topologyIds = useMemo(() => new Set(topologyServiceIds), [topologyServiceIds]);
-  const rows = useMemo(() => services
-    .filter((service) => !topologyIds.has(service.id))
-    .map((service) => {
+  const rows = useMemo(() => prioritizeServicesByProblemActivity(
+    services.filter((service) => !topologyIds.has(service.id)),
+    problems,
+  )
+    .map(({ service, problemCount }) => {
       const values = providerTagValues(service.tags, providerTagKey, providerSlug);
       const sourceTag = values.includes(providerSlug.toLowerCase());
       const conflicting = values.length > 0 && !sourceTag;
@@ -63,8 +68,8 @@ export const ProviderTagSetup = ({
         item.assignmentKey === assignmentKey &&
         isServiceScopeAssignment(item),
       );
-      return { service, values, sourceTag, conflicting, assignment };
-    }), [providerSlug, providerTagKey, scopeSettings.assignments, services, topologyIds]);
+      return { service, problemCount, values, sourceTag, conflicting, assignment };
+    }), [problems, providerSlug, providerTagKey, scopeSettings.assignments, services, topologyIds]);
 
   const selectedRow = rows.find((row) => row.service.id === selectedServiceId);
   const appMappedCount = rows.filter((row) => row.assignment).length;
@@ -155,7 +160,7 @@ export const ProviderTagSetup = ({
             <span>{rows.length} outside Scope map</span>
           </div>
           <div className="provider-service-list" role="radiogroup" aria-label={`Services available for ${providerName} coverage`}>
-            {rows.map(({ service, values, sourceTag, conflicting, assignment }) => {
+            {rows.map(({ service, problemCount, values, sourceTag, conflicting, assignment }) => {
               const selectable = !sourceTag && !conflicting;
               return (
                 <label className={`provider-service-row${selectable ? "" : " provider-service-row-disabled"}`} key={service.id}>
@@ -167,7 +172,7 @@ export const ProviderTagSetup = ({
                   <span className="provider-service-name"><strong>{service.name}</strong><small>{service.id}</small></span>
                   <span className={`provider-service-state ${assignment || sourceTag ? "positive" : conflicting ? "warning" : "neutral"}`}>
                     <strong>{assignment ? "Covered in app" : sourceTag ? "Covered by source tag" : conflicting ? "Tag points elsewhere" : "Needs review"}</strong>
-                    {assignment ? <small>{assignment.providerServiceName}</small> : conflicting ? <small>{values.join(", ")}</small> : null}
+                    {assignment ? <small>{assignment.providerServiceName}</small> : conflicting ? <small>{values.join(", ")}</small> : problemCount > 0 ? <small>{problemCount} recent Problem{problemCount === 1 ? "" : "s"}</small> : null}
                   </span>
                 </label>
               );

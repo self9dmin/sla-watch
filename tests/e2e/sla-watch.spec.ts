@@ -108,6 +108,9 @@ test.describe("SLA Review deployed smoke", () => {
         /This does not change service names, tags, telemetry, or cloud resources/i,
       ),
     ).toBeVisible();
+    await expect(app.locator(".advisor-count")).toHaveText(/required|recommended|No blockers/i);
+    await expect(app.getByText("Reuse coverage outside SLA Review")).toHaveCount(0);
+    await expect(app.getByText("Review native SLO coverage next")).toHaveCount(0);
     await app.getByRole("link", { name: "Scope map" }).click();
     await expectNoPageScroll(app);
 

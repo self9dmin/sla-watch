@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import type { SetupRecommendation } from "../types";
+import { selectPrimarySetupRecommendations } from "../data/recommendations";
 
 const OWNERSHIP_GUIDANCE_URL = "https://docs.dynatrace.com/docs/deliver/ownership/assign-team-ownership";
 
@@ -18,25 +19,33 @@ export const SetupAdvisor = ({
   recommendations: SetupRecommendation[];
   loading: boolean;
   limitedContext: boolean;
-}) => (
-  <section className="setup-checks" data-tour="advisor" aria-labelledby="setup-checks-title">
+}) => {
+  const visibleRecommendations = selectPrimarySetupRecommendations(recommendations);
+  const requiredCount = visibleRecommendations.filter(({ priority }) => priority === "high").length;
+  const statusLabel = requiredCount > 0
+    ? `${requiredCount} required`
+    : visibleRecommendations.length > 0
+      ? `${visibleRecommendations.length} recommended`
+      : "No blockers";
+
+  return <section className="setup-checks" data-tour="advisor" aria-labelledby="setup-checks-title">
     <div className="setup-section-heading">
       <div>
         <h3 id="setup-checks-title">Coverage checks</h3>
         <p>Resolve telemetry and ownership gaps before reviewing an incident.</p>
       </div>
-      {!loading ? <span className="advisor-count">{recommendations.length} open</span> : null}
+      {!loading ? <span className="advisor-count">{statusLabel}</span> : null}
     </div>
     {loading ? (
       <div className="advisor-empty" role="status">Reading the tenant boundary before making recommendations...</div>
-    ) : recommendations.length === 0 ? (
+    ) : visibleRecommendations.length === 0 ? (
       <div className="advisor-empty">
-        <strong>No coverage gaps detected in this scan.</strong>
+        <strong>No blocking coverage gaps detected.</strong>
         <span>The current provider scope is ready for incident review.</span>
       </div>
     ) : (
       <div className="advisor-list">
-        {recommendations.map((recommendation) => (
+        {visibleRecommendations.map((recommendation) => (
           <article className={`advisor-item advisor-item-${recommendation.priority}`} key={recommendation.id}>
             <div className="advisor-item-copy">
               <div className="advisor-item-title">
@@ -57,4 +66,4 @@ export const SetupAdvisor = ({
     )}
     {limitedContext ? <div className="advisor-footnote">Some Dynatrace context is unavailable. Recommendations are intentionally conservative until the relevant read permission or entity scope is restored.</div> : null}
   </section>
-);
+};
