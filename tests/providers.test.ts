@@ -34,15 +34,14 @@ describe("provider configuration", () => {
     expect(canonicalProviderSlug("oracle_cloud")).toBe("oci");
   });
 
-  it("enables only providers supported by environment evidence or an explicit addition", () => {
+  it("enables only providers supported by environment evidence or a connection", () => {
     expect(resolveEnvironmentProviderSlugs({
       detected: ["aws"],
       tagged: ["google"],
       assigned: ["oci"],
       connected: ["azure"],
-      manual: ["openai"],
       fallback: "anthropic",
-    })).toEqual(["aws", "azure", "gcp", "oci", "openai"]);
+    })).toEqual(["aws", "azure", "gcp", "oci"]);
   });
 
   it("keeps one usable fallback when detection returns no provider", () => {

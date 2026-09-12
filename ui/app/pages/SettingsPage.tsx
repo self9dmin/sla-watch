@@ -8,6 +8,7 @@ import { ContractOverrideEditor } from "../components/ContractOverrideEditor";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { useProviderConnections } from "../hooks/useProviderConnections";
+import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
 import { createOverrideKey } from "../data/contractOverrides";
 import { mergeServiceInventory } from "../data/providerAttribution";
 import { CONNECTED_PROVIDER_OPTIONS, createProviderConnectionKey, providerConnectionScopeId, providerConnectionScopeLabel, providerConnectionVerificationKey, validateProviderConnection, type ConnectedProvider } from "../data/providerConnections";
@@ -15,11 +16,11 @@ import { EVIDENCE_LOOKBACK_OPTIONS } from "../data/lookback";
 import { detectedProviderTagSlugs } from "../data/providerTags";
 import { createServiceMetricsQuery, SERVICES_QUERY, SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
 import { detectedProviderSlugs, parseServiceCloudContexts, parseSmartscapeScopeEdges } from "../data/topology";
-import { canonicalProviderSlug, PROVIDER_CATALOG, providerDetail, providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
+import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
 import type { AwsProviderNoticesResponse, AzureProviderNoticesResponse, ContractOverrideValue, ContractScopeKind, EvidenceLookbackHours, GcpProviderNoticesResponse, OciProviderNoticesResponse, ProviderConnectionValue, ServiceRecord, SlaProviderResponse, SlaThemePreference } from "../types";
 
 const SETUP_LINKS = [
-  ["watch", "Provider configuration"],
+  ["watch", "Review defaults"],
   ["provider-connections", "Provider connections"],
   ["sla-overrides", "Custom terms"],
   ["appearance", "Appearance"],
@@ -45,7 +46,7 @@ const SettingsRail = ({ page }: { page: string }) => {
         <div className="settings-rail-label">SUPPORT</div>
         <CommunityLink className="settings-rail-link" />
       </div>
-      <div className="settings-rail-note">Provider configuration, connections, custom terms, and evidence decisions are shared with the workspace. The theme preference stays personal to you. The change log is read-only.</div>
+      <div className="settings-rail-note">Review defaults, connections, custom terms, and evidence decisions are shared with the workspace. The theme preference stays personal to you. The change log is read-only.</div>
     </aside>
   );
 };
@@ -64,11 +65,11 @@ const recordText = (value: unknown, fallback: string): string => typeof value ==
 
 const WatchSettings = () => {
   const { preferences, updatePreferences } = useSlaPreferences();
-  const [manualProviderSlugs, setManualProviderSlugs] = useState(preferences.manualProviderSlugs);
+  const scopeSettings = useProviderScopeAssignments();
+  const providerConnections = useProviderConnections();
   const [providerSlug, setProviderSlug] = useState(preferences.providerSlug);
   const [providerLabelKey, setProviderLabelKey] = useState(preferences.providerLabelKey);
   const [lookbackHours, setLookbackHours] = useState<EvidenceLookbackHours>(preferences.lookbackHours);
-  const [customProvider, setCustomProvider] = useState("");
   const [saved, setSaved] = useState(false);
   const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
   const serviceCloudQueryText = useMemo(() => createServiceMetricsQuery(lookbackHours), [lookbackHours]);
@@ -80,57 +81,41 @@ const WatchSettings = () => {
     detected: detectedProviderSlugs(providerEvidence),
     tagged: detectedProviderTagSlugs(providerEvidence.map((edge) => edge.serviceTags), providerLabelKey),
   }), [providerEvidence, providerLabelKey]);
+  const assignedProviders = useMemo(
+    () => scopeSettings.assignments
+      .filter((assignment) => assignment.enabled)
+      .map((assignment) => assignment.providerSlug),
+    [scopeSettings.assignments],
+  );
+  const connectedProviders = useMemo(
+    () => providerConnections.connections
+      .filter((connection) => connection.enabled)
+      .map((connection) => connection.providerSlug),
+    [providerConnections.connections],
+  );
   const enabledProviderSlugs = useMemo(() => resolveEnvironmentProviderSlugs({
     detected: detectedProviders,
-    manual: manualProviderSlugs,
+    assigned: assignedProviders,
+    connected: connectedProviders,
     fallback: providerSlug,
-  }), [detectedProviders, manualProviderSlugs, providerSlug]);
-  const providerOptions = useMemo(() => Array.from(new Set([
-    ...PROVIDER_CATALOG.map((provider) => provider.slug),
-    ...preferences.providerSlugs,
-    ...manualProviderSlugs,
-    ...detectedProviders,
-  ])), [detectedProviders, manualProviderSlugs, preferences.providerSlugs]);
+  }), [assignedProviders, connectedProviders, detectedProviders, providerSlug]);
   const directoryRequest = useMemo(() => ({ vendor: providerSlug }), [providerSlug]);
   const directoryConnection = useAppFunction<SlaProviderResponse>({ name: "slaDirectory", data: directoryRequest, responseType: "json" });
   const activeDirectory = directoryConnection.data?.provider.slug === providerSlug ? directoryConnection.data : undefined;
   const directoryChecking = directoryConnection.isLoading || Boolean(!directoryConnection.error && directoryConnection.data && !activeDirectory);
 
   useEffect(() => {
-    setManualProviderSlugs(preferences.manualProviderSlugs);
     setProviderSlug(preferences.providerSlug);
     setProviderLabelKey(preferences.providerLabelKey);
     setLookbackHours(preferences.lookbackHours);
-  }, [preferences.manualProviderSlugs, preferences.providerLabelKey, preferences.providerSlug, preferences.lookbackHours]);
+  }, [preferences.providerLabelKey, preferences.providerSlug, preferences.lookbackHours]);
 
   useEffect(() => {
     if (!enabledProviderSlugs.includes(providerSlug)) setProviderSlug(enabledProviderSlugs[0] ?? providerSlug);
   }, [enabledProviderSlugs, providerSlug]);
 
-  const toggleProvider = (slug: string) => {
-    if (detectedProviders.includes(slug)) return;
-    setManualProviderSlugs((current) => {
-      if (current.includes(slug)) {
-        return current.filter((item) => item !== slug);
-      }
-      return [...current, slug].slice(0, 12);
-    });
-    setSaved(false);
-  };
-
-  const addCustomProvider = () => {
-    const normalized = canonicalProviderSlug(customProvider);
-    if (!normalized) return;
-    setManualProviderSlugs((current) => Array.from(new Set([...current, normalized])).slice(0, 12));
-    setProviderSlug(normalized);
-    setCustomProvider("");
-    setSaved(false);
-  };
-
   const save = async () => {
     await updatePreferences({
-      providerSlugs: enabledProviderSlugs,
-      manualProviderSlugs,
       providerSlug: providerSlug.trim().toLowerCase(),
       providerLabelKey: providerLabelKey.trim() || "provider",
       lookbackHours,
@@ -142,41 +127,16 @@ const WatchSettings = () => {
   return (
     <section className="settings-page">
       <div className="page-intro">
-        <Text className="eyebrow">Settings · providers</Text>
-        <Heading level={1}>Configure providers.</Heading>
-        <Paragraph>Review providers detected in this environment, add unobserved dependencies, and set the evidence window. Service assignments remain in Coverage.</Paragraph>
+        <Text className="eyebrow">Settings · review</Text>
+        <Heading level={1}>Review defaults.</Heading>
+        <Paragraph>Providers appear automatically from Dynatrace evidence, confirmed Coverage mappings, and enabled incident connections. Choose the focused view, tag convention, and evidence window.</Paragraph>
       </div>
-      <fieldset className="provider-monitor-fieldset">
-        <legend>Providers in scope</legend>
-        <p>Providers found in Dynatrace are enabled automatically. Add a provider only when the dependency is not visible in topology or service tags.</p>
-        <div className="provider-monitor-grid">
-          {providerOptions.map((slug) => {
-            const detected = detectedProviders.includes(slug);
-            const manuallyAdded = manualProviderSlugs.includes(slug);
-            const monitored = detected || manuallyAdded;
-            return (
-              <label className={`provider-monitor-option${monitored ? " selected" : ""}${detected ? " detected" : ""}`} key={slug}>
-                <input type="checkbox" checked={monitored} disabled={detected} onChange={() => toggleProvider(slug)} aria-label={`Monitor ${providerDisplayName(slug)}`} />
-                <span><strong>{providerDisplayName(slug)}</strong><small>{providerDetail(slug)}</small></span>
-                <span className={`provider-monitor-signal${detected ? " detected" : ""}`}>{detected ? "Detected in Dynatrace" : manuallyAdded ? "Added manually" : "Available"}</span>
-              </label>
-            );
-          })}
-        </div>
-        <div className="provider-custom-row">
-          <label className="field-label">Add another sla.directory provider
-            <input value={customProvider} onChange={(event) => setCustomProvider(event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))} placeholder="provider slug" autoComplete="off" />
-          </label>
-          <Button size="condensed" disabled={!canonicalProviderSlug(customProvider)} onClick={addCustomProvider}>Add provider</Button>
-        </div>
-        {!topologyQuery.isLoading && !serviceCloudQuery.isLoading && detectedProviders.length === 0 ? <small className="provider-detection-note">No provider was identified from current topology, cloud dimensions, or source tags. Add a provider manually when Dynatrace cannot observe the dependency.</small> : null}
-      </fieldset>
       <div className="settings-form-grid">
         <label className="field-label">Active provider
           <select value={providerSlug} onChange={(event) => setProviderSlug(event.target.value)} aria-label="Active provider for focused views">
             {enabledProviderSlugs.map((slug) => <option key={slug} value={slug}>{providerDisplayName(slug)}</option>)}
           </select>
-          <small>Coverage, Incidents, Evidence, and Directory show only providers detected in this environment or added manually.</small>
+          <small>Coverage, Incidents, Evidence, and Directory show providers detected from this environment or an enabled incident connection.</small>
         </label>
         <label className="field-label">Source tag key
           <input value={providerLabelKey} onChange={(event) => setProviderLabelKey(event.target.value)} placeholder="provider" autoComplete="off" />
@@ -636,7 +596,7 @@ const SlaOverrideSettings = () => {
         <Paragraph>Define operational terms for a provider service and an explicit Dynatrace scope. Published terms remain available as the comparison baseline.</Paragraph>
       </div>
       {loading ? <div className="settings-callout" role="status"><strong>Loading contract scope</strong><span>Reading the provider record, service inventory, Smartscape topology, and tenant settings.</span></div> : null}
-      {!loading && !activeDirectory ? <div className="error-box"><strong>Provider terms are unavailable.</strong><span>Return to Provider configuration, verify the active provider and API connection, then try again.</span></div> : null}
+      {!loading && !activeDirectory ? <div className="error-box"><strong>Provider terms are unavailable.</strong><span>Return to Review defaults, verify the active provider and API connection, then try again.</span></div> : null}
       {!loading && activeDirectory && initialValue ? (
         <>
           {!contractSettings.canWrite ? <div className="error-box compact-error">Your current role can review custom terms but cannot create them. Ask a Dynatrace administrator for app-settings write access.</div> : null}
@@ -695,7 +655,7 @@ const IntroSettings = () => {
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">Review workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure providers, optional incident data, evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Provider configuration</span><strong>Review detected providers and add unobserved dependencies.</strong><span>Service assignments are reviewed in Coverage.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Published terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">Custom terms</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one terms record to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Walkthrough</span><strong>Tour the operating views.</strong><span>Coverage opens first. The walkthrough is optional and changes no workspace configuration.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">Review workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure review defaults, optional incident data, evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Review defaults</span><strong>Choose the focused provider, source tag convention, and evidence window.</strong><span>Providers are discovered automatically and service assignments remain in Coverage.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Published terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">Custom terms</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one terms record to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Walkthrough</span><strong>Tour the operating views.</strong><span>Coverage opens first. The walkthrough is optional and changes no workspace configuration.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();

@@ -21,8 +21,6 @@
 | `status.elevenlabs.io` | ElevenLabs public incidents | Server-side outbound host | Fixed function allowlist | Review endpoint availability and response compatibility | Medium: aggregate public provider evidence |
 | `ocistatus.oraclecloud.com` | OCI public regional component status | Server-side outbound host | Fixed function allowlist | Review endpoint availability and response compatibility | Medium: current public provider evidence |
 | `announcements.<region>.oraclecloud.com` | OCI tenancy Announcements | Server-side outbound host | Validated commercial region and environment allowlist | Prefer the exact regional host; rotate the API key separately in OCI and Credential Vault | High: tenancy-specific provider evidence and request-signing boundary |
-| `providerSlugs` | Last saved effective provider collection | Shared app state | Derived from environment evidence plus explicit additions | State expires within 90 days | Low, but controls which provider records and evidence views are available |
-| `manualProviderSlugs` | Providers explicitly added despite no current Dynatrace detection | Shared app state | Administrator input | State expires within 90 days | Low, but preserves dependencies Smartscape cannot observe |
 | `providerSlug` | Active provider for Coverage, Incidents, Evidence, and Directory | Shared app state | User input constrained to the runtime provider collection | State expires within 90 days | Low, but controls the current external lookup and attribution view |
 | `providerLabelKey` | Provider tag parsing | Shared app state | User input | State expires within 90 days | Low, affects attribution |
 | `lookbackHours` | DQL query construction | Shared app state | Controlled select input | State expires within 90 days | Low |

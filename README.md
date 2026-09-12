@@ -8,8 +8,8 @@ SLA Review is a Dynatrace AppEngine app for evidence-first provider attribution.
 - Reads Davis Problems, logs, spans, and service-request telemetry for a selectable 24-hour to 90-day window.
 - Retrieves provider and service contract data from the versioned `sla.directory` JSON API through an AppEngine function.
 - Presents the active provider's published terms, credit policy, claim process, exclusions, service catalog, support plans, support-response boundary, source metadata, and tenant overrides in one read-only Directory workspace.
-- Treats AWS, Microsoft Azure, Google Cloud, and Oracle Cloud Infrastructure as four peer cloud providers. The active list is limited to providers evidenced by Dynatrace or explicitly added by an administrator.
-- Monitors more than one relevant provider at a time. Smartscape runtime metadata, cloud dimensions, source-owned provider tags, saved scope mappings, enabled incident connections, and manual settings can place a provider in scope.
+- Treats AWS, Microsoft Azure, Google Cloud, and Oracle Cloud Infrastructure as four peer cloud providers. The active list is limited to providers evidenced by Dynatrace, confirmed Coverage mappings, or enabled incident connections.
+- Monitors more than one relevant provider at a time. Smartscape runtime metadata, cloud dimensions, source-owned provider tags, saved scope mappings, and enabled incident connections place providers in scope automatically.
 - Lets administrators add multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies for customer-scoped provider evidence. Credentials remain in Dynatrace Credential Vault.
 - Reads credential-free public status for Google Cloud and OCI, plus optional OpenAI, Anthropic, and ElevenLabs sources. Public records remain explicitly non-customer-specific.
 - Opens on a compact Coverage workspace with provider, service, incident, and filing facts above an exception-first worklist.
@@ -41,9 +41,9 @@ The runtime data path does not require an MCP server or a user-supplied `sla.dir
 
 1. Install SLA Review and open it from the Dynatrace Apps page.
 2. The app opens directly in **Coverage** and detects providers from Smartscape topology, cloud dimensions, and source-owned provider tags. Review only ambiguous or unresolved provider evidence. Provider-native matches are already available under Covered, while All loaded supports intentional manual mapping.
-3. If a dependency is not visible in Dynatrace, open **Settings > Provider configuration** and add it explicitly. AWS, Azure, GCP, and OCI remain available as peer options.
-4. Optionally open **Settings > Provider connections**. For each account, subscription, project, or tenancy, create a least-privilege provider identity and store its secret in Dynatrace Credential Vault. SLA Review receives only the credential record ID.
-5. Add the exact provider hosts to Dynatrace External requests, test the connection, and save it only after verification succeeds. A provider connection does not assign services or prove provider fault.
+3. If a dependency is not visible in topology or tags, confirm its exact service boundary in **Coverage** or enable an account-specific source in **Settings > Provider connections**. AWS, Azure, GCP, and OCI remain peer options.
+4. For each optional account, subscription, project, or tenancy connection, create a least-privilege provider identity and store its secret in Dynatrace Credential Vault. SLA Review receives only the credential record ID.
+5. Add the exact provider hosts to Dynatrace External requests, test the connection, and save it only after verification succeeds. A provider connection can place its provider in scope, but does not assign services or prove provider fault.
 6. Select **Review terms** to inspect the complete published provider record, service-level coverage, support options, and any tenant overrides before assessing an incident.
 
 Provider connections are configured independently in every installing Dynatrace environment. They are not bundled with the app, inherited from this repository, or shared with the development tenant. See the [provider incident connection guide](documentation/provider-connections.md) for the complete AWS, Azure, GCP, and OCI setup.

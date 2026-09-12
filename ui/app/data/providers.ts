@@ -57,14 +57,12 @@ export const resolveEnvironmentProviderSlugs = ({
   tagged = [],
   assigned = [],
   connected = [],
-  manual = [],
   fallback,
 }: {
   detected?: string[];
   tagged?: string[];
   assigned?: string[];
   connected?: string[];
-  manual?: string[];
   fallback?: string;
 }): string[] => {
   const providers = sortProviderSlugs([
@@ -72,7 +70,6 @@ export const resolveEnvironmentProviderSlugs = ({
     ...tagged,
     ...assigned,
     ...connected,
-    ...manual,
   ]);
   if (providers.length > 0) return providers;
   const fallbackProvider = canonicalProviderSlug(fallback);
