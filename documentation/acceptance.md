@@ -1,6 +1,24 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.51`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.52`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.52 verified scenarios
+
+The `0.0.52` artifact from source commit `a4caa5c` was deployed to the designated Dynatrace target environment on 2026-09-12 and exercised through the connected Chrome profile. The smoke was read-only. It did not create, update, or delete an objective or change provider configuration, credentials, mappings, custom terms, evidence decisions, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.52` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `a4caa5c` |
+| Release gate | Type checks, lint, 24 test suites with 140 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24 | `npm run verify:release`; 81.95% statement coverage; zero production dependency vulnerabilities |
+| All-first Coverage | Coverage opened with All selected and showed eight loaded services in one grouped worklist: two covered and six without provider evidence. Covered and Needs review remained visible as focused controls | Installed production Coverage DOM and visual smoke |
+| Unified totals | The provider scope tile reported `2 of 8`, the All control reported eight, Covered reported two, and Needs review reported zero from the same coverage model | Installed production Coverage smoke plus focused unit tests |
+| Bounded layout | Coverage reported equal body client and scroll dimensions of 1646 by 803 CSS pixels, with no document scrolling or horizontal overflow | Installed production frame dimension check |
+| Objective consistency | The selected covered service reported 63.794% observed availability and a 99.99% target in both Coverage and Performance | Installed production Coverage and Performance interaction smoke |
+| Context-preserving handoff | Problem `P-260934` routed its exact affected service to Coverage with provider, Problem, service, and return context. Back to review restored the same Problem without saving a mapping | Installed production Incidents-to-Coverage navigation smoke |
+| Evidence stopping point | Evidence clearly separated review candidates from provider reports, showed the completed empty state, and stated that nothing was submitted | Installed production Evidence smoke |
+| Provider routing and actions | AWS custom terms opened the provider-specific settings page, the empty custom-terms view exposed one add action, and the missing provider-report source exposed one connection action | Installed production Directory, Settings, and Provider reports smoke |
+| Release history | Change log showed `0.0.52 Current release` and the All-first Coverage, contextual handoff, and claim-package changes | Installed production change-log smoke |
+| Runtime quality | Coverage, Performance, Incidents, Evidence, Directory, Settings, and change log loaded without a captured browser warning or error | Connected Chrome browser-log and interaction smoke |
 
 ## 0.0.51 verified scenarios
 

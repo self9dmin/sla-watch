@@ -41,8 +41,8 @@ Coverage -> service without runtime context -> operator confirmation
 Coverage -> covered service -> scoped Grail availability preview -> explicit confirmation
          -> Service-Level Objectives API -> one customer objective per provider and service
 
-Evidence -> Problem plus provider boundary -> SRE acknowledgement -> validate or dismiss
-         -> App Settings V2 -> bounded operational decision for follow-up
+Evidence -> Problem plus provider boundary -> claim package -> SRE acknowledgement
+         -> App Settings V2 -> package-ready or not-provider-related follow-up state
 
 Settings -> explicit custom terms and evidence targets -> validation -> App Settings V2
          -> shared contract override using exact service, runtime, or location identifiers
@@ -74,7 +74,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 - Tenant-specific operational terms: the `contract-overrides` App Settings schema.
 - Observed provider-service mappings: fixed provider-specific recognition of native Smartscape runtime types at query time. This state is read-only and is not persisted per service.
 - Operator provider-service overrides: the `provider-scope-assignments` App Settings schema. An exact saved service or runtime mapping takes precedence over observed topology.
-- Human evidence decisions: the `evidence-decisions` App Settings schema. A validated or dismissed record captures an SRE review outcome for follow-up, not provider fault or credit eligibility. It remains current only while the mapping basis, affected entities, and provider-service scope still match.
+- Human evidence decisions: the `evidence-decisions` App Settings schema. A package-ready or not-provider-related record captures an SRE review outcome for follow-up, not provider fault, credit eligibility, or claim submission. It remains current only while the mapping basis, affected entities, and provider-service scope still match.
 - Provider connection metadata: the `provider-connections` App Settings schema. Provider secrets: Dynatrace Credential Vault.
 - AWS provider notices: account-specific AWS Health events and bounded affected-resource identifiers after STS account verification. There is no credential-free AWS source in this release.
 - Azure provider notices: subscription-specific Azure Service Health events. There is no credential-free Azure source in this release.
@@ -86,7 +86,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 - Personal preferences and shared provider review configuration: Dynatrace app-state services when available.
 - Offline state: browser local storage only as an explicitly surfaced fallback.
 
-The active-provider collection is derived at runtime from provider-native Smartscape topology, cloud dimensions, source-owned provider tags, saved scope mappings, and enabled incident connections. There is no separate manual provider list. The active provider controls Coverage, Performance, Incidents, Evidence, and Directory inside the shared operating shell. Coverage is the landing workspace and decides only which provider service applies. Its default queue contains ambiguous or unresolved provider evidence, while Covered exposes automatic and saved matches and All loaded permits intentional exact mapping. Performance is a read-only portfolio of app-managed customer objectives for that provider. Incidents reuses the canonical Evidence candidate rules to prioritize a bounded Problem worklist. It shows only the context needed to choose Coverage, Evidence, or the native Problems app. Evidence contains both Dynatrace-derived review candidates and separately labeled provider reports. Changing the active provider does not remove another provider, modify entity metadata, or change a provider connection.
+The active-provider collection is derived at runtime from provider-native Smartscape topology, cloud dimensions, source-owned provider tags, saved scope mappings, and enabled incident connections. There is no separate manual provider list. The active provider controls Coverage, Performance, Incidents, Evidence, and Directory inside the shared operating shell. Coverage is the landing workspace and decides only which provider service applies. All opens first and groups every loaded service as covered, needing review, or unattributed. Covered and Needs review are visible focus controls over the same normalized model. Performance is a read-only portfolio of app-managed customer objectives for that provider. Incidents reuses the canonical Evidence candidate rules to prioritize a bounded Problem worklist. It shows only the context needed to choose Coverage, Evidence, or the native Problems app. Evidence contains both Dynatrace-derived review candidates and separately labeled provider reports. Changing the active provider does not remove another provider, modify entity metadata, or change a provider connection.
 
 Directory is the normalized presentation of the complete supported `sla.directory` provider response. It keeps published terms, credit policy, claim requirements, exclusions, service-specific coverage, support plans, support-response status, and record provenance visibly separate from tenant-owned overrides. The parser rejects malformed nested support and tier records before they reach this surface.
 
