@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.48`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.49`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.49 verified scenarios
+
+The `0.0.49` artifact from source commit `9b9c9ed` was deployed to the designated Dynatrace target environment on 2026-09-12 and exercised through the connected Chrome profile. The tenant returned one existing app-managed objective for the selected covered service. The smoke opened that record in the native Service-Level Objectives app but did not create, update, or delete an objective or change provider configuration, credentials, mappings, custom terms, evidence decisions, entities, or cloud resources. The production theme remained light.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.49` manifest, six AppEngine functions, App Settings schemas, new objective scopes, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `9b9c9ed` |
+| Release gate | Type checks, lint, 21 test suites with 132 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24 | Release commands completed locally; zero production dependency vulnerabilities |
+| Exact service preview | Covered AWS service `content-pipeline-catalog` resolved to Amazon EC2 and displayed customer-observed request availability, the 99.99% target, a 30-day evaluation period, and `sla.directory` as the terms source | Installed production Coverage smoke against live Grail telemetry |
+| Service-scale boundary | Coverage exposed one objective for the exact Dynatrace service while keeping its Smartscape runtime and location as supporting scope context. No host, process, or runtime objective fan-out occurred | Installed production Coverage accessibility-tree and interaction smoke |
+| Existing-objective protection | The app detected the existing deterministic provider-and-service objective and showed `Open in SLOs` instead of another create action | Installed production Coverage smoke |
+| Native handoff | `Open in SLOs` opened the native Service-Level Objectives app, where `content-pipeline-catalog availability (AWS)` showed a 99.99% target and Last 30 days evaluation | Installed production native-app handoff smoke |
+| Explicit create guard | The local tenant-hosted build enabled creation only after the scoped Grail query completed, exposed a second confirmation, and returned safely to preview when Cancel was selected | Connected Chrome local-release smoke; no create request was submitted |
+| Release history | Change log showed `0.0.49 Current release` and the customer-objective handoff details | Installed production change-log smoke |
+| Runtime quality | The installed app and objective handoff completed without an application-frame warning or error | Connected Chrome browser-log and interaction smoke |
 
 ## 0.0.48 verified scenarios
 
