@@ -1,6 +1,23 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.50`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.51`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.51 verified scenarios
+
+The `0.0.51` artifact from source commit `e55ba8c` was deployed to the designated Dynatrace target environment on 2026-09-12 and exercised through the connected Chrome profile. The smoke was read-only. It did not create, update, or delete an objective or change provider configuration, credentials, mappings, custom terms, evidence decisions, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.51` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `e55ba8c` |
+| Release gate | Type checks, lint, 22 test suites with 136 tests, production build, App Toolkit analysis, and production dependency audit passed under Node 24 | Final `npm run verify`; production dependency audit reported zero vulnerabilities |
+| Real tenant queue | Incidents loaded 94 Dynatrace Problems for the 30-day window and displayed a bounded page of eight items with 12 pages | Installed production Incidents accessibility-tree and visual smoke |
+| Prioritization and pagination | The queue prioritizes active and provider-relevant Problems before recency, preserves source order for ties, and selected the first item on page two after Next | Focused unit coverage and installed production pagination interaction |
+| Focused detail | The selected Problem showed affected service, provider match, root-cause availability, state, and observed window. Filing mechanics, credit, and terms details were absent | Installed production Incidents DOM, accessibility-tree, and visual smoke |
+| Conservative routing | The live selected Problem had an affected service but no AWS coverage overlap, so the single contextual action routed to Coverage. Production reported zero Evidence candidates and did not infer provider relevance | Installed production Incidents smoke against live AWS data |
+| Native Problems handoff | Open Problems launched the official `dynatrace.davis.problems` application | Installed production navigation smoke |
+| Evidence continuity | Candidate selection is preserved in the Evidence route by automated coverage. The target environment had zero AWS candidates, so this handoff was not forced during the production smoke | End-to-end route coverage and unchanged target environment |
+| Bounded layout | The production app body reported equal client and scroll dimensions of 1646 by 803 CSS pixels, eight incident tiles, and no document scrolling or horizontal overflow | Installed production frame dimension and DOM checks |
+| Runtime quality | Incidents loaded and paginated without a captured browser warning or error | Connected Chrome browser-log and interaction smoke |
 
 ## 0.0.50 verified scenarios
 
