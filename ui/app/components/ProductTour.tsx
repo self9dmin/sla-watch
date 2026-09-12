@@ -25,11 +25,6 @@ const STEPS: TourStep[] = [
     body: "Incidents prioritizes active and provider-relevant Dynatrace Problems. Use the focused summary to choose the next step, or open Problems for full investigation.",
   },
   {
-    target: '[data-tour="evidence"]',
-    title: "Validate review candidates",
-    body: "Evidence combines SLA Review findings with a separate provider-report view. Human validation approves operational follow-up only. It does not determine provider fault or credit eligibility.",
-  },
-  {
     target: '[data-tour="directory"]',
     title: "Open provider records",
     body: "Review terms opens the directory record for the active provider, including published terms, service coverage, claim requirements, support options, and tenant overrides.",
@@ -38,6 +33,11 @@ const STEPS: TourStep[] = [
     target: '[data-tour="settings"]',
     title: "Configure the workspace",
     body: "Settings controls monitored providers, optional incident connections, custom terms, the tag key, and the lookback window. Provider connections can be added for more than one account scope.",
+  },
+  {
+    target: '[data-tour="evidence"]',
+    title: "Finish the human review",
+    body: "Evidence assembles the observed impact, provider relationship, current terms, and required evidence. Mark the package ready or not provider-related. Nothing is sent, and this is where the SRE review stops.",
   },
 ];
 

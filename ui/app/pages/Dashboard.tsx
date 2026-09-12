@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppFunction, useDql } from "@dynatrace-sdk/react-hooks";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Surface } from "@dynatrace/strato-components/layouts";
@@ -19,16 +19,9 @@ import { detectedProviderTagSlugs, providerTagValue } from "../data/providerTags
 import { buildSetupRecommendations } from "../data/recommendations";
 import { formatEvidenceLookback } from "../data/lookback";
 import {
-  buildProviderCandidates,
   mergeServiceInventory,
 } from "../data/providerAttribution";
-import {
-  resolveProviderServiceCandidates,
-  createProviderScopeAssignmentKey,
-  isServiceScopeAssignment,
-  runtimeEntityIdForEdge,
-  serviceEntityIdForEdge,
-} from "../data/providerScopeAssignments";
+import { buildProviderCoverageModel } from "../data/providerCoverage";
 import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
 import {
   detectedProviderSlugs,
@@ -180,7 +173,7 @@ const WATCH_LINKS: ReadonlyArray<{
   },
 ];
 
-const WatchNavigation = ({ section }: { section: WatchSection }) => (
+const WatchNavigation = ({ section, providerSlug }: { section: WatchSection; providerSlug: string }) => (
   <nav className="section-tabs" aria-label="Review sections">
     {WATCH_LINKS.map((item) => (
       <Link
@@ -188,7 +181,7 @@ const WatchNavigation = ({ section }: { section: WatchSection }) => (
         className={
           section === item.section ? "section-tab active" : "section-tab"
         }
-        to={item.to}
+        to={`${item.to}${item.to.includes("?") ? "&" : "?"}provider=${encodeURIComponent(providerSlug)}`}
         aria-current={section === item.section ? "page" : undefined}
         data-tour={item.tour}
       >
@@ -217,10 +210,13 @@ const WatchNavigation = ({ section }: { section: WatchSection }) => (
 export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const section = initialSection;
   const location = useLocation();
+  const navigate = useNavigate();
+  const routeParams = new URLSearchParams(location.search);
   const evidenceView =
-    new URLSearchParams(location.search).get("view") === "provider-reports"
+    routeParams.get("view") === "provider-reports"
       ? "provider-reports"
       : "candidates";
+  const routeProviderSlug = routeParams.get("provider")?.trim().toLowerCase();
   const { preferences, updatePreferences } = useSlaPreferences();
   const scopeSettings = useProviderScopeAssignments();
   const providerConnections = useProviderConnections();
@@ -400,8 +396,11 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
       topologyDetectedProviders,
     ],
   );
-  const providerSlug = enabledProviderSlugs.includes(requestedProviderSlug)
-    ? requestedProviderSlug
+  const preferredProviderSlug = routeProviderSlug && enabledProviderSlugs.includes(routeProviderSlug)
+    ? routeProviderSlug
+    : requestedProviderSlug;
+  const providerSlug = enabledProviderSlugs.includes(preferredProviderSlug)
+    ? preferredProviderSlug
     : enabledProviderSlugs[0] ?? requestedProviderSlug;
   const directoryRequest = useMemo(
     () => ({ vendor: providerSlug }),
@@ -420,11 +419,6 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const directoryLoading =
     directoryQuery.isLoading ||
     Boolean(!directoryQuery.error && directoryQuery.data && !directoryData);
-  const providerCandidates = useMemo(
-    () => buildProviderCandidates(services, providerEvidence),
-    [providerEvidence, services],
-  );
-
   const activeProblems = problems.filter(
     (problem) => problem.status === "ACTIVE",
   ).length;
@@ -446,79 +440,19 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
       ),
     [providerLabelKey, selectedProviderSlug, services],
   );
-  const taggedProviderServiceIds = useMemo(
-    () =>
-      new Set(
-        services
-          .filter((service) =>
-            service.tags.some(
-              (tag) =>
-                providerTagValue(
-                  tag,
-                  providerLabelKey,
-                  selectedProviderSlug,
-                ) === selectedProviderSlug,
-            ),
-          )
-          .map((service) => service.id),
-      ),
-    [providerLabelKey, selectedProviderSlug, services],
-  );
-  const confirmedScopeServiceIds = useMemo(() => {
-    const currentScopeKeys = new Set(
-      providerEvidence.map((edge) =>
-        createProviderScopeAssignmentKey(
-          selectedProviderSlug,
-          serviceEntityIdForEdge(edge),
-          runtimeEntityIdForEdge(edge),
-        ),
-      ),
-    );
-    return new Set(
-      scopeSettings.assignments
-        .filter(
-          (assignment) =>
-            assignment.enabled &&
-            assignment.providerSlug === selectedProviderSlug &&
-            (isServiceScopeAssignment(assignment) ||
-              currentScopeKeys.has(assignment.assignmentKey)),
-        )
-        .map((assignment) => assignment.serviceEntityId),
-    );
-  }, [providerEvidence, scopeSettings.assignments, selectedProviderSlug]);
-  const observedProviderServiceIds = useMemo(() => {
-    if (!directoryData) return new Set<string>();
-    return new Set(Array.from(
-      resolveProviderServiceCandidates(providerEvidence, directoryData).entries(),
-    ).flatMap(([serviceId, resolution]) =>
-      resolution.candidate?.confidence === "observed" && !resolution.ambiguous
-        ? [serviceId]
-        : [],
-    ));
-  }, [directoryData, providerEvidence]);
-  const matchedProviderServices = services.filter(
-    (service) =>
-      taggedProviderServiceIds.has(service.id) ||
-      confirmedScopeServiceIds.has(service.id) ||
-      observedProviderServiceIds.has(service.id),
-  ).length;
-  const taggedProviderServices = taggedProviderServiceIds.size;
-  const activeProviderCandidates = providerCandidates.filter(
-    (candidate) => candidate.providerSlug === selectedProviderSlug,
-  );
-  const suggestedServiceCount = new Set(
-    activeProviderCandidates
-      .filter((candidate) =>
-        services.some(
-          (service) =>
-            service.id === candidate.serviceId &&
-            !taggedProviderServiceIds.has(service.id) &&
-            !confirmedScopeServiceIds.has(service.id) &&
-            !observedProviderServiceIds.has(service.id),
-        ),
-      )
-      .map((candidate) => candidate.serviceId),
-  ).size;
+  const coverageModel = useMemo(() => buildProviderCoverageModel({
+    provider: directoryData,
+    providerSlug: selectedProviderSlug,
+    topology: providerEvidence,
+    services,
+    problems,
+    providerTagKey: providerLabelKey,
+    assignments: scopeSettings.assignments,
+  }), [directoryData, problems, providerEvidence, providerLabelKey, scopeSettings.assignments, selectedProviderSlug, services]);
+  const matchedProviderServices = coverageModel.coveredRows.length;
+  const suggestedServiceCount = coverageModel.reviewRows.length;
+  const unattributedServiceCount = coverageModel.unattributedRows.length;
+  const taggedProviderServices = coverageModel.taggedServiceCount;
 
   const serviceTotal = firstCount(serviceCountQuery.data, "service_count");
   const relationshipTotal = firstCount(topologyCountQuery.data, "relationship_count");
@@ -587,19 +521,19 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
           ? "Contract unavailable"
           : inventoryStatus.incomplete || inventoryStatus.unverified
             ? "Inventory incomplete"
-          : matchedProviderServices > 0
-            ? activeProblems > 0
-              ? "Review available"
-              : "Boundary ready"
-            : "Action required";
+          : suggestedServiceCount > 0
+            ? "Review needed"
+            : matchedProviderServices > 0
+              ? "Coverage ready"
+              : "No provider coverage";
   const coverageTone: Tone =
     telemetryLoading || inventoryLoading || directoryLoading || topologyQuery.isLoading || scopeSettings.loading
       ? "neutral"
       : telemetryError || !directoryData || inventoryStatus.incomplete || inventoryStatus.unverified
         ? "warning"
-        : matchedProviderServices > 0
-          ? "positive"
-          : "warning";
+        : suggestedServiceCount > 0 || matchedProviderServices === 0
+          ? "warning"
+          : "positive";
 
   const setupRecommendations = useMemo(
     () =>
@@ -648,9 +582,18 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             <span>Active provider</span>
             <select
               value={providerSlug}
-              onChange={(event) =>
-                void updatePreferences({ providerSlug: event.target.value })
-              }
+              onChange={(event) => {
+                const nextProviderSlug = event.target.value;
+                void updatePreferences({ providerSlug: nextProviderSlug });
+                if (routeProviderSlug) {
+                  const nextParams = new URLSearchParams(location.search);
+                  nextParams.set("provider", nextProviderSlug);
+                  void navigate(
+                    `${location.pathname}?${nextParams.toString()}`,
+                    { replace: true },
+                  );
+                }
+              }}
               aria-label="Active provider"
               title="Providers detected from this environment"
             >
@@ -665,7 +608,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             <Button
               className={`hero-tool-button${section === "directory" ? " active" : ""}`}
               as={Link}
-              to="/directory"
+              to={`/directory?provider=${encodeURIComponent(providerSlug)}`}
               size="condensed"
               data-tour="directory"
               aria-current={section === "directory" ? "page" : undefined}
@@ -676,7 +619,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
         </div>
       </section>
 
-      <WatchNavigation section={section} />
+      <WatchNavigation section={section} providerSlug={providerSlug} />
 
       <div className={`watch-view watch-view-${section}`}>
         {section === "coverage" ? (
@@ -715,25 +658,25 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 value={
                   servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "Checking"
-                    : `${matchedProviderServices.toLocaleString()} service${matchedProviderServices === 1 ? "" : "s"}`
+                    : `${matchedProviderServices.toLocaleString()} of ${coverageModel.rows.length.toLocaleString()}`
                 }
                 detail={
-                  observedProviderServiceIds.size > 0
-                    ? `${observedProviderServiceIds.size} matched from provider-native topology`
-                  : suggestedServiceCount > 0
-                    ? `${suggestedServiceCount} suggestion${suggestedServiceCount === 1 ? "" : "s"} to review`
-                    : matchedProviderServices > 0
-                      ? "confirmed scope or provider tag"
-                      : `No loaded service evidence for ${providerName}`
+                  suggestedServiceCount > 0
+                    ? `${suggestedServiceCount} need review · ${unattributedServiceCount} not attributed`
+                    : unattributedServiceCount > 0
+                      ? `${matchedProviderServices} covered · ${unattributedServiceCount} not attributed`
+                      : matchedProviderServices > 0
+                        ? "all loaded services covered"
+                        : `No loaded service evidence for ${providerName}`
                 }
                 tone={
                   servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "neutral"
                     : inventoryStatus.incomplete || inventoryStatus.unverified
                       ? "warning"
-                    : matchedProviderServices > 0
-                      ? "positive"
-                      : "warning"
+                    : suggestedServiceCount > 0 || matchedProviderServices === 0
+                      ? "warning"
+                      : "positive"
                 }
               />
               <OverviewFact
@@ -776,10 +719,9 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             ) : null}
             <CoverageWorkspace
               provider={directoryData}
-              topology={providerEvidence}
               services={services}
-              problems={problems}
               providerTagKey={providerLabelKey}
+              coverageModel={coverageModel}
               loading={servicesLoading || incidentServicesQuery.isLoading || topologyQuery.isLoading || incidentTopologyQuery.isLoading || directoryLoading}
               error={topologyQuery.error ?? directoryError ?? undefined}
               scopeSettings={scopeSettings}

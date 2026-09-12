@@ -20,7 +20,14 @@ import {
   MAX_EVIDENCE_DECISION_NOTE_LENGTH,
   type EvidenceCandidate,
 } from "../data/evidenceCandidates";
+import { resolveEffectiveContractTerms } from "../data/contractOverrides";
 import { formatEvidenceLookback } from "../data/lookback";
+import {
+  createCoverageReviewPath,
+  createEvidenceReviewPath,
+  createIncidentReviewPath,
+} from "../data/reviewRoutes";
+import { useContractOverrides } from "../hooks/useContractOverrides";
 import { useEvidenceDecisions } from "../hooks/useEvidenceDecisions";
 import { ProviderNotices } from "./ProviderNotices";
 
@@ -60,6 +67,9 @@ const formatDateTime = (value?: string): string => {
       }).format(parsed);
 };
 
+const formatPercent = (value: number | null): string =>
+  value === null ? "Not published" : `${value}%`;
+
 const formatMappingBasis = (candidate: EvidenceCandidate): string =>
   candidate.mappingBasis === "confirmed-scope"
     ? "Confirmed scope"
@@ -75,10 +85,10 @@ const CandidateState = ({
   decision?: EvidenceDecisionRecord;
 }) => {
   if (decision?.status === "validated")
-    return <StatusPill tone="positive">Validated</StatusPill>;
+    return <StatusPill tone="positive">Package ready</StatusPill>;
   if (decision?.status === "dismissed")
-    return <StatusPill tone="neutral">Dismissed</StatusPill>;
-  return <StatusPill tone="warning">Needs review</StatusPill>;
+    return <StatusPill tone="neutral">Not provider-related</StatusPill>;
+  return <StatusPill tone="warning">Not ready</StatusPill>;
 };
 
 const CandidateDetail = ({
@@ -95,6 +105,7 @@ const CandidateDetail = ({
   const [note, setNote] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [saveError, setSaveError] = useState<string>();
+  const contractSettings = useContractOverrides();
   const decisionIsCurrent = decision
     ? evidenceDecisionMatchesCandidate(decision, candidate)
     : false;
@@ -160,6 +171,37 @@ const CandidateDetail = ({
     ? candidate.providerServiceNames.join(", ")
     : "Provider-level terms";
   const reviewTime = decision?.lastModifiedTime ?? decision?.reviewedAt;
+  const serviceId = candidate.affectedServices[0]?.id ?? candidate.problem.affectedEntityIds[0];
+  const providerServiceId = candidate.providerServiceIds[0] ?? "*";
+  const terms = useMemo(() => resolveEffectiveContractTerms(
+    provider,
+    contractSettings.overrides,
+    {
+      providerSlug: provider.provider.slug,
+      providerServiceId,
+      serviceId,
+    },
+  ), [contractSettings.overrides, provider, providerServiceId, serviceId]);
+  const incidentPath = createIncidentReviewPath({
+    providerSlug: provider.provider.slug,
+    problemId: candidate.problem.id,
+  });
+  const evidencePath = createEvidenceReviewPath({
+    providerSlug: provider.provider.slug,
+    problemId: candidate.problem.id,
+  });
+  const coveragePath = createCoverageReviewPath({
+    providerSlug: provider.provider.slug,
+    problemId: candidate.problem.id,
+    serviceId,
+    returnTo: evidencePath,
+  });
+  const readyEnough = Boolean(
+    candidate.scopeConfirmed &&
+    candidate.problem.startedAt &&
+    candidate.problem.affectedEntityIds.length > 0,
+  );
+  const requiredEvidence = provider.provider.claimProcess?.requiredEvidence ?? [];
 
   return (
     <article className="candidate-detail">
@@ -201,10 +243,42 @@ const CandidateDetail = ({
           {formatMappingBasis(candidate)}
         </StatusPill>
         <nav aria-label="Candidate references">
-          <Link to={`/incidents?problem=${encodeURIComponent(candidate.problem.id)}`}>Open incident</Link>
-          <Link to="/">Review coverage</Link>
-          <Link to="/directory">Review terms</Link>
+          <Link to={incidentPath}>Open incident</Link>
+          <Link to={coveragePath}>Review coverage</Link>
+          <Link to={`/directory?provider=${encodeURIComponent(provider.provider.slug)}`}>Review terms</Link>
         </nav>
+      </section>
+
+      <section className="candidate-package" aria-labelledby="candidate-package-title">
+        <div className="candidate-package-heading">
+          <div>
+            <strong id="candidate-package-title">Claim package</strong>
+            <span>Prepared from the current Dynatrace evidence and applicable terms.</span>
+          </div>
+          <StatusPill tone={readyEnough ? "positive" : "warning"}>
+            {readyEnough ? "Ready for decision" : "Missing coverage"}
+          </StatusPill>
+        </div>
+        <dl className="candidate-package-facts">
+          <div><dt>Observed window</dt><dd>{formatDateTime(candidate.problem.startedAt)} to {candidate.problem.endedAt ? formatDateTime(candidate.problem.endedAt) : "ongoing"}</dd></div>
+          <div><dt>Coverage basis</dt><dd>{formatMappingBasis(candidate)}</dd></div>
+          <div><dt>Terms source</dt><dd>{terms.source}</dd></div>
+          <div><dt>Filing window</dt><dd>{terms.filingDeadlineDays === null ? "Not published" : `${terms.filingDeadlineDays} ${terms.businessDays ? "business" : "calendar"} days`}</dd></div>
+          <div><dt>Claim method</dt><dd>{terms.claimMethod ?? "Not published"}</dd></div>
+          <div><dt>Maximum credit</dt><dd>{formatPercent(terms.maxCreditPercent)}</dd></div>
+        </dl>
+        <div className="candidate-package-requirements">
+          <strong>Provider-required evidence</strong>
+          {requiredEvidence.length > 0 ? (
+            <ul>{requiredEvidence.map((item) => <li key={item}>{item}</li>)}</ul>
+          ) : (
+            <span>No evidence checklist is published in the provider record.</span>
+          )}
+          <span>Provider reports are optional supporting evidence. A missing report does not invalidate observed customer impact.</span>
+        </div>
+        {!readyEnough ? (
+          <Button as={Link} to={coveragePath} size="condensed">Resolve coverage</Button>
+        ) : null}
       </section>
 
       <section className="candidate-review-panel" aria-label="Human review decision">
@@ -216,70 +290,76 @@ const CandidateDetail = ({
             </span>
           ) : null}
         </div>
-        {!decisionIsCurrent && decision ? (
-          <div className="candidate-decision-stale" role="status">
-            Coverage changed after the previous decision. Review and save it again.
-          </div>
-        ) : null}
-        <label className="candidate-review-note">
-          <span>Review note (required to dismiss)</span>
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            rows={2}
-            maxLength={MAX_EVIDENCE_DECISION_NOTE_LENGTH}
-            placeholder="Add a concise operational reason. Do not paste confidential contract text."
-            disabled={!settings.canWrite || settings.mutating}
-          />
-        </label>
-        <label className="candidate-acknowledgement">
-          <input
-            type="checkbox"
-            checked={acknowledged}
-            onChange={(event) => setAcknowledged(event.target.checked)}
-            disabled={!settings.canWrite || settings.mutating}
-          />
-          <span>
-            I reviewed the service scope and current terms. This decision does
-            not establish provider fault or credit eligibility.
-          </span>
-        </label>
-        {saveError ? <div className="candidate-decision-error" role="alert">{saveError}</div> : null}
-        {settings.error ? (
-          <div className="candidate-decision-error" role="status">
-            Evidence decisions are unavailable. Existing evidence remains read-only.
-          </div>
-        ) : null}
-        <div className="candidate-review-actions">
-          <Button
-            variant="emphasized"
-            color="primary"
-            size="condensed"
-            disabled={!settings.canWrite || settings.mutating || !acknowledged}
-            onClick={() => void save("validated")}
-          >
-            {settings.mutating ? "Saving" : "Validate"}
-          </Button>
-          <Button
-            size="condensed"
-            disabled={!settings.canWrite || settings.mutating}
-            onClick={() => void save("dismissed")}
-          >
-            Dismiss
-          </Button>
-          {decision ? (
-            <Button
-              size="condensed"
-              disabled={!settings.canWrite || settings.mutating}
-              onClick={() => void resetDecision()}
-            >
-              Reset decision
+        {currentDecision ? (
+          <div className={`candidate-completion candidate-completion-${currentDecision.status}`} role="status">
+            <strong>{currentDecision.status === "validated" ? "Claim package ready" : "Review complete: not provider-related"}</strong>
+            <span>{currentDecision.status === "validated"
+              ? "Your review is complete. Nothing has been sent. A contract owner can use this package for provider follow-up."
+              : "Nothing has been sent. This Problem remains available in Dynatrace, but it is excluded from provider follow-up."}</span>
+            {currentDecision.decisionNote ? <small>Note: {currentDecision.decisionNote}</small> : null}
+            <Button size="condensed" disabled={!settings.canWrite || settings.mutating} onClick={() => void resetDecision()}>
+              Reopen review
             </Button>
-          ) : null}
-          {!settings.loading && !settings.canWrite ? (
-            <span>Read-only. App Settings write access is required.</span>
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          <>
+            {!decisionIsCurrent && decision ? (
+              <div className="candidate-decision-stale" role="status">
+                Coverage changed after the previous decision. Review and save it again.
+              </div>
+            ) : null}
+            <label className="candidate-review-note">
+              <span>Review note (required when not provider-related)</span>
+              <textarea
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                rows={2}
+                maxLength={MAX_EVIDENCE_DECISION_NOTE_LENGTH}
+                placeholder="Add a concise operational reason. Do not paste confidential contract text."
+                disabled={!settings.canWrite || settings.mutating}
+              />
+            </label>
+            <label className="candidate-acknowledgement">
+              <input
+                type="checkbox"
+                checked={acknowledged}
+                onChange={(event) => setAcknowledged(event.target.checked)}
+                disabled={!settings.canWrite || settings.mutating || !readyEnough}
+              />
+              <span>
+                I reviewed the provider relationship, observed impact, current
+                terms, and provider-required evidence. Nothing will be sent.
+              </span>
+            </label>
+            {saveError ? <div className="candidate-decision-error" role="alert">{saveError}</div> : null}
+            {settings.error ? (
+              <div className="candidate-decision-error" role="status">
+                Evidence decisions are unavailable. Existing evidence remains read-only.
+              </div>
+            ) : null}
+            <div className="candidate-review-actions">
+              <Button
+                variant="emphasized"
+                color="primary"
+                size="condensed"
+                disabled={!settings.canWrite || settings.mutating || !acknowledged || !readyEnough}
+                onClick={() => void save("validated")}
+              >
+                {settings.mutating ? "Saving" : "Mark package ready"}
+              </Button>
+              <Button
+                size="condensed"
+                disabled={!settings.canWrite || settings.mutating}
+                onClick={() => void save("dismissed")}
+              >
+                Not provider-related
+              </Button>
+              {!settings.loading && !settings.canWrite ? (
+                <span>Read-only. App Settings write access is required.</span>
+              ) : null}
+            </div>
+          </>
+        )}
       </section>
     </article>
   );
@@ -386,22 +466,22 @@ const CandidateWorkspace = ({
       <div className="evidence-empty">
         <strong>Provider terms are unavailable.</strong>
         <span>Restore the directory record before reviewing candidates.</span>
-        <Button as={Link} to="/directory" size="condensed">Review terms</Button>
+        <Button as={Link} to={`/directory?provider=${encodeURIComponent(providerSlug)}`} size="condensed">Review terms</Button>
       </div>
     );
   }
   if (candidates.length === 0) {
     return (
       <div className="evidence-empty">
-        <strong>No provider-review candidates were found.</strong>
+        <strong>Review complete for this window.</strong>
         <span>
-          No Problem in the last {formatEvidenceLookback(lookbackHours)} overlaps
-          an observed or confirmed provider scope, provider tag, or Smartscape suggestion for
+          No provider-review candidate in the last {formatEvidenceLookback(lookbackHours)} overlaps
+           an observed or confirmed provider scope, provider tag, or Smartscape suggestion for
           {` ${provider.provider.name}`}.
         </span>
         <div className="evidence-empty-actions">
-          <Button as={Link} to="/" size="condensed">Review coverage</Button>
-          <Button as={Link} to="/incidents" size="condensed">Open incidents</Button>
+          <Button as={Link} to={`/?provider=${encodeURIComponent(providerSlug)}`} size="condensed">Review coverage</Button>
+          <Button as={Link} to={`/incidents?provider=${encodeURIComponent(providerSlug)}`} size="condensed">Open incidents</Button>
         </div>
       </div>
     );
@@ -410,9 +490,9 @@ const CandidateWorkspace = ({
   return (
     <div className="evidence-candidates-view">
       <dl className="evidence-candidate-summary" aria-label="Evidence candidate status">
-        <div><dt>Needs review</dt><dd>{needsReview}</dd></div>
-        <div><dt>Validated</dt><dd>{validated}</dd></div>
-        <div><dt>Dismissed</dt><dd>{dismissed}</dd></div>
+        <div><dt>Not ready</dt><dd>{needsReview}</dd></div>
+        <div><dt>Package ready</dt><dd>{validated}</dd></div>
+        <div><dt>Not provider-related</dt><dd>{dismissed}</dd></div>
       </dl>
       <div className="evidence-candidate-layout">
         <aside className="candidate-queue" aria-label="Provider review candidates">
@@ -463,27 +543,38 @@ const CandidateWorkspace = ({
 export const EvidenceWorkspace = ({
   view,
   ...props
-}: EvidenceWorkspaceProps) => (
-  <Surface className="panel-card evidence-workspace">
+}: EvidenceWorkspaceProps) => {
+  const location = useLocation();
+  const problemId = new URLSearchParams(location.search).get("problem");
+  const candidatePath = problemId
+    ? createEvidenceReviewPath({ providerSlug: props.providerSlug, problemId })
+    : `/evidence?provider=${encodeURIComponent(props.providerSlug)}`;
+  const reportParams = new URLSearchParams({
+    provider: props.providerSlug,
+    view: "provider-reports",
+  });
+  if (problemId) reportParams.set("problem", problemId);
+
+  return <Surface className="panel-card evidence-workspace">
     <div className="evidence-workspace-heading">
       <div>
         <Heading level={2}>Evidence</Heading>
         <Paragraph>
-          Review findings from Dynatrace, provider reports, and current terms.
+          Assemble the provider follow-up package, then record the SRE decision.
         </Paragraph>
       </div>
     </div>
     <nav className="evidence-view-tabs" aria-label="Evidence views">
       <Link
         className={view === "candidates" ? "evidence-view-tab active" : "evidence-view-tab"}
-        to="/evidence"
+        to={candidatePath}
         aria-current={view === "candidates" ? "page" : undefined}
       >
         Review candidates
       </Link>
       <Link
         className={view === "provider-reports" ? "evidence-view-tab active" : "evidence-view-tab"}
-        to="/evidence?view=provider-reports"
+        to={`/evidence?${reportParams.toString()}`}
         aria-current={view === "provider-reports" ? "page" : undefined}
       >
         Provider reports
@@ -502,9 +593,9 @@ export const EvidenceWorkspace = ({
     <div className="evidence-boundary">
       <strong>Review boundary</strong>
       <span>
-        Validation records an SRE decision only. The provider determines fault,
-        eligibility, and any service credit.
+        Package readiness records an SRE decision only. Nothing is submitted.
+        The provider determines fault, eligibility, and any service credit.
       </span>
     </div>
-  </Surface>
-);
+  </Surface>;
+};

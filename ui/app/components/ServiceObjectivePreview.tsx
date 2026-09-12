@@ -10,6 +10,7 @@ import {
   OBJECTIVE_EVALUATION_WINDOW,
   parseServiceObjectivePreview,
 } from "../data/serviceObjectives";
+import { useObjectiveEvaluations } from "../hooks/useObjectiveEvaluations";
 import { useServiceObjectives } from "../hooks/useServiceObjectives";
 
 type ServiceObjectivePreviewProps = {
@@ -53,10 +54,6 @@ export const ServiceObjectivePreview = ({
       target,
     })
     : null;
-  const previewResult = useDql<PreviewRecord>(
-    { query: previewQuery ?? "data record(noop = true) | limit 0" },
-    { enabled: Boolean(previewQuery) },
-  );
   const objectives = useServiceObjectives({
     enabled: Boolean(externalId),
     providerSlug,
@@ -66,6 +63,13 @@ export const ServiceObjectivePreview = ({
   const existing = useMemo(
     () => objectives.objectives.find((objective) => objective.externalId === externalId),
     [externalId, objectives.objectives],
+  );
+  const existingObjectives = useMemo(() => existing ? [existing] : [], [existing]);
+  const evaluations = useObjectiveEvaluations(existingObjectives);
+  const evaluation = existing ? evaluations[existing.id] : undefined;
+  const previewResult = useDql<PreviewRecord>(
+    { query: previewQuery ?? "data record(noop = true) | limit 0" },
+    { enabled: Boolean(previewQuery) && !objectives.loading && !existing },
   );
   const preview = parseServiceObjectivePreview(previewResult.data?.records);
   const existingTarget = existing?.criteria[0]?.target ?? null;
@@ -101,25 +105,38 @@ export const ServiceObjectivePreview = ({
         </span>
       </div>
       <div className="service-objective-facts">
-        <div><span>Observed</span><strong>{previewResult.isLoading ? "Loading" : previewResult.error ? "Unavailable" : percent(preview?.reliability ?? null)}</strong></div>
+        <div><span>Observed</span><strong>{existing
+          ? evaluation?.state === "loading" || !evaluation
+            ? "Loading"
+            : evaluation.state === "complete"
+              ? percent(evaluation.result?.value ?? null)
+              : "Unavailable"
+          : previewResult.isLoading
+            ? "Loading"
+            : previewResult.error
+              ? "Unavailable"
+              : percent(preview?.reliability ?? null)}</strong></div>
         <div><span>Target</span><strong>{percent(target)}</strong></div>
         <div><span>Evaluation</span><strong>{OBJECTIVE_EVALUATION_WINDOW === "now-30d" ? "Last 30 days" : OBJECTIVE_EVALUATION_WINDOW}</strong></div>
         <div><span>Terms</span><strong>{termsSource}</strong></div>
       </div>
       <p className="service-objective-note">
-        This measures customer-observed availability for one Dynatrace service. Provider notices remain separate evidence.
+        {existing
+          ? "Observed value comes from the Dynatrace objective evaluation. Provider reports remain separate evidence."
+          : "This preview measures customer-observed availability for one Dynatrace service. Provider reports remain separate evidence."}
       </p>
-      {preview && preview.totalRequests > 0 ? (
+      {!existing && preview && preview.totalRequests > 0 ? (
         <p className="service-objective-traffic">{preview.totalRequests.toLocaleString()} requests, {preview.failedRequests.toLocaleString()} failed in the 30-day evaluation window.</p>
       ) : null}
       {!serviceClassicId ? <div className="service-objective-warning">A classic service ID is required before Dynatrace can create this objective.</div> : null}
       {target === null ? <div className="service-objective-warning">No availability target is published for this scope. Add custom terms before creating an objective.</div> : null}
       {previewResult.error ? <div className="service-objective-warning">The scoped Grail query did not validate, so creation is disabled.</div> : null}
       {objectives.error ? <div className="service-objective-warning">{objectives.error}</div> : null}
+      {existing && evaluation?.state === "unavailable" ? <div className="service-objective-warning">{evaluation.message ?? "The Dynatrace objective could not be evaluated."}</div> : null}
       {existing && targetDiffers ? (
         <div className="service-objective-warning">The existing target is {percent(existingTarget)}. Current terms suggest {percent(target)}. Review it in Dynatrace before changing anything.</div>
       ) : null}
-      {previewQuery ? (
+      {!existing && previewQuery ? (
         <details className="service-objective-query">
           <summary>View scoped query</summary>
           <pre>{definition?.customSli?.indicator ?? previewQuery}</pre>

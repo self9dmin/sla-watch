@@ -258,6 +258,7 @@ export const ProviderDirectoryWorkspace = ({
 
   const openCreateSettings = (seed?: ContractOverrideValue) => {
     const params = new URLSearchParams();
+    if (directory?.provider.slug) params.set("provider", directory.provider.slug);
     if (seed?.providerServiceId && seed.providerServiceId !== "*")
       params.set("providerServiceId", seed.providerServiceId);
     if (seed?.scopeKind && seed.scopeKind !== "provider")
@@ -991,16 +992,18 @@ export const ProviderDirectoryWorkspace = ({
                   Shared in this environment. Public records remain unchanged.
                 </span>
               </div>
-              <Button
-                size="condensed"
-                variant="emphasized"
-                disabled={
-                  !contractSettings.canWrite || contractSettings.mutating
-                }
-                onClick={() => openCreateSettings()}
-              >
-                Add custom terms
-              </Button>
+              {providerOverrides.length > 0 ? (
+                <Button
+                  size="condensed"
+                  variant="emphasized"
+                  disabled={
+                    !contractSettings.canWrite || contractSettings.mutating
+                  }
+                  onClick={() => openCreateSettings()}
+                >
+                  Add custom terms
+                </Button>
+              ) : null}
             </div>
             {!contractSettings.canRead || contractSettings.error ? (
               <div className="error-box compact-error">

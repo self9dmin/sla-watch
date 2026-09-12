@@ -86,16 +86,23 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByRole("navigation", { name: "Coverage views" }),
     ).toHaveCount(0);
-    await expect(app.getByText("Coverage exceptions")).toBeVisible();
+    await expect(app.getByText("Service coverage")).toBeVisible();
     await expect(
       app.getByRole("listbox", { name: "Provider coverage worklist" }),
     ).toBeVisible();
     await expect(
       app.getByRole("searchbox", { name: "Search provider coverage" }),
     ).toBeVisible();
-    await expect(
-      app.getByRole("combobox", { name: "Coverage worklist filter" }),
-    ).toBeVisible();
+    const coverageViews = app.getByRole("group", {
+      name: "Coverage worklist views",
+    });
+    await expect(coverageViews).toBeVisible();
+    const allCoverage = coverageViews.getByRole("button", { name: /^All/ });
+    const coveredCoverage = coverageViews.getByRole("button", { name: /^Covered/ });
+    const reviewCoverage = coverageViews.getByRole("button", { name: /^Needs review/ });
+    await expect(allCoverage).toHaveAttribute("aria-pressed", "true");
+    await expect(coveredCoverage).toBeVisible();
+    await expect(reviewCoverage).toBeVisible();
     await expect(
       app.getByText(/A confirmed mapping is reused in Incidents/i),
     ).toHaveCount(0);
@@ -110,10 +117,18 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(app.getByRole("button", { name: "Add custom terms" })).toHaveCount(0);
     await expectNoPageScroll(app);
 
-    const coverageFilter = app.getByRole("combobox", {
-      name: "Coverage worklist filter",
-    });
-    await coverageFilter.selectOption("covered");
+    const providerScopeText = await app
+      .getByLabel("Coverage status")
+      .locator(".overview-fact")
+      .filter({ hasText: "Provider scope" })
+      .innerText();
+    const coverageTotals = providerScopeText.match(/(\d[\d,]*) of (\d[\d,]*)/);
+    expect(coverageTotals).not.toBeNull();
+    await expect(coveredCoverage.locator("strong")).toHaveText(coverageTotals?.[1] ?? "");
+    await expect(allCoverage.locator("strong")).toHaveText(coverageTotals?.[2] ?? "");
+
+    await coveredCoverage.click();
+    await expect(coveredCoverage).toHaveAttribute("aria-pressed", "true");
     await expect(app.getByText("Customer objective")).toBeVisible();
     await expect(
       app.getByText(/customer-observed availability for one Dynatrace service/i),
@@ -338,7 +353,7 @@ test.describe("SLA Review deployed smoke", () => {
 
     await app.getByRole("button", { name: "Add custom terms" }).first().click();
     await expect(
-      app.getByRole("heading", { name: "Add custom terms." }),
+      app.getByRole("heading", { name: /^Add .+ custom terms\.$/ }),
     ).toBeVisible();
     await expect(
       app.getByRole("region", { name: "Add custom terms" }),

@@ -141,9 +141,9 @@ export const evidenceDecisionInputError = ({
   if (note.trim().length > MAX_EVIDENCE_DECISION_NOTE_LENGTH)
     return `Keep the review note to ${MAX_EVIDENCE_DECISION_NOTE_LENGTH} characters or fewer.`;
   if (status === "validated" && !acknowledged)
-    return "Confirm the review boundary before validating this candidate.";
+    return "Confirm the review boundary before marking this package ready.";
   if (status === "dismissed" && note.trim().length === 0)
-    return "Add a short reason before dismissing this candidate.";
+    return "Add a short reason before marking this review not provider-related.";
   return null;
 };
 
