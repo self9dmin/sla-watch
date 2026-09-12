@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
-import type { ContractContext, ContractOverrideRecord, EffectiveContractTerms, EvidenceLookbackHours, ProblemRecord, ServiceRecord, SlaClaimProcess, SlaProviderResponse, SmartscapeScopeEdge } from "../types";
-import { overrideMatchesContext, resolveEffectiveContractTerms } from "../data/contractOverrides";
+import type { ContractContext, EffectiveContractTerms, EvidenceLookbackHours, ProblemRecord, ServiceRecord, SlaClaimProcess, SlaProviderResponse, SmartscapeScopeEdge } from "../types";
+import { resolveEffectiveContractTerms } from "../data/contractOverrides";
 import { EVIDENCE_LOOKBACK_OPTIONS, formatEvidenceLookback } from "../data/lookback";
 import { inferProviderServiceCandidate, isServiceScopeAssignment, resolveUniqueProviderServiceCandidate, runtimeEntityIdForEdge, serviceEntityIdForEdge, type IncidentProviderServiceCandidate } from "../data/providerScopeAssignments";
 import { useContractOverrides } from "../hooks/useContractOverrides";
@@ -36,14 +36,13 @@ type ContractScopeChoice = {
   context: Omit<ContractContext, "providerSlug" | "providerServiceId">;
 };
 
-type ContractAssignment = {
-  override: ContractOverrideRecord;
+type MappingSource = "confirmed" | "observed" | "candidate" | "none";
+
+type ResolvedIncidentMapping = {
   providerServiceId: string;
   scopeKey: string;
-  rank: number;
+  source: MappingSource;
 };
-
-type MappingSource = "contract" | "confirmed" | "observed" | "candidate" | "manual" | "none";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -133,10 +132,9 @@ const IncidentDetail = ({
   providerServiceId,
   scopeKey,
   scopeChoices,
-  onProviderServiceChange,
-  onScopeChange,
   contractLoading,
   contractError,
+  mappingLoading,
   mappingSource,
   mappingDetail,
 }: {
@@ -147,10 +145,9 @@ const IncidentDetail = ({
   providerServiceId: string;
   scopeKey: string;
   scopeChoices: ContractScopeChoice[];
-  onProviderServiceChange: (value: string) => void;
-  onScopeChange: (value: string) => void;
   contractLoading: boolean;
   contractError: boolean;
+  mappingLoading: boolean;
   mappingSource: MappingSource;
   mappingDetail: string;
 }) => {
@@ -175,6 +172,14 @@ const IncidentDetail = ({
     : problem.affectedEntityIds.length > 0
       ? `${problem.affectedEntityIds.length} entity ID${problem.affectedEntityIds.length === 1 ? "" : "s"} returned`
       : "No service boundary returned";
+  const providerServiceLabel = mappingLoading
+    ? "Checking Coverage"
+    : providerServiceId === "*"
+      ? `${providerRecord?.name ?? "Provider"} (provider-wide)`
+      : provider?.services.find((service) => service.id === providerServiceId)?.name ?? providerServiceId;
+  const scopeLabel = mappingLoading
+    ? "Checking Coverage"
+    : scopeChoices.find((choice) => choice.key === scopeKey)?.label ?? "Provider-wide scope";
 
   return (
     <article className="incident-detail">
@@ -184,16 +189,16 @@ const IncidentDetail = ({
       </div>
 
       <div className="incident-contract-context">
-        <label>Provider service<select value={providerServiceId} onChange={(event) => onProviderServiceChange(event.target.value)}><option value="*">{mappingSource === "none" ? "Provider-level terms (no service match)" : "Provider-level terms"}</option>{provider?.services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
-        <label>Dynatrace scope<select value={scopeKey} onChange={(event) => onScopeChange(event.target.value)}>{scopeChoices.map((choice) => <option key={choice.key} value={choice.key}>{choice.label}</option>)}</select></label>
+        <div><span>Provider service</span><strong>{providerServiceLabel}</strong></div>
+        <div><span>Dynatrace scope</span><strong>{scopeLabel}</strong></div>
         <div><span>Applied terms</span><strong className={contractTerms?.source === "tenant override" ? "source-tenant" : ""}>{contractLoading ? "Checking" : contractError ? "Public fallback" : contractTerms?.source === "tenant override" ? "Tenant override" : "sla.directory"}</strong></div>
       </div>
       <div className={`incident-mapping-note incident-mapping-${mappingSource}`}>
-        <StatusPill tone={mappingSource === "confirmed" || mappingSource === "contract" || mappingSource === "observed" ? "positive" : mappingSource === "candidate" ? "warning" : "neutral"}>
-          {mappingSource === "contract" ? "Contract scope match" : mappingSource === "confirmed" ? "Confirmed mapping" : mappingSource === "observed" ? "Observed topology" : mappingSource === "candidate" ? "Smartscape candidate" : mappingSource === "manual" ? "Manual selection" : "No service match"}
+        <StatusPill tone={!mappingLoading && (mappingSource === "confirmed" || mappingSource === "observed") ? "positive" : !mappingLoading && mappingSource === "candidate" ? "warning" : "neutral"}>
+          {mappingLoading ? "Checking Coverage" : mappingSource === "confirmed" ? "Confirmed mapping" : mappingSource === "observed" ? "Observed topology" : mappingSource === "candidate" ? "Coverage review needed" : "Provider-wide fallback"}
         </StatusPill>
         <span>{mappingDetail}</span>
-        <Link to="/">Review coverage</Link>
+        <Link to="/">{mappingSource === "candidate" || mappingSource === "none" ? "Resolve in Coverage" : "Review Coverage"}</Link>
       </div>
 
       <dl className="incident-facts">
@@ -239,10 +244,6 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
   const requestedProblemId = new URLSearchParams(location.search).get("problem");
   const [selectedId, setSelectedId] = useState<string | null>(requestedProblemId);
   const lastRequestedProblem = useRef<string | null>(null);
-  const [providerServiceId, setProviderServiceId] = useState("*");
-  const [scopeKey, setScopeKey] = useState("provider");
-  const [mappingSource, setMappingSource] = useState<MappingSource>("none");
-  const autoSelectedProblem = useRef<string | null>(null);
   const contractSettings = useContractOverrides();
   const scopeSettings = useProviderScopeAssignments();
   const selectedProblem = problems.find((problem) => problem.id === selectedId) ?? problems[0];
@@ -306,32 +307,6 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
     ? contractSettings.overrides.filter((override) => override.providerSlug === provider.provider.slug)
     : [], [contractSettings.overrides, provider]);
 
-  const matchingAssignments = useMemo<ContractAssignment[]>(() => {
-    if (!provider) return [];
-    const rank = { provider: 1, service: 2, location: 3, host: 4 } as const;
-    const assignments: ContractAssignment[] = [];
-    providerOverrides.filter((override) => override.scopeKind !== "provider").forEach((override) => {
-      const expectedPrefix = `${override.scopeKind}:`;
-      scopeChoices.filter((choice) => choice.key.startsWith(expectedPrefix)).forEach((choice) => {
-        const context = {
-          providerSlug: provider.provider.slug,
-          providerServiceId: override.providerServiceId,
-          ...choice.context,
-        };
-        if (!overrideMatchesContext(override, context)) return;
-        const key = `${override.providerServiceId}|${choice.key}`;
-        if (assignments.some((assignment) => `${assignment.providerServiceId}|${assignment.scopeKey}` === key)) return;
-        assignments.push({
-          override,
-          providerServiceId: override.providerServiceId,
-          scopeKey: choice.key,
-          rank: rank[override.scopeKind] + Number(override.providerServiceId !== "*") / 10,
-        });
-      });
-    });
-    return assignments.sort((left, right) => right.rank - left.rank);
-  }, [provider, providerOverrides, scopeChoices]);
-
   const confirmedAssignments = useMemo(() => {
     if (!provider || !selectedProblem) return [];
     const affected = new Set(selectedProblem.affectedEntityIds);
@@ -365,64 +340,51 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
     return Array.from(candidates.values());
   }, [provider, scopeChoices, selectedProblem, topology]);
   const topologyDecision = useMemo(() => resolveUniqueProviderServiceCandidate(topologyCandidates), [topologyCandidates]);
+  const confirmedAmbiguous = confirmedAssignments.length > 0 && !confirmedDecision;
 
-  useEffect(() => {
-    if (!scopeChoices.some((choice) => choice.key === scopeKey)) {
-      const hostChoices = scopeChoices.filter((choice) => choice.key.startsWith("host:"));
-      const serviceChoices = scopeChoices.filter((choice) => choice.key.startsWith("service:"));
-      setScopeKey(hostChoices.length === 1 ? hostChoices[0].key : serviceChoices.length === 1 ? serviceChoices[0].key : "provider");
-    }
-  }, [scopeChoices, scopeKey]);
-
-  useEffect(() => {
-    if (providerServiceId !== "*" && !provider?.services.some((service) => service.id === providerServiceId)) setProviderServiceId("*");
-  }, [provider, providerServiceId]);
-
-  useEffect(() => {
-    if (!selectedProblem || contractSettings.loading || scopeSettings.loading || topologyLoading) return;
-    const selectionKey = `${provider?.provider.slug ?? "none"}|${selectedProblem.id}`;
-    if (autoSelectedProblem.current === selectionKey) return;
-    const highestRank = matchingAssignments[0]?.rank;
-    const mostSpecific = matchingAssignments.filter((assignment) => assignment.rank === highestRank);
-    if (mostSpecific.length === 1) {
-      setProviderServiceId(mostSpecific[0].providerServiceId);
-      setScopeKey(mostSpecific[0].scopeKey);
-      setMappingSource("contract");
-    } else if (confirmedDecision) {
-      setProviderServiceId(confirmedDecision.providerServiceId);
-      setScopeKey(confirmedDecision.scopeKey);
-      setMappingSource("confirmed");
-    } else if (topologyDecision) {
-      setProviderServiceId(topologyDecision.providerServiceId);
-      setScopeKey(topologyDecision.scopeKey);
-      setMappingSource(topologyDecision.confidence === "observed" ? "observed" : "candidate");
-    } else {
-      setProviderServiceId("*");
-      setScopeKey("provider");
-      setMappingSource("none");
-    }
-    autoSelectedProblem.current = selectionKey;
-  }, [confirmedDecision, contractSettings.loading, matchingAssignments, provider?.provider.slug, scopeSettings.loading, selectedProblem, topologyDecision, topologyLoading]);
-
-  const mappingDetail = mappingSource === "contract"
-    ? "A matching tenant scope selected this provider service and Dynatrace scope."
-    : mappingSource === "confirmed"
+  const resolvedMapping = useMemo<ResolvedIncidentMapping>(() => {
+    if (confirmedDecision) return {
+      providerServiceId: confirmedDecision.providerServiceId,
+      scopeKey: confirmedDecision.scopeKey,
+      source: "confirmed",
+    };
+    if (confirmedAmbiguous) return {
+      providerServiceId: "*",
+      scopeKey: "provider",
+      source: "candidate",
+    };
+    if (topologyDecision?.confidence === "observed") return {
+      providerServiceId: topologyDecision.providerServiceId,
+      scopeKey: topologyDecision.scopeKey,
+      source: "observed",
+    };
+    if (topologyDecision) return {
+      providerServiceId: "*",
+      scopeKey: "provider",
+      source: "candidate",
+    };
+    return { providerServiceId: "*", scopeKey: "provider", source: "none" };
+  }, [confirmedAmbiguous, confirmedDecision, topologyDecision]);
+  const mappingLoading = scopeSettings.loading || topologyLoading;
+  const mappingDetail = mappingLoading
+    ? "Reading confirmed Coverage mappings and provider-native Smartscape relationships."
+    : resolvedMapping.source === "confirmed"
       ? confirmedDecision?.evidence ?? "A mapping confirmed in Coverage was reused for this incident."
-      : mappingSource === "observed"
-        ? `${topologyDecision?.evidence ?? "Provider-native Smartscape runtime metadata identifies this provider service"}. This selects terms only and does not establish provider fault or credit eligibility.`
-      : mappingSource === "candidate"
-        ? `${topologyDecision?.evidence ?? "Smartscape runtime metadata suggests this provider service"}. Confirm it in Coverage before relying on it.`
-        : mappingSource === "manual"
-          ? "This selection applies only to the current review and has not been saved as a scope mapping."
-          : "No unique confirmed mapping or Smartscape provider-service candidate was found for the affected services.";
+      : resolvedMapping.source === "observed"
+        ? `${topologyDecision?.evidence ?? "Provider-native Smartscape runtime metadata identifies this provider service"}. The applicable terms were resolved automatically; this does not establish provider fault or credit eligibility.`
+        : resolvedMapping.source === "candidate"
+          ? confirmedAmbiguous
+            ? "More than one confirmed Coverage mapping applies to the affected services. Provider-wide terms remain in use until the conflict is resolved in Coverage."
+            : `${topologyDecision?.evidence ?? "Smartscape runtime metadata suggests a provider service"}. Provider-wide terms remain in use until the suggestion is confirmed in Coverage.`
+          : "No unique provider-service mapping was found for the affected services. Provider-wide terms remain in use until Coverage is resolved.";
 
-  const selectedScope = scopeChoices.find((choice) => choice.key === scopeKey) ?? scopeChoices[0];
+  const selectedScope = scopeChoices.find((choice) => choice.key === resolvedMapping.scopeKey) ?? scopeChoices[0];
   const effectiveTerms = provider ? resolveEffectiveContractTerms(
     provider,
     providerOverrides,
     {
       providerSlug: provider.provider.slug,
-      providerServiceId,
+      providerServiceId: resolvedMapping.providerServiceId,
       ...selectedScope.context,
     },
   ) : undefined;
@@ -482,14 +444,13 @@ export const IncidentReview = ({ provider, problems, services, topology, topolog
             serviceNames={selectedServiceNames}
             provider={provider}
             contractTerms={effectiveTerms}
-            providerServiceId={providerServiceId}
-            scopeKey={scopeKey}
+            providerServiceId={resolvedMapping.providerServiceId}
+            scopeKey={resolvedMapping.scopeKey}
             scopeChoices={scopeChoices}
-            onProviderServiceChange={(value) => { setProviderServiceId(value); setMappingSource("manual"); }}
-            onScopeChange={(value) => { setScopeKey(value); setMappingSource("manual"); }}
             contractLoading={contractSettings.loading || scopeSettings.loading || topologyLoading}
             contractError={Boolean(contractSettings.error || scopeSettings.error || topologyError)}
-            mappingSource={mappingSource}
+            mappingLoading={mappingLoading}
+            mappingSource={resolvedMapping.source}
             mappingDetail={mappingDetail}
           /> : null}
         </div>

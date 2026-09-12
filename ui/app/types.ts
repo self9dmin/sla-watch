@@ -120,6 +120,14 @@ export type ProviderNoticeProduct = {
   directoryServiceIds: string[];
 };
 
+export type ProviderNoticeAffectedResource = {
+  id: string;
+  arn?: string;
+  accountId?: string;
+  status?: string;
+  updateTime?: string;
+};
+
 export type ProviderNotice = {
   id: string;
   source:
@@ -141,6 +149,7 @@ export type ProviderNotice = {
   updateTime?: string;
   products: ProviderNoticeProduct[];
   locations: string[];
+  affectedResources?: ProviderNoticeAffectedResource[];
   url?: string;
 };
 

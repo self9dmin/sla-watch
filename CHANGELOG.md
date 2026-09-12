@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.48
+
+- Kept provider-service mapping in Coverage and removed effective terms and custom-term creation from that workflow.
+- Made Incident mapping read-only and automatically inherited from confirmed Coverage or unique provider-native Smartscape evidence.
+- Uses provider-wide terms when a mapping is suggested, absent, or conflicting, with a direct path back to Coverage instead of a one-off Incident selection.
+- Added bounded AWS Health affected-entity reads and exact resource correlation against compatible Smartscape runtime identifiers.
+- Updated AWS setup for `health:DescribeAffectedEntities` and documented disposable least-privilege live acceptance and cleanup.
+
 ## 0.0.47
 
 - Removed the manual provider cards and custom provider-slug field from Settings.

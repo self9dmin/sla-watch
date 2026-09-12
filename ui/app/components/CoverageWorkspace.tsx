@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { openApp } from "@dynatrace-sdk/navigation";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { HostsIcon, ServicesIcon, SmartscapeIcon } from "@dynatrace/strato-icons";
 import type {
-  EffectiveContractTerms,
   CoverageInventoryStatus,
   ProblemRecord,
   ProviderScopeAssignmentRecord,
@@ -14,7 +13,6 @@ import type {
   SlaProviderResponse,
   SmartscapeScopeEdge,
 } from "../types";
-import { resolveEffectiveContractTerms } from "../data/contractOverrides";
 import { prioritizeServicesByProblemActivity } from "../data/providerAttribution";
 import {
   createProviderScopeAssignmentKey,
@@ -30,7 +28,6 @@ import {
 } from "../data/providerScopeAssignments";
 import { providerTagValues } from "../data/providerTags";
 import { topologyAnchorRank } from "../data/topology";
-import { useContractOverrides } from "../hooks/useContractOverrides";
 import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAssignments";
 import { SetupAdvisor } from "./SetupAdvisor";
 
@@ -81,18 +78,6 @@ const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode 
   <span className={`status-pill status-pill-${tone}`}>{children}</span>
 );
 
-const formatPercent = (value: number | null | undefined): string =>
-  value === null || value === undefined ? "Not published" : `${value}%`;
-
-const TermsStrip = ({ terms }: { terms: EffectiveContractTerms }) => (
-  <dl className="effective-terms-strip">
-    <div><dt>Availability</dt><dd>{formatPercent(terms.availabilityTarget)}</dd></div>
-    <div><dt>Filing window</dt><dd>{terms.filingDeadlineDays === null ? "Not published" : `${terms.filingDeadlineDays} ${terms.businessDays ? "business" : "calendar"} days`}</dd></div>
-    <div><dt>Maximum credit</dt><dd>{formatPercent(terms.maxCreditPercent)}</dd></div>
-    <div><dt>Applied source</dt><dd className={terms.source === "tenant override" ? "source-tenant" : ""}>{terms.source === "tenant override" ? "Tenant override" : "sla.directory"}</dd></div>
-  </dl>
-);
-
 const rowIsCovered = (row: CoverageRow): boolean => Boolean(
   row.assignment || row.sourceTag || (row.kind === "scope" && row.observed),
 );
@@ -103,9 +88,6 @@ const rowNeedsReview = (row: CoverageRow): boolean => {
     row.ambiguous || row.candidate || row.edge.providerSlug,
   );
 };
-
-const rowServiceId = (row: CoverageRow): string =>
-  row.kind === "scope" ? serviceEntityIdForEdge(row.edge) : row.service.id;
 
 const rowServiceName = (row: CoverageRow): string =>
   row.kind === "scope" ? row.edge.serviceName : row.service.name;
@@ -139,8 +121,6 @@ export const CoverageWorkspace = ({
   limitedContext,
   inventory,
 }: CoverageWorkspaceProps) => {
-  const navigate = useNavigate();
-  const contractSettings = useContractOverrides();
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [selectedProviderServiceId, setSelectedProviderServiceId] = useState("");
   const [feedback, setFeedback] = useState<{ tone: Tone; message: string }>();
@@ -149,6 +129,8 @@ export const CoverageWorkspace = ({
   const [page, setPage] = useState(0);
   const providerSlug = provider?.provider.slug ?? "";
   const providerName = provider?.provider.name ?? providerSlug;
+  const assignmentDisplayName = (assignment: ProviderScopeAssignmentRecord): string =>
+    assignment.providerServiceId === "*" ? `${providerName} (provider-wide)` : assignment.providerServiceName;
 
   const providerAssignments = useMemo(
     () => scopeSettings.assignments.filter((assignment) =>
@@ -331,33 +313,12 @@ export const CoverageWorkspace = ({
   }, [selectedRow]);
 
   const selectedProviderService = selectedProviderServiceId === "*"
-    ? { id: "*", name: "Provider-level terms" }
+    ? { id: "*", name: providerName || "Provider" }
     : provider?.services.find((service) => service.id === selectedProviderServiceId);
   const selectionMatchesCandidate = Boolean(
     selectedCandidate && selectedProviderService?.id === selectedCandidate.providerServiceId,
   );
   const selectionUsesObservedMatch = selectedObserved && selectionMatchesCandidate && !selectedAssignment;
-
-  const providerOverrides = useMemo(
-    () => provider
-      ? contractSettings.overrides.filter((override) => override.providerSlug === provider.provider.slug)
-      : [],
-    [contractSettings.overrides, provider],
-  );
-
-  const selectedUsesServiceScope = selectedRow?.kind === "service" ||
-    selectedRow?.edge.targetType === "SERVICE_CLOUD_CONTEXT" ||
-    Boolean(selectedAssignment && isServiceScopeAssignment(selectedAssignment));
-
-  const effectiveTerms = provider && selectedRow && selectedProviderService && !selectedConflict
-    ? resolveEffectiveContractTerms(provider, providerOverrides, {
-        providerSlug,
-        providerServiceId: selectedProviderService.id,
-        serviceId: rowServiceId(selectedRow),
-        hostId: selectedRow.kind === "scope" && !selectedUsesServiceScope ? runtimeEntityIdForEdge(selectedRow.edge) : undefined,
-        location: selectedRow.kind === "scope" ? selectedRow.edge.location : undefined,
-      })
-    : undefined;
 
   const assignmentValue = (): ProviderScopeAssignmentValue | null => {
     if (!selectedRow || !selectedProviderService || selectedConflict) return null;
@@ -415,7 +376,7 @@ export const CoverageWorkspace = ({
 
   const removeAssignment = async () => {
     if (!selectedAssignment || scopeSettings.mutating || !window.confirm(
-      `Remove the confirmed ${selectedAssignment.providerServiceName} mapping for ${selectedAssignment.serviceEntityName}?`,
+      `Remove the confirmed ${assignmentDisplayName(selectedAssignment)} mapping for ${selectedAssignment.serviceEntityName}?`,
     )) return;
     try {
       await scopeSettings.deleteAssignment(selectedAssignment);
@@ -431,23 +392,6 @@ export const CoverageWorkspace = ({
     }
   };
 
-  const openCreateSettings = () => {
-    if (!selectedRow || !selectedProviderService) return;
-    const serviceLevel = selectedRow.kind === "service" ||
-      selectedRow.edge.targetType === "SERVICE_CLOUD_CONTEXT" ||
-      Boolean(selectedAssignment && isServiceScopeAssignment(selectedAssignment));
-    const scopeKind = serviceLevel ? "service" : "host";
-    const scopeEntityId = selectedRow.kind === "scope" && !serviceLevel
-      ? runtimeEntityIdForEdge(selectedRow.edge)
-      : rowServiceId(selectedRow);
-    const params = new URLSearchParams({
-      providerServiceId: selectedProviderService.id,
-      scopeKind,
-      scopeEntityId,
-    });
-    void navigate(`/settings/sla-overrides?${params.toString()}`);
-  };
-
   const renderRow = (row: CoverageRow) => {
     const assignment = row.assignment;
     const covered = rowIsCovered(row);
@@ -458,7 +402,7 @@ export const CoverageWorkspace = ({
           <span className="scope-connector"><span aria-hidden="true" /><small>{row.edge.relationship === "belongs_to" ? "belongs to" : "runs on"}</small></span>
           <span className="scope-node"><HostsIcon /><span><small>{row.edge.targetType.replaceAll("_", " ")}</small><strong>{row.edge.targetName}</strong></span></span>
           <span className="scope-connector"><span aria-hidden="true" /><small>{row.evidenceCount > 1 ? `${row.evidenceCount} signals` : "Smartscape"}</small></span>
-          <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.observed ? "Observed" : row.ambiguous ? "Ambiguous" : row.problemCount > 0 ? `${row.problemCount} recent Problems` : row.candidate ? "Recommended" : "Needs review"}</small><strong>{assignment?.providerServiceName ?? (row.sourceTag ? "Provider-level terms" : row.observed ? row.candidate?.providerServiceName : row.ambiguous ? "Review service match" : row.candidate?.providerServiceName ?? "Select terms")}</strong></span></span>
+          <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.observed ? "Observed" : row.ambiguous ? "Ambiguous" : row.problemCount > 0 ? `${row.problemCount} recent Problems` : row.candidate ? "Recommended" : "Needs review"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.observed ? row.candidate?.providerServiceName : row.ambiguous ? "Review service match" : row.candidate?.providerServiceName ?? "Select provider service"}</strong></span></span>
         </button>
       );
     }
@@ -469,7 +413,7 @@ export const CoverageWorkspace = ({
         <span className="scope-connector"><span aria-hidden="true" /><small>found in</small></span>
         <span className="scope-node coverage-source-node"><ServicesIcon /><span><small>Coverage source</small><strong>{row.sourceTag ? `${providerTagKey}:${providerSlug}` : row.conflicting ? "Different provider tag" : "Service inventory"}</strong></span></span>
         <span className="scope-connector"><span aria-hidden="true" /><small>No runtime</small></span>
-        <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.conflicting ? "Different provider tag" : "No provider evidence"}</small><strong>{assignment?.providerServiceName ?? (row.sourceTag ? "Provider-level terms" : row.conflicting ? row.values.join(", ") : "Not attributed")}</strong></span></span>
+        <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.conflicting ? "Different provider tag" : "No provider evidence"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.conflicting ? row.values.join(", ") : "Not attributed"}</strong></span></span>
       </button>
     );
   };
@@ -502,7 +446,7 @@ export const CoverageWorkspace = ({
             ? "Manual mapping"
             : "Needs review";
   const stateTitle = selectedAssignment
-    ? `Applied terms: ${selectedAssignment.providerServiceName}`
+    ? `Confirmed provider service: ${assignmentDisplayName(selectedAssignment)}`
     : selectedSourceTag
       ? `Matched by ${providerTagKey}:${providerSlug}`
       : selectionUsesObservedMatch
@@ -514,8 +458,8 @@ export const CoverageWorkspace = ({
         : selectionMatchesCandidate
           ? `Smartscape recommends: ${selectedProviderService?.name}`
           : selectedProviderService
-            ? `Selected terms: ${selectedProviderService.name}`
-            : "Choose the provider terms for this service";
+            ? `Selected provider service: ${selectedProviderService.name}`
+            : "Choose the provider service for this Dynatrace service";
   const stateDetail = selectedAssignment?.evidence
     ?? (selectedConflict && selectedRow?.kind === "service"
       ? `Detected tags: ${selectedRow.values.join(", ")}. Review the matching rule before assigning ${providerName}.`
@@ -524,7 +468,7 @@ export const CoverageWorkspace = ({
         : selectionUsesObservedMatch
           ? `${selectedCandidate?.evidence}. SLA Review can use this provider-native topology without saving one mapping per service.`
         : selectedAmbiguous
-          ? "Dynatrace found more than one possible provider service. Select the applicable terms only after reviewing the affected runtime paths."
+          ? "Dynatrace found more than one possible provider service. Select one only after reviewing the affected runtime paths."
         : selectedRow?.kind === "scope" && selectionMatchesCandidate
           ? selectedCandidate?.evidence
           : selectedRow?.kind === "scope" && selectedCandidate && selectedProviderService
@@ -549,7 +493,7 @@ export const CoverageWorkspace = ({
           <Button size="condensed" onClick={() => openApp("dynatrace.smartscape", "view/dynatrace.smartscape.smartscape-on-grail")}><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
         </div>
       </div>
-      <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed mappings, and matching source tags select terms in Incidents and Evidence. They do not establish provider fault, local impact, or credit eligibility.</span></div>
+      <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed mappings, and matching source tags identify the provider service. Incidents and Evidence then resolve the applicable terms automatically. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>
       {inventory.incomplete || inventory.unverified ? (
         <div className="coverage-inventory-warning" role="status">
           <strong>{inventory.incomplete ? "Inventory incomplete" : "Inventory could not be verified"}</strong>
@@ -598,12 +542,12 @@ export const CoverageWorkspace = ({
               </div>
             </div>
           </div>
-          <aside className="scope-detail" aria-label="Provider terms for selected service">
+          <aside className="scope-detail" aria-label="Provider coverage for selected service">
             {selectedRow ? (
               <>
-                <label className="field-label">{selectedRow.kind === "scope" ? "Provider service for this scope" : "Terms for this service"}
+                <label className="field-label">Provider service
                   <select value={selectedProviderServiceId} onChange={(event) => { setSelectedProviderServiceId(event.target.value); setFeedback(undefined); }} disabled={selectedConflict}>
-                    {selectedRow.kind === "service" ? <option value="*">Provider-level terms</option> : <option value="">Select a provider service</option>}
+                    {selectedRow.kind === "service" ? <option value="*">{providerName} (provider-wide)</option> : <option value="">Select a provider service</option>}
                     {provider.services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
                   </select>
                 </label>
@@ -617,11 +561,9 @@ export const CoverageWorkspace = ({
                   <strong>{selectedRow.kind === "scope" ? `${selectedRow.edge.serviceName} → ${selectedRow.edge.targetName}` : selectedRow.service.name}</strong>
                   <small>{selectedRow.kind === "scope" ? selectedRow.edge.location ?? "No location field returned" : selectedRow.problemCount > 0 ? `${selectedRow.problemCount} recent Problem${selectedRow.problemCount === 1 ? "" : "s"}` : "No Smartscape runtime relationship returned"}</small>
                 </div>
-                {effectiveTerms ? <TermsStrip terms={effectiveTerms} /> : null}
                 <div className="scope-detail-actions">
                   {selectedConflict ? <Link className="text-action" to="/settings/watch">Review matching rules</Link> : null}
                   {showSaveAction ? <Button size="condensed" variant="emphasized" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void saveAssignment()}>{scopeSettings.mutating ? "Saving" : selectedAssignment ? "Update mapping" : selectionMatchesCandidate ? `Confirm ${selectedProviderService?.name}` : selectedRow.kind === "service" && selectedProviderService?.id === "*" ? "Confirm provider coverage" : `Use ${selectedProviderService?.name}`}</Button> : null}
-                  <Button size="condensed" disabled={!selectedProviderService || selectedConflict} onClick={openCreateSettings}>Add custom terms</Button>
                   {selectedAssignment ? <Button size="condensed" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void removeAssignment()}>Remove mapping</Button> : null}
                 </div>
                 {feedback ? <div className={`scope-map-feedback scope-map-feedback-${feedback.tone}`} role={feedback.tone === "warning" ? "alert" : "status"}>{feedback.message}</div> : null}

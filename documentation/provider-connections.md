@@ -27,12 +27,12 @@ See the Dynatrace guidance for [Credential Vault](https://docs.dynatrace.com/doc
 
 | Provider source | One connection represents | Provider prerequisite | Credential Vault Token value | Required outbound hosts | Behavior without a connection |
 | --- | --- | --- | --- | --- | --- |
-| AWS Health | One 12-digit AWS account | An eligible AWS Health API support plan and `health:DescribeEvents`, `health:DescribeEventDetails` | JSON containing `accessKeyId`, `secretAccessKey`, and optional `sessionToken` | `sts.us-east-1.amazonaws.com`, `health.us-east-1.amazonaws.com` | No AWS provider notices; contracts and Dynatrace evidence remain available |
+| AWS Health | One 12-digit AWS account | An eligible AWS Health API support plan and `health:DescribeEvents`, `health:DescribeEventDetails`, `health:DescribeAffectedEntities` | JSON containing `accessKeyId`, `secretAccessKey`, and optional `sessionToken` | `sts.us-east-1.amazonaws.com`, `health.us-east-1.amazonaws.com` | No AWS provider notices; contracts and Dynatrace evidence remain available |
 | Azure Service Health | One Azure subscription | A dedicated Microsoft Entra service principal with `Microsoft.ResourceHealth/events/read` on that subscription | JSON containing `tenantId`, `clientId`, and `clientSecret` | `login.microsoftonline.com`, `management.azure.com` | No Azure provider notices; contracts and Dynatrace evidence remain available |
 | Google Cloud Personalized Service Health | One Google Cloud project | Enable `servicehealth.googleapis.com`; grant `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer` | The service account JSON key | `oauth2.googleapis.com`, `servicehealth.googleapis.com` | Public Google Cloud status remains available and is labeled non-project-specific |
 | OCI Announcements | One commercial OCI tenancy and region | A dedicated API user in a group granted `Allow group AnnouncementListers to inspect announcements in tenancy` | JSON containing `userOcid`, `fingerprint`, and unencrypted RSA `privateKey` | Exact `announcements.<region>.oraclecloud.com` hostname | Public OCI regional status remains available and is labeled non-tenancy-specific |
 
-AWS currently requires Business Support+, Enterprise Support, or Unified Operations for AWS Health API access. AWS recommends temporary credentials where practical. If temporary credentials are used, the Credential Vault value must be refreshed before they expire. See the [AWS Health API reference](https://docs.aws.amazon.com/health/latest/APIReference/Welcome.html).
+AWS currently requires Business Support+, Enterprise Support, or Unified Operations for AWS Health API access. AWS recommends temporary credentials where practical. If temporary credentials are used, the Credential Vault value must be refreshed before they expire. The app retrieves bounded affected-entity pages for the newest account-specific events and attempts an exact identifier match against the current Smartscape runtime inventory. It rejects account or region conflicts and never treats account or region overlap alone as local impact. See the [AWS Health API reference](https://docs.aws.amazon.com/health/latest/APIReference/Welcome.html) and [DescribeAffectedEntities](https://docs.aws.amazon.com/health/latest/APIReference/API_DescribeAffectedEntities.html).
 
 Azure Service Health is read through the subscription-scoped Resource Health events endpoint. See the [Azure events API](https://learn.microsoft.com/en-us/rest/api/resourcehealth/events/list-by-subscription-id?view=rest-resourcehealth-2025-05-01).
 
@@ -54,6 +54,8 @@ OCI Announcements are retained by Oracle for 90 days. The app reads summary anno
 10. Open **Evidence** and select the saved source when more than one source exists.
 
 Repeat the process for every required account scope. Adding a second account, subscription, project, or tenancy does not replace the first.
+
+For live acceptance, prefer a disposable least-privilege identity with temporary credentials. After testing, remove the app connection, delete the Credential Vault record, and revoke or delete the provider credential. The app cannot perform those cleanup steps on the administrator's behalf.
 
 ## Interpreting the result
 

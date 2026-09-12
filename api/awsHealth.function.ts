@@ -31,7 +31,16 @@ type ProviderNotice = {
   updateTime?: string;
   products: Array<{ id: string; name: string; directoryServiceIds: string[] }>;
   locations: string[];
+  affectedResources: ProviderNoticeAffectedResource[];
   url: string;
+};
+
+type ProviderNoticeAffectedResource = {
+  id: string;
+  arn?: string;
+  accountId?: string;
+  status?: string;
+  updateTime?: string;
 };
 
 type AwsRequest = {
@@ -49,6 +58,10 @@ const STS_HOST = "sts.us-east-1.amazonaws.com";
 const FETCH_TIMEOUT_MS = 8_000;
 const MAX_NOTICES = 100;
 const DETAIL_BATCH_SIZE = 10;
+const AFFECTED_ENTITY_BATCH_SIZE = 10;
+const MAX_AFFECTED_ENTITY_EVENTS = 20;
+const MAX_AFFECTED_ENTITY_PAGES = 2;
+const MAX_AFFECTED_RESOURCES = 200;
 const ACCOUNT_ID_PATTERN = /^\d{12}$/;
 const ACCESS_KEY_ID_PATTERN = /^[A-Z0-9]{16,128}$/;
 const CREDENTIAL_ID_PATTERN = /^CREDENTIALS_VAULT-[A-F0-9]{16}$/i;
@@ -196,7 +209,7 @@ const healthResponseError = async (response: Response): Promise<Error> => {
   }
   if (code === "SubscriptionRequiredException") return new Error("AWS Health API access requires Business Support+, Enterprise Support, or Unified Operations for this account.");
   if (response.status === 401) return new Error("AWS rejected the signing credential or request signature.");
-  if (response.status === 403) return new Error("AWS denied Health access. Grant health:DescribeEvents and health:DescribeEventDetails to the dedicated identity.");
+  if (response.status === 403) return new Error("AWS denied Health access. Grant health:DescribeEvents, health:DescribeEventDetails, and health:DescribeAffectedEntities to the dedicated identity.");
   if (response.status === 429) return new Error("AWS Health throttled this request. Try again after the provider retry interval.");
   return new Error(`AWS Health returned HTTP ${response.status}${code ? ` (${code})` : ""}.`);
 };
@@ -223,6 +236,7 @@ export const parseAwsHealthEvents = (
   payload: unknown,
   accountId: string,
   descriptions: ReadonlyMap<string, string> = new Map(),
+  affectedResources: ReadonlyMap<string, ProviderNoticeAffectedResource[]> = new Map(),
 ): ProviderNotice[] => {
   if (!isRecord(payload) || (payload.events !== undefined && !Array.isArray(payload.events))) throw new Error("AWS Health returned an invalid response.");
   const events = Array.isArray(payload.events) ? payload.events.slice(0, MAX_NOTICES) : [];
@@ -248,9 +262,80 @@ export const parseAwsHealthEvents = (
       updateTime: epochDate(value.lastUpdatedTime),
       products: [{ id: service, name: serviceName, directoryServiceIds: mapAwsServiceToDirectoryIds(service) }],
       locations: unique([optionalText(value.region), optionalText(value.availabilityZone)]),
+      affectedResources: affectedResources.get(arn) ?? [],
       url: "https://health.aws.amazon.com/health/home#/account/dashboard/open-issues",
     }];
   });
+};
+
+export const parseAwsAffectedEntities = (payload: unknown): Map<string, ProviderNoticeAffectedResource[]> => {
+  if (!isRecord(payload) || (payload.entities !== undefined && !Array.isArray(payload.entities))) {
+    throw new Error("AWS Health returned an invalid affected-entity response.");
+  }
+  const resources = new Map<string, ProviderNoticeAffectedResource[]>();
+  const seen = new Set<string>();
+  const entities = Array.isArray(payload.entities) ? payload.entities : [];
+  entities.slice(0, MAX_AFFECTED_RESOURCES).forEach((value) => {
+    if (!isRecord(value)) return;
+    const eventArn = optionalText(value.eventArn);
+    const arn = optionalText(value.entityArn);
+    const entityValue = optionalText(value.entityValue);
+    const id = entityValue ?? arn;
+    if (!eventArn || !id) return;
+    const key = `${eventArn}|${id}|${arn ?? ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const eventResources = resources.get(eventArn) ?? [];
+    eventResources.push({
+      id,
+      arn,
+      accountId: optionalText(value.awsAccountId),
+      status: optionalText(value.statusCode),
+      updateTime: epochDate(value.lastUpdatedTime),
+    });
+    resources.set(eventArn, eventResources);
+  });
+  return resources;
+};
+
+const affectedEntities = async (
+  arns: string[],
+  credential: AwsSigningCredential,
+  now: Date,
+): Promise<Map<string, ProviderNoticeAffectedResource[]>> => {
+  const resources = new Map<string, ProviderNoticeAffectedResource[]>();
+  const limitedArns = arns.slice(0, MAX_AFFECTED_ENTITY_EVENTS);
+  let resourceCount = 0;
+  for (let offset = 0; offset < limitedArns.length && resourceCount < MAX_AFFECTED_RESOURCES; offset += AFFECTED_ENTITY_BATCH_SIZE) {
+    const eventArns = limitedArns.slice(offset, offset + AFFECTED_ENTITY_BATCH_SIZE);
+    let nextToken: string | undefined;
+    for (let page = 0; page < MAX_AFFECTED_ENTITY_PAGES && resourceCount < MAX_AFFECTED_RESOURCES; page += 1) {
+      const body = JSON.stringify({
+        filter: { eventArns },
+        maxResults: 100,
+        ...(nextToken ? { nextToken } : {}),
+      });
+      const response = await healthRequest("DescribeAffectedEntities", body, credential, now);
+      if (!response.ok) throw await healthResponseError(response);
+      const payload = await response.json() as unknown;
+      const pageResources = parseAwsAffectedEntities(payload);
+      pageResources.forEach((items, eventArn) => {
+        const current = resources.get(eventArn) ?? [];
+        const currentKeys = new Set(current.map((item) => `${item.id}|${item.arn ?? ""}`));
+        items.forEach((item) => {
+          const key = `${item.id}|${item.arn ?? ""}`;
+          if (resourceCount >= MAX_AFFECTED_RESOURCES || currentKeys.has(key)) return;
+          currentKeys.add(key);
+          current.push(item);
+          resourceCount += 1;
+        });
+        resources.set(eventArn, current);
+      });
+      nextToken = isRecord(payload) ? optionalText(payload.nextToken) : undefined;
+      if (!nextToken) break;
+    }
+  }
+  return resources;
 };
 
 const eventDescriptions = async (arns: string[], credential: AwsSigningCredential, now: Date): Promise<Map<string, string>> => {
@@ -283,7 +368,8 @@ export default async function (payload: RequestPayload = {}) {
   const eventPayload = await response.json() as unknown;
   const summaries = parseAwsHealthEvents(eventPayload, request.accountId);
   const descriptions = await eventDescriptions(summaries.map((notice) => notice.id), credential, now);
-  const notices = parseAwsHealthEvents(eventPayload, request.accountId, descriptions);
+  const resources = await affectedEntities(summaries.map((notice) => notice.id), credential, now);
+  const notices = parseAwsHealthEvents(eventPayload, request.accountId, descriptions, resources);
   return {
     provider: "aws" as const,
     providerName: "AWS",
