@@ -179,10 +179,10 @@ export const Header = ({
             </button>
           </div>
           <p>
-            Use Coverage to confirm the provider boundary, Incidents to inspect
-            Dynatrace Problems, and Evidence to validate review candidates or
-            compare provider reports. FinOps Agent is planned and is not
-            available in this release.
+            Use Coverage to confirm the provider boundary, Performance to track
+            customer objectives, Incidents to inspect Dynatrace Problems, and
+            Evidence to validate review candidates or compare provider reports.
+            FinOps Agent is planned and is not available in this release.
           </p>
           <section>
             <h3>1. Confirm coverage</h3>
@@ -192,7 +192,15 @@ export const Header = ({
             </p>
           </section>
           <section>
-            <h3>2. Review incidents</h3>
+            <h3>2. Check performance</h3>
+            <p>
+              Performance evaluates app-managed customer objectives from
+              Dynatrace service-request telemetry. Provider reports remain
+              separate evidence.
+            </p>
+          </section>
+          <section>
+            <h3>3. Review incidents</h3>
             <p>
               Select one Problem at a time and compare its observed impact with
               provider terms. A matching service does not prove provider fault
@@ -200,7 +208,7 @@ export const Header = ({
             </p>
           </section>
           <section>
-            <h3>3. Validate evidence</h3>
+            <h3>4. Validate evidence</h3>
             <p>
               Evidence lists Problems that overlap confirmed or suggested
               provider coverage. Record a human validation or dismissal, then
@@ -208,14 +216,14 @@ export const Header = ({
             </p>
           </section>
           <section>
-            <h3>4. Review provider terms</h3>
+            <h3>5. Review provider terms</h3>
             <p>
               Directory separates availability terms, service-level coverage,
               support options, and tenant overrides for the active provider.
             </p>
           </section>
           <section>
-            <h3>5. Get support</h3>
+            <h3>6. Get support</h3>
             <p>
               {communityLive
                 ? "The change log documents application releases. Questions and issue discussion belong on the Dynatrace Community profile."

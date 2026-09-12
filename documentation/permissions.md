@@ -12,7 +12,7 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | `storage:logs:read` | Count recent log records | Show log count as unavailable |
 | `storage:spans:read` | Count recent spans | Show span count as unavailable |
 | `storage:smartscape:read` | Read service-to-runtime and location relationships used for evidence-boundary selection | Hide unavailable topology choices; never infer them from entity names |
-| `slo:slos:read` | Find objectives previously created by SLA Review | Keep the service preview available, but identify objective discovery as unavailable and disable creation to prevent duplicates |
+| `slo:slos:read` | Find and evaluate objectives previously created by SLA Review | Keep the service preview available, identify Performance as unavailable, and disable creation to prevent duplicates |
 | `slo:slos:write` | Create one explicitly confirmed customer objective for a covered Dynatrace service | Keep the preview read-only and explain that objective write access is required |
 | `environment-api:credentials:read` | Read the administrator-selected AppEngine Token credential inside the provider AppEngine function | Keep customer-scoped provider notices unavailable; a supported public status source can remain available |
 | `app-settings:objects:read` | Read shared tenant custom terms, provider connections, confirmed provider-service scope mappings, and human evidence decisions | Use public sources where possible and identify shared tenant configuration as unavailable |
@@ -43,7 +43,7 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 | User app state | User state read | User state write | Personal preferences remain local when denied |
 | Shared app state | App state read | App state write | Workspace configuration remains local when denied |
 | Dynatrace entity tags | Read through the service inventory | None | Existing source tags can support a review, but the app never writes, replaces, or removes them |
-| Dynatrace objectives | App-managed records with `slo:slos:read` | Explicit create only with `slo:slos:write` | One provider and service objective is created from customer-observed request telemetry; no objective is created on load and no provider report is counted as local health |
+| Dynatrace objectives | App-managed records with `slo:slos:read` | Explicit create only with `slo:slos:write` | One provider and service objective is created from customer-observed request telemetry; Performance evaluates only a bounded visible page; no objective is created on load and no provider report is counted as local health |
 | Tickets and credits | Not accessed | Not written | No automated eligibility, submission, or remediation is performed |
 
 ## Deployment permissions

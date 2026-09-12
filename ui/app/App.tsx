@@ -40,7 +40,7 @@ const AppShell = ({
   saveError: string | null;
 }) => {
   const location = useLocation();
-  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/incidents" || location.pathname === "/provider-notices" || location.pathname === "/evidence" || location.pathname === "/directory";
+  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/performance" || location.pathname === "/incidents" || location.pathname === "/provider-notices" || location.pathname === "/evidence" || location.pathname === "/directory";
   return (
     <div className="sla-app">
       <header className="sla-header">
@@ -51,6 +51,7 @@ const AppShell = ({
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/setup" element={<LegacyCoverageRedirect />} />
+          <Route path="/performance" element={<Dashboard initialSection="performance" />} />
           <Route path="/incidents" element={<Dashboard initialSection="incidents" />} />
           <Route path="/provider-notices" element={<Navigate to="/evidence?view=provider-reports" replace />} />
           <Route path="/evidence" element={<Dashboard initialSection="evidence" />} />

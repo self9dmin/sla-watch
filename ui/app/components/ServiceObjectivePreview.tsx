@@ -57,7 +57,12 @@ export const ServiceObjectivePreview = ({
     { query: previewQuery ?? "data record(noop = true) | limit 0" },
     { enabled: Boolean(previewQuery) },
   );
-  const objectives = useServiceObjectives(Boolean(externalId));
+  const objectives = useServiceObjectives({
+    enabled: Boolean(externalId),
+    providerSlug,
+    serviceClassicId,
+    pageSize: 5,
+  });
   const existing = useMemo(
     () => objectives.objectives.find((objective) => objective.externalId === externalId),
     [externalId, objectives.objectives],

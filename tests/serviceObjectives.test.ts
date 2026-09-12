@@ -1,8 +1,10 @@
 import {
   createServiceAvailabilityPreviewQuery,
   createServiceAvailabilitySliQuery,
+  createManagedObjectiveFilter,
   createServiceObjectiveConfig,
   createServiceObjectiveExternalId,
+  formatObjectiveTimeframe,
   normalizeClassicServiceId,
   parseServiceObjectivePreview,
 } from "../ui/app/data/serviceObjectives";
@@ -17,6 +19,24 @@ describe("service objectives", () => {
   it("creates a deterministic provider and service identity", () => {
     expect(createServiceObjectiveExternalId("AWS", "SERVICE-A0B1C2"))
       .toBe("sla-review-aws-service-a0b1c2");
+  });
+
+  it("builds bounded provider and service discovery filters", () => {
+    expect(createManagedObjectiveFilter({
+      providerSlug: " AWS ' OR name = * ",
+      serviceClassicId: "SERVICE-A0B1C2",
+    })).toBe(
+      "tag.key = 'managed-by' and tag.value = 'sla-review' and tag.key = 'provider' and tag.value = 'aws-or-name' and tag.key = 'service' and tag.value = 'service-a0b1c2'",
+    );
+    expect(createManagedObjectiveFilter()).toBe(
+      "tag.key = 'managed-by' and tag.value = 'sla-review'",
+    );
+  });
+
+  it("formats objective windows for operators", () => {
+    expect(formatObjectiveTimeframe("now-30d")).toBe("Last 30 days");
+    expect(formatObjectiveTimeframe("now-1h")).toBe("Last 1 hour");
+    expect(formatObjectiveTimeframe("custom-window")).toBe("custom-window");
   });
 
   it("builds a bounded preview from service request metrics", () => {

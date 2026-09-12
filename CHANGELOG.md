@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.50
+
+- Added a Performance workspace with compact dashboard tiles for customer objectives created from Coverage.
+- Evaluates only the selected provider's visible objective page and shows observed performance, target, status, error budget, and period.
+- Uses the native Dynatrace objective icon and single-value visualization, with a prominent handoff to the SLOs app.
+- Keeps provider reports separate from customer-observed performance and hands deeper analysis to the native Dynatrace objective app.
+- Replaced Coverage's tenant-wide objective scan with an exact provider-and-service lookup.
+
 ## 0.0.49
 
 - Added a compact customer-objective preview for each covered Dynatrace service using request count and failure count from Grail.
