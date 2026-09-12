@@ -2,7 +2,7 @@
 
 ## Product boundary
 
-SLA Review is a read-mostly Dynatrace AppEngine application with four explicit shared tenant write paths: operator-confirmed coverage mappings, tenant-owned custom terms, optional provider-connection metadata, and human evidence decisions. It monitors a collection of provider contracts from `sla.directory` while one active provider controls each focused review. It compares those records with custom terms, the live service inventory, Smartscape topology, recent telemetry, and separately labeled provider reports. Its output is an evidence posture for human review, not an automated credit decision.
+SLA Review is a read-mostly Dynatrace AppEngine application with five explicit shared tenant write paths: operator-confirmed coverage mappings, tenant-owned custom terms, optional provider-connection metadata, human evidence decisions, and explicitly confirmed Dynatrace objectives. It monitors a collection of provider contracts from `sla.directory` while one active provider controls each focused review. It compares those records with custom terms, the live service inventory, Smartscape topology, recent telemetry, and separately labeled provider reports. Its output is an evidence posture for human review, not an automated credit decision.
 
 The application has no database of its own, no scheduled work, no webhook receiver, no email sender, and no embedded agent. There is no `cron.md`, `emails.md`, `seo.md`, or `automation.md` because those capabilities do not exist in this release.
 
@@ -11,6 +11,7 @@ The application has no database of its own, no scheduled work, no webhook receiv
 - React 18 and TypeScript UI under `ui/`.
 - Dynatrace Strato components and design tokens for the UI.
 - Dynatrace DQL through `@dynatrace-sdk/react-hooks` for services, Problems, logs, spans, service-request telemetry, and Smartscape relationships.
+- Dynatrace Service-Level Objectives SDK for permission-aware discovery and explicit creation of app-managed customer objectives.
 - Six AppEngine functions: `api/slaDirectory.function.ts` for public contract data; `api/awsHealth.function.ts`, `api/azureServiceHealth.function.ts`, `api/gcpServiceHealth.function.ts`, and `api/ociAnnouncements.function.ts` for customer-scoped provider notices; and `api/providerPublicStatus.function.ts` for credential-free public OCI, OpenAI, Anthropic, and ElevenLabs status.
 - App state services for user preferences and shared provider review configuration.
 - App Settings V2 for shared, versioned tenant custom terms, confirmed provider-service scope mappings, human evidence decisions, and non-secret provider connection metadata.
@@ -22,7 +23,7 @@ The browser entry point is `ui/main.tsx`. Application routing is in `ui/app/App.
 Dashboard -> useDql / useAppFunction -> Dynatrace Grail or sla.directory -> normalized records -> evidence state -> UI
 ```
 
-The application has five write paths, including personal and shared preferences:
+The application has six write paths, including personal and shared preferences:
 
 ```text
 Settings -> SlaPreferencesContext -> user/app state service
@@ -36,6 +37,9 @@ Coverage -> ambiguous or manually selected scope -> operator confirmation
 
 Coverage -> service without runtime context -> operator confirmation
          -> App Settings V2 -> exact service mapping reused by Incidents and Evidence
+
+Coverage -> covered service -> scoped Grail availability preview -> explicit confirmation
+         -> Service-Level Objectives API -> one customer objective per provider and service
 
 Evidence -> Problem plus provider boundary -> SRE acknowledgement -> validate or dismiss
          -> App Settings V2 -> bounded operational decision for follow-up
@@ -61,6 +65,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 10. App state stores provider configuration and personal display preferences. App Settings stores custom terms, confirmed scope mappings, exact evidence target IDs, bounded human evidence decisions, and non-secret provider connection metadata. Provider secrets remain in Credential Vault and are never returned to the browser.
 11. The release history is bundled with the application. The Community destination is launch-gated and does not expose an external link before public launch.
 12. Existing provider tags are read only as optional source evidence. The app stores confirmed coverage in App Settings and never writes or removes entity tags.
+13. Objective discovery and creation run in the current user's permission context. Previewing performs only a bounded Grail read. Creation uses a deterministic external ID and requires an explicit second action, so repeated visits do not create duplicate objectives.
 
 ## Canonical sources of truth
 
@@ -77,6 +82,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 - OCI provider notices: tenancy-specific Announcements when an administrator selects a saved connection, or the fixed public regional status endpoint as an explicitly non-customer-specific source.
 - OpenAI, Anthropic, and ElevenLabs provider notices: fixed public status endpoints, always labeled non-customer-specific.
 - Service-to-runtime and location context: Smartscape on Grail, queried at runtime.
+- Customer objective definitions: native Dynatrace Service-Level Objectives. SLA Review owns only records tagged `managed-by:sla-review`; their SLI remains customer-observed service telemetry, not provider status.
 - Personal preferences and shared provider review configuration: Dynatrace app-state services when available.
 - Offline state: browser local storage only as an explicitly surfaced fallback.
 
@@ -92,6 +98,7 @@ The app does not alter or copy the public provider record. A tenant override is 
 - AWS affected entities are correlated only when a returned resource identifier exactly matches a Smartscape runtime identifier and any available account and region context is compatible. Account or region overlap without an identifier match is shown as uncorrelated provider evidence, not local impact.
 - Smartscape topology identifies a service-to-runtime or location relationship, but does not prove that a provider caused an incident or publishes a host-level SLA. Incident review applies the most specific matching record and leaves equally specific ambiguity to the operator.
 - Global service and preferred-anchor queries are intentionally bounded. Separate aggregate counts detect truncation, the UI refuses to claim complete coverage when a count cannot be verified, and recent Problem service IDs trigger a sanitized incident-scoped topology query. Processes and containers remain supporting incident evidence rather than primary Coverage rows.
+- Objective creation is service-scoped, not host- or process-scoped. One deterministic provider and service identity prevents an environment with thousands of runtimes from producing thousands of objectives. The objective measures the full Dynatrace service and must not be used as proof that one provider caused a failure.
 - Logs and spans are counted at the tenant level rather than joined to a selected service. This is intentionally described as environment signal presence and is not sufficient for provider attribution (`ui/app/data/queries.ts`).
 - `sla.directory` is an external availability dependency. The UI reports unavailable or unknown states and never converts a failed request into a healthy result (`api/slaDirectory.function.ts`, `ui/app/pages/Dashboard.tsx`).
 - Shared app-state writes are workspace-wide and scope-controlled. A user with write permission can change shared provider configuration (`documentation/permissions.md`).

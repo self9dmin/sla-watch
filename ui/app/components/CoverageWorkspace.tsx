@@ -14,6 +14,7 @@ import type {
   SmartscapeScopeEdge,
 } from "../types";
 import { prioritizeServicesByProblemActivity } from "../data/providerAttribution";
+import { resolveEffectiveContractTerms } from "../data/contractOverrides";
 import {
   createProviderScopeAssignmentKey,
   createServiceScopeAssignment,
@@ -29,7 +30,9 @@ import {
 import { providerTagValues } from "../data/providerTags";
 import { topologyAnchorRank } from "../data/topology";
 import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAssignments";
+import { useContractOverrides } from "../hooks/useContractOverrides";
 import { SetupAdvisor } from "./SetupAdvisor";
+import { ServiceObjectivePreview } from "./ServiceObjectivePreview";
 
 type Tone = "neutral" | "warning" | "positive";
 
@@ -127,6 +130,7 @@ export const CoverageWorkspace = ({
   const [coverageFilter, setCoverageFilter] = useState<"review" | "covered" | "all">("review");
   const [searchText, setSearchText] = useState("");
   const [page, setPage] = useState(0);
+  const contractSettings = useContractOverrides();
   const providerSlug = provider?.provider.slug ?? "";
   const providerName = provider?.provider.name ?? providerSlug;
   const assignmentDisplayName = (assignment: ProviderScopeAssignmentRecord): string =>
@@ -312,13 +316,27 @@ export const CoverageWorkspace = ({
     setFeedback(undefined);
   }, [selectedRow]);
 
-  const selectedProviderService = selectedProviderServiceId === "*"
+  const selectedProviderService = useMemo(() => selectedProviderServiceId === "*"
     ? { id: "*", name: providerName || "Provider" }
-    : provider?.services.find((service) => service.id === selectedProviderServiceId);
+    : provider?.services.find((service) => service.id === selectedProviderServiceId),
+  [provider, providerName, selectedProviderServiceId]);
   const selectionMatchesCandidate = Boolean(
     selectedCandidate && selectedProviderService?.id === selectedCandidate.providerServiceId,
   );
   const selectionUsesObservedMatch = selectedObserved && selectionMatchesCandidate && !selectedAssignment;
+  const selectedCovered = Boolean(selectedRow && rowIsCovered(selectedRow));
+  const selectedServiceClassicId = selectedRow?.kind === "scope"
+    ? selectedRow.edge.serviceClassicId ?? serviceEntityIdForEdge(selectedRow.edge)
+    : selectedRow?.service.id ?? null;
+  const selectedServiceName = selectedRow ? rowServiceName(selectedRow) : "";
+  const selectedTerms = useMemo(() => {
+    if (!provider || !selectedRow || !selectedProviderService || !selectedCovered) return null;
+    return resolveEffectiveContractTerms(provider, contractSettings.overrides, {
+      providerSlug,
+      providerServiceId: selectedProviderService.id,
+      serviceId: selectedServiceClassicId ?? undefined,
+    });
+  }, [contractSettings.overrides, provider, providerSlug, selectedCovered, selectedProviderService, selectedRow, selectedServiceClassicId]);
 
   const assignmentValue = (): ProviderScopeAssignmentValue | null => {
     if (!selectedRow || !selectedProviderService || selectedConflict) return null;
@@ -530,7 +548,7 @@ export const CoverageWorkspace = ({
                 <div className="coverage-list-empty">
                   <strong>{coverageFilter === "review" ? "No evidence-backed exceptions in the loaded inventory" : "No matching services"}</strong>
                   <span>{inventory.incomplete ? "This is not a complete-coverage result because the inventory is bounded." : coverageFilter === "review" ? "Use All loaded only when you need to map a service without provider evidence." : "Change the filter or search to review another service."}</span>
-                  {coverageFilter === "review" && coverageRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("all")}>View all loaded services</Button> : null}
+                  {coverageFilter === "review" && coveredRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("covered")}>Inspect covered services</Button> : coverageFilter === "review" && coverageRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("all")}>View all loaded services</Button> : null}
                 </div>
               )}
             </div>
@@ -567,6 +585,17 @@ export const CoverageWorkspace = ({
                   {selectedAssignment ? <Button size="condensed" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void removeAssignment()}>Remove mapping</Button> : null}
                 </div>
                 {feedback ? <div className={`scope-map-feedback scope-map-feedback-${feedback.tone}`} role={feedback.tone === "warning" ? "alert" : "status"}>{feedback.message}</div> : null}
+                {selectedCovered && selectedProviderService && selectedTerms ? (
+                  <ServiceObjectivePreview
+                    serviceClassicId={selectedServiceClassicId}
+                    serviceName={selectedServiceName}
+                    providerSlug={providerSlug}
+                    providerName={providerName}
+                    providerServiceName={selectedProviderService.name}
+                    target={selectedTerms.availabilityTarget}
+                    termsSource={selectedTerms.source}
+                  />
+                ) : null}
               </>
             ) : (
               <div className="scope-mapping-state">

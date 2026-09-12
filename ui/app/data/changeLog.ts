@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.48",
+    version: "0.0.49",
     label: "Current release",
+    summary: "Added a safe Dynatrace objective handoff for covered services.",
+    details: [
+      "Coverage previews customer-observed availability from Dynatrace service requests beside the applicable target.",
+      "Provider notices remain separate evidence and are not counted as customer service health.",
+      "An explicit action creates one native Dynatrace objective per provider and service only after the scoped Grail query validates.",
+      "Existing app-managed objectives are detected and opened in the native Service-Level Objectives app instead of being duplicated.",
+    ],
+  },
+  {
+    version: "0.0.48",
+    label: "Previous release",
     summary: "Made Coverage the single provider-mapping source and added exact AWS resource correlation.",
     details: [
       "Coverage now decides only which provider service applies; effective terms and custom-term creation remain outside that workflow.",

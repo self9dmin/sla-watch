@@ -11,7 +11,8 @@ This document separates executable coverage from manual or proposed coverage. Pa
 | Provider tag parsing | Accepted read-only tag forms must normalize conservatively | Provider, vendor, cloud-provider, context, and plain-value forms normalize; unrelated contextless tags are ignored | `tests/providerTags.test.ts` | Existing unit test |
 | Access failure | Permission failure is not absence of data | Telemetry error produces an access recommendation and suppresses provider-tag advice | `tests/recommendations.test.ts` | Existing unit test |
 | Telemetry boundary | Visible services do not prove recent incident evidence exists | A visible service inventory without Problems, logs, spans, or request series produces a separate telemetry recommendation | `tests/recommendations.test.ts` | Existing unit test |
-| SLO follow-up | SLO advice requires a known provider scope | A confirmed scope or matched provider tag with owner context can suggest native SLO follow-up | `tests/recommendations.test.ts` | Existing unit test |
+| Objective follow-up | Optional objective advice requires a known provider scope | A confirmed scope or matched provider tag with owner context can suggest a native objective follow-up without counting it as blocking setup | `tests/recommendations.test.ts` | Existing unit test |
+| Customer objective generation | One exact service must produce one safe, repeatable objective definition | Classic IDs and lookbacks are validated, custom DQL uses request and failure metrics, external IDs are deterministic, targets are bounded, and template plus custom SLI modes are never mixed | `tests/serviceObjectives.test.ts` | Existing unit test |
 | App-state expiry | Expiration must remain inside the platform limit | The generated timestamp includes a safety margin below 90 days | `tests/stateExpiration.test.ts` | Existing unit test |
 | External contract parsing | Untrusted directory payloads must be validated | Invalid envelope, service identity, support record, or SLA tier throws before data reaches the UI; supported contract, claim, support, and provenance fields are preserved | `tests/slaDirectory.function.test.ts` | Existing unit test |
 | Multi-provider normalization | Provider monitoring is a collection with one valid active provider | Slugs are normalized, deduplicated, bounded, and invalid values are rejected | `tests/providers.test.ts` | Existing unit test |
@@ -64,6 +65,7 @@ This document separates executable coverage from manual or proposed coverage. Pa
 | App Settings authorization | Read-only and denied users must not mutate tenant custom terms | Read-only users can inspect records, denied users see the public fallback, and writes require schema-level permission | Guarded live integration | Proposed |
 | Ambiguous incident assignment | Equally specific matches must remain an operator decision | A Problem with two matching SLA assignments does not silently select one | Component or guarded live integration | Proposed |
 | Hub install | Clean install from the release artifact | App launches, function runs with allowlist, and Technical information matches the manifest | Guarded live acceptance | Proposed |
+| Objective authorization and lifecycle | Read-only preview and explicit create must honor the current user's objective permissions | A reader can inspect the Grail preview but cannot create; a writer creates one record, a reload detects it without duplication, and cleanup occurs in the native objective app | Guarded live integration | Proposed |
 
 ## Gaps
 
