@@ -101,7 +101,7 @@ Deny or degraded behavior: an inaccessible credential, invalid signature, missin
 
 Actor: signed-in user with `app-settings:objects:write` for the app's `provider-scope-assignments` schema.
 
-1. The user opens Coverage. The default queue contains only provider evidence that is ambiguous or does not resolve to one provider service. Unrelated services remain searchable under All loaded.
+1. The user opens Coverage with All selected. One normalized worklist groups every loaded service as covered, needing review, or unattributed. Visible Covered and Needs review controls focus the same model without changing its totals.
 2. Smartscape-backed rows show one representative host, cluster, or provider-native runtime anchor per service. Process and container relationships are not expanded into primary Coverage rows.
 3. A fixed provider-specific table may resolve one provider-native runtime type to one provider service. That observed match is used without writing one App Settings object per service.
 4. Hostname-only patterns, conflicting provider services, and provider boundaries without a service match remain for review. The user can confirm or change the exact provider service.
@@ -157,19 +157,19 @@ Actor: signed-in user with `app-settings:objects:read`; saving a decision also r
 
 1. Evidence compares each returned Problem with exact saved scope mappings, explicit provider tags, observed provider-native topology, and lower-confidence Smartscape suggestions for the active provider.
 2. A Problem enters the candidate queue only when at least one exact affected service overlaps one of those boundaries. Saved mappings take precedence over provider tags, which take precedence over topology.
-3. The detail view gives one direct explanation of why the candidate appears, identifies the mapping basis, and links to the incident, Coverage, and current terms. Provider reports stay separate and do not establish local impact.
+3. The detail view gives one direct explanation of why the candidate appears, identifies the mapping basis, and assembles the observed window, coverage basis, terms source, filing window, claim method, maximum credit, and required evidence into a claim package. Provider reports stay separate and do not establish local impact.
 4. The SRE reviews those records. Provider-native topology is labeled observed, while hostname-only or conflicting topology remains visibly unconfirmed.
-5. Validation requires an explicit acknowledgement that the service scope and current terms were reviewed. Dismissal requires a concise operational reason.
+5. Marking a package ready requires an explicit acknowledgement that the service scope and current terms were reviewed. Classifying a candidate as not provider-related requires a concise operational reason.
 6. App Settings stores one bounded Problem snapshot, exact affected entity IDs, provider services, mapping basis, decision, review time, and concise note.
 7. A saved decision remains current only while the mapping basis, affected entities, and provider-service scope still match. A changed boundary returns the candidate to Needs review.
 
-Deny or degraded behavior: a failed Problem, topology, directory, or decision-store read is shown as incomplete rather than empty. A read-only user can inspect candidates and saved decisions but cannot validate or dismiss. A decision does not establish provider fault, SLA eligibility, credit approval, or claim submission.
+Deny or degraded behavior: a failed Problem, topology, directory, or decision-store read is shown as incomplete rather than empty. A read-only user can inspect candidates and saved decisions but cannot mark a package ready or classify it as not provider-related. A decision does not establish provider fault, SLA eligibility, credit approval, or claim submission.
 
 ## Confirm service coverage without runtime context
 
 Actor: signed-in user with `app-settings:objects:write` for the app's `provider-scope-assignments` schema.
 
-1. The user opens Coverage, switches to All loaded, and selects a service without provider evidence.
+1. The user opens Coverage with All already selected and chooses a service without provider evidence.
 2. The row identifies service inventory or a matching source tag as the available evidence. Existing provider tags are displayed only as source evidence.
 3. The user selects one exact service and chooses provider-level terms or one provider service. Service names are context only and never create an automatic assignment.
 4. A confirmation screen names the service, provider, and terms boundary. Saving writes an app-owned assignment to App Settings and does not modify Dynatrace entity metadata.
