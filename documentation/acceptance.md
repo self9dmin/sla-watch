@@ -1,6 +1,23 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.52`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.53`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.53 verified scenarios
+
+The `0.0.53` artifact from source commit `12b2af9` was deployed to the designated Dynatrace target environment on 2026-09-12 and exercised through the connected Chrome profile. The production smoke was read-only. It did not create, update, or delete an objective or change provider configuration, credentials, mappings, custom terms, evidence decisions, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.53` manifest, six AppEngine functions, updated evidence-decision schema, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `12b2af9` |
+| Release gate | Type checks, lint, 25 test suites with 146 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed | `npm run verify:release`; 82.26% statement coverage; zero production dependency vulnerabilities |
+| Release history | Change log showed `0.0.53 Current release` after a fresh app reload | Installed production change-log smoke |
+| Coverage integrity | Production loaded eight services in All, with two covered and six not attributed. The provider-scope tile and worklist counts agreed | Installed production Coverage accessibility-tree and visual smoke |
+| Real tenant triage | Incidents loaded 94 Problems over 30 days, four affected services, zero active Problems, and zero AWS evidence candidates. The selected Problem preserved its exact affected-service Coverage route | Installed production Incidents smoke |
+| Objective continuity | Performance loaded the existing AWS customer objective and its native evaluation without introducing a second measurement source | Installed production Performance smoke |
+| Directory and settings | AWS terms retained the complete public reference, 62 services, support and custom-term views; Settings reported the public directory source connected | Installed production Directory and Settings smoke |
+| Evidence package logic | Exact affected-service request/failure aggregation, objective lookup bounds, provider-report correlation, provider-service route continuity, checklist gating, three persisted statuses, and legacy-decision compatibility passed focused automated coverage | `tests/serviceTelemetry.test.ts`, `tests/queries.test.ts`, `tests/providerNoticeCorrelation.test.ts`, `tests/reviewRoutes.test.ts`, `tests/evidenceCandidates.test.ts` |
+| Conservative production state | The live AWS boundary did not overlap a current Problem, so Evidence correctly remained complete and empty instead of fabricating a provider candidate. No temporary production mapping was created solely to force a decision | Installed production Evidence smoke |
+| Open authorization acceptance | Writer-side Not ready persistence and current-checklist Package ready behavior are implemented and unit tested. Live read-only, denied-write, and new-schema mutation acceptance still require governed test identities and a disposable qualifying Problem | Target environment remained unchanged; prior `0.0.42` acceptance covers create, reload, reopen, and cleanup on the earlier compatible decision lifecycle |
 
 ## 0.0.52 verified scenarios
 

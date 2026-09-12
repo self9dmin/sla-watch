@@ -80,7 +80,7 @@ This document separates executable coverage from manual or proposed coverage. Pa
 2. The Playwright suite is committed, but no authenticated CI run is recorded because test credentials must be supplied through CI secrets, never checked into the repository.
 3. DQL query validity and the semantic scope of tenant-wide log/span counts still require a representative tenant test case.
 4. Provider-service-to-Dynatrace-entity joins may come from a fixed provider-native Smartscape signature or an exact operator assignment. Neither path, nor an Evidence decision, can claim provider fault or end-to-end credit eligibility.
-5. Service-scoped coverage reuse still needs a disposable live Problem that overlaps the selected service before the full Coverage-to-Evidence mutation path can be automated.
+5. The compatible create, reload, reopen, and cleanup path was exercised in `0.0.42`; the new Not ready state and evidence-checklist persistence still need governed live mutation acceptance with a disposable qualifying Problem.
 6. No automated accessibility scan is wired into CI.
 7. AWS account authentication and Health plan behavior require a disposable least-privilege live identity for acceptance. The key and Credential Vault record must be revoked and deleted after the test.
 8. Azure subscription authentication requires a disposable app registration, secret, and least-privilege role assignment for acceptance. The secret, role assignment, and Credential Vault record must be removed after the test.
