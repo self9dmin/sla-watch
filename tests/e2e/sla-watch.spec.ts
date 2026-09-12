@@ -166,13 +166,33 @@ test.describe("SLA Review deployed smoke", () => {
     });
     await expect(lookback).toBeVisible();
     await expect(lookback.locator("option")).toHaveCount(7);
+    await expect(
+      app.getByLabel("Incident status").locator(".overview-fact"),
+    ).toHaveCount(4);
+    await expect(app.getByText("Dynatrace Problems", { exact: true })).toBeVisible();
+    const openProblems = app.getByRole("button", { name: "Open Problems" });
+    await expect(openProblems).toBeVisible();
+    await expect(openProblems.locator("svg")).toHaveCount(1);
+    const problemsRegion = app.getByRole("region", { name: "Observed Problems" });
+    const emptyProblems = app.getByText(/No Problems in the last/);
+    await expect(problemsRegion.or(emptyProblems)).toBeVisible();
+    if (await problemsRegion.count()) {
+      const visibleProblemCount = await problemsRegion.locator(".incident-tile").count();
+      expect(visibleProblemCount).toBeGreaterThan(0);
+      expect(visibleProblemCount).toBeLessThanOrEqual(8);
+      await expect(app.getByLabel("Problem pages")).toBeVisible();
+    }
     await expect(app.getByRole("combobox", { name: "Provider service" })).toHaveCount(0);
     await expect(app.getByRole("combobox", { name: "Dynatrace scope" })).toHaveCount(0);
     await expect(
       app.getByText(
         /The provider determines fault, eligibility, and any service credit/i,
       ),
-    ).toBeVisible();
+    ).toHaveCount(0);
+    await expect(
+      app.getByText("Filing window reference", { exact: true }),
+    ).toHaveCount(0);
+    await expect(app.getByText(/maximum credit/i)).toHaveCount(0);
     await expectNoPageScroll(app);
 
     await app.getByRole("link", { name: "Evidence" }).click();

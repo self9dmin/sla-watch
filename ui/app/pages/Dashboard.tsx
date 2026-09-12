@@ -812,6 +812,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
         ) : section === "incidents" ? (
           <IncidentReview
             provider={directoryData}
+            providerLabelKey={providerLabelKey}
             problems={problems}
             services={services}
             topology={providerEvidence}

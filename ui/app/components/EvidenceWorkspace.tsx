@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
@@ -297,6 +297,9 @@ const CandidateWorkspace = ({
   loading,
   error,
 }: Omit<EvidenceWorkspaceProps, "view">) => {
+  const location = useLocation();
+  const requestedProblemId = new URLSearchParams(location.search).get("problem");
+  const lastRequestedProblem = useRef<string | null>(null);
   const settings = useEvidenceDecisions();
   const candidates = useMemo(
     () =>
@@ -323,11 +326,24 @@ const CandidateWorkspace = ({
 
   useEffect(() => {
     if (
+      requestedProblemId &&
+      requestedProblemId !== lastRequestedProblem.current
+    ) {
+      const requested = candidates.find(
+        (candidate) => candidate.problem.id === requestedProblemId,
+      );
+      if (requested) {
+        lastRequestedProblem.current = requestedProblemId;
+        setSelectedKey(requested.key);
+        return;
+      }
+    }
+    if (
       candidates.length > 0 &&
       !candidates.some((candidate) => candidate.key === selectedKey)
     ) setSelectedKey(candidates[0].key);
     if (candidates.length === 0) setSelectedKey(undefined);
-  }, [candidates, selectedKey]);
+  }, [candidates, requestedProblemId, selectedKey]);
 
   const selected =
     candidates.find((candidate) => candidate.key === selectedKey) ??
