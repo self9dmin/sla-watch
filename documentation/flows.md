@@ -16,7 +16,7 @@ Sequence:
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
 5. The app reads active tenant custom terms, confirmed provider-service scope mappings, and prior human evidence decisions from App Settings. It preserves the public directory record as the fallback baseline.
 6. Coverage classifies the current provider boundary as loading, access-incomplete, inventory-incomplete, contract-unavailable, action-required, boundary-ready, or review-available. It never reports complete coverage from a truncated or unverified inventory.
-7. The operating shell presents Coverage, Performance, Incidents, and Evidence. Coverage is the landing workspace and places provider, service, incident, and filing facts above an exception-first worklist. Provider-native matches are automatic, ambiguous provider evidence is queued for review, and unrelated loaded services stay out of the default queue. Performance evaluates a bounded page of app-managed customer objectives for the active provider. Incidents contains the observed Problem queue and effective filing references. Evidence combines Dynatrace-derived review candidates with a separate provider-reports view. Review terms exposes the complete normalized public provider record and tenant overrides.
+7. The operating shell presents Coverage, Performance, Incidents, and Evidence. Coverage is the landing workspace and places provider, service, incident, and filing facts above an exception-first worklist. Provider-native matches are automatic, ambiguous provider evidence is queued for review, and unrelated loaded services stay out of the default queue. Performance evaluates a bounded page of app-managed customer objectives for the active provider. Incidents prioritizes a bounded page of active and provider-relevant Problems, shows one focused triage summary, and hands full investigation to the native Problems app. Evidence combines Dynatrace-derived review candidates with a separate provider-reports view. Review terms exposes the complete normalized public provider record and tenant overrides.
 8. Loading the workspace does not change a Dynatrace entity, tag, metric, Problem, SLO, custom terms record, evidence decision, or external ticket.
 
 Deny or degraded behavior: a missing read scope is shown as access incomplete, not as no telemetry. A failed directory request is shown as unavailable, not as a provider breach.
@@ -138,18 +138,18 @@ Actor: signed-in user with `app-settings:objects:write` for the app's `contract-
 
 Deny or degraded behavior: without App Settings write permission, the page is read-only. Without service or Smartscape read access, unavailable target types are not fabricated; a provider-wide fallback can still be defined. Saving no record leaves the public directory record unchanged.
 
-## Match a Problem to effective terms
+## Triage a Problem for evidence review
 
 Actor: signed-in Dynatrace user.
 
-1. Incidents reads the Problem's exact affected entity IDs.
-2. It issues a sanitized, bounded Smartscape query for the Problem's affected service IDs so incident review is not limited to the global Coverage sample.
-3. Active tenant overrides are evaluated by provider service, effective date, and exact target ID. Precedence is host, location, service, provider-wide fallback, then the public `sla.directory` record.
-4. If one most-specific tenant contract scope matches, Incident review selects it. Otherwise it checks saved Coverage overrides. If there is no saved mapping, one unique provider-native Smartscape service match is selected as observed. A hostname-only unique candidate may be preselected but remains visibly unconfirmed.
-5. If equally specific records or multiple provider-service candidates remain, the operator chooses the applicable boundary.
-6. The UI shows the mapping source, applied terms source, and filing reference, but does not assert root cause, provider fault, credit eligibility, or claim approval.
+1. Incidents reads each Problem's exact affected entity IDs and reuses the canonical Evidence candidate rules.
+2. Active Problems are ordered first, then Problems with an exact overlap to the active provider boundary, then the newest remaining records.
+3. The worklist is limited to eight Problems per page. Changing pages selects the first visible record instead of retaining hidden context.
+4. The focused summary shows affected services, provider-service match, root-cause availability, state, and observed window.
+5. A provider-relevant Problem opens directly in Evidence with the same Problem selected. A Problem with affected scope but no provider overlap opens Coverage. Full causal investigation opens in the native Dynatrace Problems app.
+6. Contract details, filing mechanics, credit values, traces, logs, remediation, and full causal analysis stay out of Incidents. They remain in Review terms, Evidence, or the native Problems app as appropriate.
 
-Deny or degraded behavior: missing topology, scope settings, terms settings, or Problem access is surfaced as unavailable or incomplete. Invalid affected entity IDs are removed before query construction, and service IDs plus returned relationships are capped. The app never substitutes a name-based guess or treats a lower-confidence Smartscape candidate as observed.
+Deny or degraded behavior: missing topology, scope settings, or Problem access is surfaced as unavailable or incomplete. The Problem worklist remains usable when provider matching fails. The app never substitutes a name-based guess or treats a lower-confidence Smartscape candidate as observed.
 
 ## Review an evidence candidate
 

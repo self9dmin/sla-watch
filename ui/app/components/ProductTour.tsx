@@ -22,7 +22,7 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="incidents"]',
     title: "Review observed incidents",
-    body: "Incidents presents a Problem queue and one focused review. It compares observed dates with provider terms without making an eligibility or credit decision.",
+    body: "Incidents prioritizes active and provider-relevant Dynatrace Problems. Use the focused summary to choose the next step, or open Problems for full investigation.",
   },
   {
     target: '[data-tour="evidence"]',

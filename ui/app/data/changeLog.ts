@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.50",
+    version: "0.0.51",
     label: "Current release",
+    summary: "Focused Incidents on Dynatrace Problem triage.",
+    details: [
+      "Incidents now presents active and provider-relevant Problems first in bounded pages of eight.",
+      "The focused summary keeps only affected services, provider match, root-cause availability, state, observed time, and one next action.",
+      "Provider-relevant Problems move into Evidence with the same Problem selected, while unresolved service scope returns to Coverage.",
+      "The native Problems handoff owns full causal investigation, logs, traces, filtering, and remediation.",
+      "Contract details, filing mechanics, and credit values no longer compete with triage in Incidents.",
+    ],
+  },
+  {
+    version: "0.0.50",
+    label: "Previous release",
     summary: "Added a Performance portfolio for customer objectives.",
     details: [
       "Performance shows app-managed customer objectives as compact dashboard tiles inside the operating shell.",

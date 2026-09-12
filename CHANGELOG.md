@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.51
+
+- Redesigned Incidents as a compact Dynatrace Problems triage workspace instead of a second investigation or contract screen.
+- Prioritizes active Problems, provider-relevant evidence candidates, and recent records in bounded pages of eight.
+- Reuses the canonical Evidence candidate rules and preserves the selected Problem when moving into Evidence.
+- Adds a native Problems identity and direct handoff for full root-cause investigation, logs, traces, filtering, and remediation.
+- Keeps Incidents focused on impact, root-cause availability, provider match, observed time, and one contextual next action. Contract details, filing mechanics, and credit values remain in Evidence or Review terms.
+
 ## 0.0.50
 
 - Added a Performance workspace with compact dashboard tiles for customer objectives created from Coverage.
