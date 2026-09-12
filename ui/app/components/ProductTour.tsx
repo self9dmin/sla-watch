@@ -15,6 +15,11 @@ const STEPS: TourStep[] = [
     body: "Coverage is the starting point. Smartscape recommendations and services without runtime context share one review list.",
   },
   {
+    target: '[data-tour="performance"]',
+    title: "Track customer objectives",
+    body: "Performance evaluates the customer objectives created from Coverage. It keeps provider reports separate and opens native Dynatrace objectives for deeper analysis.",
+  },
+  {
     target: '[data-tour="incidents"]',
     title: "Review observed incidents",
     body: "Incidents presents a Problem queue and one focused review. It compares observed dates with provider terms without making an eligibility or credit decision.",

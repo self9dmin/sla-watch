@@ -21,7 +21,7 @@
 | `status.elevenlabs.io` | ElevenLabs public incidents | Server-side outbound host | Fixed function allowlist | Review endpoint availability and response compatibility | Medium: aggregate public provider evidence |
 | `ocistatus.oraclecloud.com` | OCI public regional component status | Server-side outbound host | Fixed function allowlist | Review endpoint availability and response compatibility | Medium: current public provider evidence |
 | `announcements.<region>.oraclecloud.com` | OCI tenancy Announcements | Server-side outbound host | Validated commercial region and environment allowlist | Prefer the exact regional host; rotate the API key separately in OCI and Credential Vault | High: tenancy-specific provider evidence and request-signing boundary |
-| `providerSlug` | Active provider for Coverage, Incidents, Evidence, and Directory | Shared app state | User input constrained to the runtime provider collection | State expires within 90 days | Low, but controls the current external lookup and attribution view |
+| `providerSlug` | Active provider for Coverage, Performance, Incidents, Evidence, and Directory | Shared app state | User input constrained to the runtime provider collection | State expires within 90 days | Low, but controls the current external lookup and attribution view |
 | `providerLabelKey` | Provider tag parsing | Shared app state | User input | State expires within 90 days | Low, affects attribution |
 | `lookbackHours` | DQL query construction | Shared app state | Controlled select input | State expires within 90 days | Low |
 | `sla.user.v1` | Theme preference | User app state/local fallback | App constants | State expires within 90 days | Low |

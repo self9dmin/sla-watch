@@ -6,7 +6,7 @@ export const OBJECTIVE_EVALUATION_HOURS = 30 * 24;
 
 const CLASSIC_SERVICE_ID = /^SERVICE-[A-F0-9]+$/;
 
-const safeTagValue = (value: string): string => value
+export const normalizeObjectiveTagValue = (value: string): string => value
   .trim()
   .toLowerCase()
   .replace(/[^a-z0-9._-]+/g, "-")
@@ -25,15 +25,48 @@ export const createServiceObjectiveExternalId = (
   serviceClassicId: string,
 ): string | null => {
   const serviceId = normalizeClassicServiceId(serviceClassicId);
-  const provider = safeTagValue(providerSlug);
+  const provider = normalizeObjectiveTagValue(providerSlug);
   if (!serviceId || !provider) return null;
   return `sla-review-${provider}-${serviceId.toLowerCase()}`;
+};
+
+export const createManagedObjectiveFilter = ({
+  providerSlug,
+  serviceClassicId,
+}: {
+  providerSlug?: string;
+  serviceClassicId?: string | null;
+} = {}): string => {
+  const clauses = ["tag.key = 'managed-by' and tag.value = 'sla-review'"];
+  const provider = providerSlug
+    ? normalizeObjectiveTagValue(providerSlug)
+    : "";
+  const serviceId = serviceClassicId
+    ? normalizeClassicServiceId(serviceClassicId)?.toLowerCase()
+    : undefined;
+
+  if (provider) {
+    clauses.push(`tag.key = 'provider' and tag.value = '${provider}'`);
+  }
+  if (serviceId) {
+    clauses.push(`tag.key = 'service' and tag.value = '${serviceId}'`);
+  }
+  return clauses.join(" and ");
+};
+
+export const formatObjectiveTimeframe = (value?: string): string => {
+  const match = /^now-(\d+)([hd])$/.exec(value ?? "");
+  if (!match) return value?.trim() || "Configured period";
+  const amount = Number(match[1]);
+  const unit = match[2] === "h" ? "hour" : "day";
+  return `Last ${amount.toLocaleString()} ${unit}${amount === 1 ? "" : "s"}`;
 };
 
 const scopedServiceFilter = (serviceClassicId: string): string | null => {
   const serviceId = normalizeClassicServiceId(serviceClassicId);
   if (!serviceId) return null;
-  return `| fieldsAdd target_service = toSmartscapeId(array("${serviceId}")[])\n| filter in(dt.smartscape.service, target_service)`;
+  return `| fieldsAdd target_service = toSmartscapeId(array("${serviceId}")[])
+| filter in(dt.smartscape.service, target_service)`;
 };
 
 export const createServiceAvailabilitySliQuery = (serviceClassicId: string): string | null => {
@@ -86,7 +119,7 @@ export const createServiceObjectiveConfig = ({
   const indicator = createServiceAvailabilitySliQuery(serviceClassicId);
   if (!serviceId || !externalId || !indicator || !Number.isFinite(target) || target <= 0 || target > 100) return null;
 
-  const provider = safeTagValue(providerSlug);
+  const provider = normalizeObjectiveTagValue(providerSlug);
   return {
     name: safeName(`${serviceName} availability (${providerName})`),
     description: safeName(

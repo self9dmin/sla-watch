@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.49",
+    version: "0.0.50",
     label: "Current release",
+    summary: "Added a Performance portfolio for customer objectives.",
+    details: [
+      "Performance shows app-managed customer objectives as compact dashboard tiles inside the operating shell.",
+      "The objective portfolio uses the native Dynatrace objective icon and single-value visualization, with one prominent Open SLOs action.",
+      "Only the selected provider and visible page are loaded and evaluated, keeping large environments bounded.",
+      "Objective status, observed performance, target, error budget, and evaluation period stay separate from provider reports.",
+      "Coverage now uses an exact provider-and-service objective lookup instead of loading every app-managed objective.",
+    ],
+  },
+  {
+    version: "0.0.49",
+    label: "Previous release",
     summary: "Added a safe Dynatrace objective handoff for covered services.",
     details: [
       "Coverage previews customer-observed availability from Dynatrace service requests beside the applicable target.",

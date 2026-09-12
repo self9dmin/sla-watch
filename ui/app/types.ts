@@ -1,5 +1,6 @@
 export type WatchSection =
   | "coverage"
+  | "performance"
   | "directory"
   | "incidents"
   | "evidence";

@@ -1,12 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   serviceLevelObjectivesClient,
   type Slo,
   type SloConfig,
 } from "@dynatrace-sdk/client-service-level-objectives";
 import { effectivePermissionsClient } from "@dynatrace-sdk/client-platform-management-service";
+import { createManagedObjectiveFilter } from "../data/serviceObjectives";
 
-const MANAGED_FILTER = "tag.key = 'managed-by' and tag.value = 'sla-review'";
+type ServiceObjectiveQuery = {
+  enabled: boolean;
+  providerSlug?: string;
+  serviceClassicId?: string | null;
+  page?: number;
+  pageSize?: number;
+};
 
 const errorMessage = (error: unknown): string => {
   if (error instanceof Error && error.name === "Forbidden") {
@@ -16,36 +23,27 @@ const errorMessage = (error: unknown): string => {
   return "Dynatrace objectives are unavailable.";
 };
 
-const loadManagedObjectives = async (): Promise<Slo[]> => {
-  const objectives: Slo[] = [];
-  const seenPageKeys = new Set<string>();
-  let pageKey: string | undefined;
-
-  do {
-    const page = await serviceLevelObjectivesClient.getSlos({
-      pageSize: 500,
-      pageKey,
-      filter: MANAGED_FILTER,
-    });
-    objectives.push(...page.slos);
-    pageKey = page.nextPageKey;
-    if (pageKey && seenPageKeys.has(pageKey)) break;
-    if (pageKey) seenPageKeys.add(pageKey);
-  } while (pageKey);
-
-  return objectives;
-};
-
-export const useServiceObjectives = (enabled: boolean) => {
+export const useServiceObjectives = ({
+  enabled,
+  providerSlug,
+  serviceClassicId,
+  page = 1,
+  pageSize = 8,
+}: ServiceObjectiveQuery) => {
   const [objectives, setObjectives] = useState<Slo[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [canRead, setCanRead] = useState<boolean | null>(null);
   const [canWrite, setCanWrite] = useState<boolean | null>(null);
   const [error, setError] = useState<string>();
+  const requestId = useRef(0);
+  const boundedPage = Math.max(1, Math.floor(page));
+  const boundedPageSize = Math.min(50, Math.max(1, Math.floor(pageSize)));
 
   const refresh = useCallback(async () => {
     if (!enabled) return;
+    const currentRequest = ++requestId.current;
     setLoading(true);
     setError(undefined);
 
@@ -58,8 +56,18 @@ export const useServiceObjectives = (enabled: boolean) => {
           ],
         },
       }),
-      loadManagedObjectives(),
+      serviceLevelObjectivesClient.getSlos({
+        pageSize: boundedPageSize,
+        page: boundedPage,
+        filter: createManagedObjectiveFilter({
+          providerSlug,
+          serviceClassicId,
+        }),
+        sort: "name",
+      }),
     ]);
+
+    if (currentRequest !== requestId.current) return;
 
     if (permissions.status === "fulfilled") {
       setCanRead(permissions.value.find((item) => item.permission === "slo:slos:read")?.granted !== "false");
@@ -70,27 +78,46 @@ export const useServiceObjectives = (enabled: boolean) => {
     }
 
     if (managed.status === "fulfilled") {
-      setObjectives(managed.value);
+      setObjectives(managed.value.slos);
+      setTotalCount(managed.value.totalCount);
       setCanRead((value) => value ?? true);
     } else {
       setObjectives([]);
+      setTotalCount(0);
       setCanRead(false);
       setError(errorMessage(managed.reason));
     }
     setLoading(false);
-  }, [enabled]);
+  }, [
+    boundedPage,
+    boundedPageSize,
+    enabled,
+    providerSlug,
+    serviceClassicId,
+  ]);
 
   useEffect(() => {
     if (!enabled) {
+      requestId.current += 1;
       setObjectives([]);
+      setTotalCount(0);
+      setCanRead(null);
+      setCanWrite(null);
       setError(undefined);
+      setLoading(false);
       return;
     }
+    setObjectives([]);
+    setTotalCount(0);
     void refresh();
   }, [enabled, refresh]);
 
   const createObjective = async (definition: SloConfig): Promise<Slo> => {
-    if (canWrite !== true) throw new Error("Objective write access is required to create this objective.");
+    if (canWrite !== true) {
+      throw new Error(
+        "Objective write access is required to create this objective.",
+      );
+    }
     setCreating(true);
     setError(undefined);
     try {
@@ -98,7 +125,8 @@ export const useServiceObjectives = (enabled: boolean) => {
       setObjectives((current) => [
         created,
         ...current.filter((objective) => objective.id !== created.id),
-      ]);
+      ].slice(0, boundedPageSize));
+      setTotalCount((current) => current + 1);
       return created;
     } catch (createError) {
       setError(errorMessage(createError));
@@ -110,6 +138,9 @@ export const useServiceObjectives = (enabled: boolean) => {
 
   return {
     objectives,
+    totalCount,
+    page: boundedPage,
+    pageSize: boundedPageSize,
     loading,
     creating,
     canRead,

@@ -10,6 +10,7 @@ import {
 import { EvidenceWorkspace } from "../components/EvidenceWorkspace";
 import { IncidentReview } from "../components/IncidentReview";
 import { CoverageWorkspace } from "../components/CoverageWorkspace";
+import { PerformanceWorkspace } from "../components/PerformanceWorkspace";
 import { ProviderDirectoryWorkspace } from "../components/ProviderDirectoryWorkspace";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
 import { useProviderConnections } from "../hooks/useProviderConnections";
@@ -159,6 +160,12 @@ const WATCH_LINKS: ReadonlyArray<{
   tour: string;
 }> = [
   { section: "coverage", label: "Coverage", to: "/", tour: "coverage" },
+  {
+    section: "performance",
+    label: "Performance",
+    to: "/performance",
+    tour: "performance",
+  },
   {
     section: "incidents",
     label: "Incidents",
@@ -785,6 +792,11 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               inventory={inventoryStatus}
             />
           </Surface>
+        ) : section === "performance" ? (
+          <PerformanceWorkspace
+            providerSlug={selectedProviderSlug}
+            providerName={providerName}
+          />
         ) : section === "directory" ? (
           <Surface className="panel-card directory-panel">
             <ProviderDirectoryWorkspace

@@ -136,7 +136,7 @@ const WatchSettings = () => {
           <select value={providerSlug} onChange={(event) => setProviderSlug(event.target.value)} aria-label="Active provider for focused views">
             {enabledProviderSlugs.map((slug) => <option key={slug} value={slug}>{providerDisplayName(slug)}</option>)}
           </select>
-          <small>Coverage, Incidents, Evidence, and Directory show providers detected from this environment or an enabled incident connection.</small>
+          <small>Coverage, Performance, Incidents, Evidence, and Directory show providers detected from this environment or an enabled incident connection.</small>
         </label>
         <label className="field-label">Source tag key
           <input value={providerLabelKey} onChange={(event) => setProviderLabelKey(event.target.value)} placeholder="provider" autoComplete="off" />
@@ -648,7 +648,7 @@ const IntroSettings = () => {
   const navigate = useNavigate();
   return (
     <section className="settings-page">
-      <div className="page-intro"><Text className="eyebrow">Settings · guidance</Text><Heading level={1}>Product walkthrough.</Heading><Paragraph>Coverage is the starting point. Use this short tour when a responder needs an orientation to Coverage, Incidents, Evidence, and provider terms.</Paragraph></div>
+      <div className="page-intro"><Text className="eyebrow">Settings · guidance</Text><Heading level={1}>Product walkthrough.</Heading><Paragraph>Coverage is the starting point. Use this short tour when a responder needs an orientation to Coverage, Performance, Incidents, Evidence, and provider terms.</Paragraph></div>
       <div className="settings-actions"><Button variant="emphasized" onClick={() => void navigate("/?walkthrough=1")}>Start walkthrough</Button></div>
       <div className="settings-callout"><strong>The walkthrough changes nothing</strong><span>It does not change providers, connections, coverage, telemetry, tags, terms, or evidence decisions.</span></div>
     </section>

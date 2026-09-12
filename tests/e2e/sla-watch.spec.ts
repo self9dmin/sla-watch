@@ -40,6 +40,7 @@ test.describe("SLA Review deployed smoke", () => {
     });
     await expect(sectionNavigation.getByRole("link")).toHaveText([
       "Coverage",
+      "Performance",
       "Incidents",
       "Evidence",
     ]);
@@ -138,6 +139,24 @@ test.describe("SLA Review deployed smoke", () => {
         app.getByRole("button", { name: "Open in SLOs" }),
       ).toBeVisible();
     }
+    await expectNoPageScroll(app);
+
+    await app.getByRole("link", { name: "Performance" }).click();
+    await expect(
+      app.getByRole("heading", { name: "Performance" }),
+    ).toBeVisible();
+    await expect(
+      app.getByLabel("Performance status").locator(".overview-fact"),
+    ).toHaveCount(4);
+    const objectiveRegion = app.getByRole("region", {
+      name: "Customer objectives",
+    });
+    const emptyPerformance = app.getByText(/No customer objectives for/);
+    await expect(objectiveRegion.or(emptyPerformance)).toBeVisible();
+    await expect(app.getByText("Service objectives")).toBeVisible();
+    await expect(
+      app.getByRole("button", { name: "Open SLOs" }),
+    ).toBeVisible();
     await expectNoPageScroll(app);
 
     await app.getByRole("link", { name: "Incidents" }).click();

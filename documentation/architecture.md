@@ -11,7 +11,7 @@ The application has no database of its own, no scheduled work, no webhook receiv
 - React 18 and TypeScript UI under `ui/`.
 - Dynatrace Strato components and design tokens for the UI.
 - Dynatrace DQL through `@dynatrace-sdk/react-hooks` for services, Problems, logs, spans, service-request telemetry, and Smartscape relationships.
-- Dynatrace Service-Level Objectives SDK for permission-aware discovery and explicit creation of app-managed customer objectives.
+- Dynatrace Service-Level Objectives SDK for permission-aware discovery, bounded evaluation, and explicit creation of app-managed customer objectives.
 - Six AppEngine functions: `api/slaDirectory.function.ts` for public contract data; `api/awsHealth.function.ts`, `api/azureServiceHealth.function.ts`, `api/gcpServiceHealth.function.ts`, and `api/ociAnnouncements.function.ts` for customer-scoped provider notices; and `api/providerPublicStatus.function.ts` for credential-free public OCI, OpenAI, Anthropic, and ElevenLabs status.
 - App state services for user preferences and shared provider review configuration.
 - App Settings V2 for shared, versioned tenant custom terms, confirmed provider-service scope mappings, human evidence decisions, and non-secret provider connection metadata.
@@ -65,7 +65,7 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 10. App state stores provider configuration and personal display preferences. App Settings stores custom terms, confirmed scope mappings, exact evidence target IDs, bounded human evidence decisions, and non-secret provider connection metadata. Provider secrets remain in Credential Vault and are never returned to the browser.
 11. The release history is bundled with the application. The Community destination is launch-gated and does not expose an external link before public launch.
 12. Existing provider tags are read only as optional source evidence. The app stores confirmed coverage in App Settings and never writes or removes entity tags.
-13. Objective discovery and creation run in the current user's permission context. Previewing performs only a bounded Grail read. Creation uses a deterministic external ID and requires an explicit second action, so repeated visits do not create duplicate objectives.
+13. Objective discovery, evaluation, and creation run in the current user's permission context. Coverage performs an exact provider-and-service lookup plus a bounded Grail preview. Performance pages app-managed objectives by provider and evaluates only the visible page with bounded concurrency. Creation uses a deterministic external ID and requires an explicit second action, so repeated visits do not create duplicate objectives.
 
 ## Canonical sources of truth
 
@@ -82,11 +82,11 @@ Settings -> provider account scope and Credential Vault ID -> successful connect
 - OCI provider notices: tenancy-specific Announcements when an administrator selects a saved connection, or the fixed public regional status endpoint as an explicitly non-customer-specific source.
 - OpenAI, Anthropic, and ElevenLabs provider notices: fixed public status endpoints, always labeled non-customer-specific.
 - Service-to-runtime and location context: Smartscape on Grail, queried at runtime.
-- Customer objective definitions: native Dynatrace Service-Level Objectives. SLA Review owns only records tagged `managed-by:sla-review`; their SLI remains customer-observed service telemetry, not provider status.
+- Customer objective definitions: native Dynatrace Service-Level Objectives. SLA Review owns only records tagged `managed-by:sla-review`; their SLI remains customer-observed service telemetry, not provider status. Performance filters these records by provider, retrieves eight per page, and evaluates only those visible records.
 - Personal preferences and shared provider review configuration: Dynatrace app-state services when available.
 - Offline state: browser local storage only as an explicitly surfaced fallback.
 
-The active-provider collection is derived at runtime from provider-native Smartscape topology, cloud dimensions, source-owned provider tags, saved scope mappings, and enabled incident connections. There is no separate manual provider list. The active provider controls Coverage, Incidents, Evidence, and Directory inside the shared operating shell. Coverage is the landing workspace and decides only which provider service applies. Its default queue contains ambiguous or unresolved provider evidence, while Covered exposes automatic and saved matches and All loaded permits intentional exact mapping. Incidents consumes that mapping as read-only context and resolves public or tenant terms automatically. Evidence contains both Dynatrace-derived review candidates and separately labeled provider reports. Changing the active provider does not remove another provider, modify entity metadata, or change a provider connection.
+The active-provider collection is derived at runtime from provider-native Smartscape topology, cloud dimensions, source-owned provider tags, saved scope mappings, and enabled incident connections. There is no separate manual provider list. The active provider controls Coverage, Performance, Incidents, Evidence, and Directory inside the shared operating shell. Coverage is the landing workspace and decides only which provider service applies. Its default queue contains ambiguous or unresolved provider evidence, while Covered exposes automatic and saved matches and All loaded permits intentional exact mapping. Performance is a read-only portfolio of app-managed customer objectives for that provider. Incidents consumes the coverage mapping as read-only context and resolves public or tenant terms automatically. Evidence contains both Dynatrace-derived review candidates and separately labeled provider reports. Changing the active provider does not remove another provider, modify entity metadata, or change a provider connection.
 
 Directory is the normalized presentation of the complete supported `sla.directory` provider response. It keeps published terms, credit policy, claim requirements, exclusions, service-specific coverage, support plans, support-response status, and record provenance visibly separate from tenant-owned overrides. The parser rejects malformed nested support and tier records before they reach this surface.
 
