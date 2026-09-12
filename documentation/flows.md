@@ -110,6 +110,19 @@ Actor: signed-in user with `app-settings:objects:write` for the app's `provider-
 
 Deny or degraded behavior: a missing Smartscape relationship is not replaced with a name-based guess. A lower-confidence or ambiguous candidate is not presented as observed. A read-only user can inspect automatic matches and candidates but cannot create, update, or remove an override. If aggregate counts fail or exceed the loaded rows, Coverage reports incomplete inventory rather than a complete boundary.
 
+## Preview or create a customer objective
+
+Actor: signed-in user with `storage:metrics:read`; discovery requires `slo:slos:read`, and creation also requires `slo:slos:write`.
+
+1. The user selects one covered service in Coverage. Provider-native topology, a source tag, or an operator mapping must already establish the provider boundary.
+2. The app resolves the provider-service or provider-wide target, including an applicable tenant override, and runs a bounded Grail preview using service request count and failure count.
+3. The preview names one classic Dynatrace service, the effective target, the 30-day evaluation period, the terms source, and recent observed availability. Provider notices remain separate.
+4. The app looks only for objectives tagged `managed-by:sla-review` and uses a deterministic provider and service external ID to detect an existing record.
+5. If the scoped query validates and no record exists, a user with write access can review and confirm one create action. The custom SLI contains only the exact validated service ID.
+6. After creation, Coverage shows the existing objective and opens the native Service-Level Objectives app for further management.
+
+Deny or degraded behavior: page load and preview never create a resource. Missing classic IDs, targets, metric access, query validation, objective read access, or objective write access disable creation with a specific explanation. Runtime, host, and process rows never fan out into separate objectives. The generated objective measures the whole customer service and does not establish provider fault or credit eligibility.
+
 ## Add or edit a custom SLA
 
 Actor: signed-in user with `app-settings:objects:write` for the app's `contract-overrides` schema.

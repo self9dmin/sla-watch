@@ -109,6 +109,37 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(app.getByRole("button", { name: "Add custom terms" })).toHaveCount(0);
     await expectNoPageScroll(app);
 
+    const coverageFilter = app.getByRole("combobox", {
+      name: "Coverage worklist filter",
+    });
+    await coverageFilter.selectOption("covered");
+    await expect(app.getByText("Customer objective")).toBeVisible();
+    await expect(
+      app.getByText(/customer-observed availability for one Dynatrace service/i),
+    ).toBeVisible();
+    await expect(app.getByText("Last 30 days")).toBeVisible();
+    await expect(app.getByText(/sla\.directory|tenant override/i)).toBeVisible();
+
+    const createObjective = app.getByRole("button", { name: "Create objective" });
+    if (await createObjective.count()) {
+      await expect(createObjective).toBeVisible();
+      if (await createObjective.isEnabled()) {
+        await createObjective.click();
+        await expect(
+          app.getByText(/Create one Dynatrace objective for this provider and service/i),
+        ).toBeVisible();
+        await app.getByRole("button", { name: "Cancel" }).click();
+        await expect(
+          app.getByText(/Create one Dynatrace objective for this provider and service/i),
+        ).toHaveCount(0);
+      }
+    } else {
+      await expect(
+        app.getByRole("button", { name: "Open in SLOs" }),
+      ).toBeVisible();
+    }
+    await expectNoPageScroll(app);
+
     await app.getByRole("link", { name: "Incidents" }).click();
     await expect(app.getByRole("heading", { name: "Incidents" })).toBeVisible();
     const lookback = app.getByRole("combobox", {

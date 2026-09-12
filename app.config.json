@@ -3,7 +3,7 @@
   "environmentUrl": "https://your-environment.apps.dynatrace.com/",
   "app": {
     "name": "SLA Review",
-    "version": "0.0.48",
+    "version": "0.0.49",
     "icon": "ui/assets/sla-watch-icon.svg",
     "description": "Review provider terms against Dynatrace evidence and service ownership",
     "id": "my.sla",
@@ -15,6 +15,8 @@
       { "name": "storage:logs:read", "comment": "Check whether correlated log telemetry exists" },
       { "name": "storage:spans:read", "comment": "Check whether distributed tracing telemetry exists" },
       { "name": "storage:smartscape:read", "comment": "Read service-to-runtime topology for contract scope selection" },
+      { "name": "slo:slos:read", "comment": "Find objectives previously created from confirmed service coverage" },
+      { "name": "slo:slos:write", "comment": "Create one customer-confirmed availability objective for a selected Dynatrace service" },
       { "name": "app-settings:objects:read", "comment": "Read custom terms, provider connections, confirmed scope mappings, and evidence decisions" },
       { "name": "app-settings:objects:write", "comment": "Manage custom terms, scope mappings, provider connections, and human evidence decisions" },
       { "name": "state:user-app-states:read", "comment": "Restore the personal theme preference" },

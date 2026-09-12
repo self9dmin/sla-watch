@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.49
+
+- Added a compact customer-objective preview for each covered Dynatrace service using request count and failure count from Grail.
+- Uses the effective public or tenant availability target while keeping provider notices separate from customer-observed service health.
+- Added an explicit, permission-aware action that creates one native Dynatrace objective per provider and service only after the scoped query validates.
+- Routes created objectives to the native Service-Level Objectives app and detects existing app-managed objectives without duplicating them.
+
 ## 0.0.48
 
 - Kept provider-service mapping in Coverage and removed effective terms and custom-term creation from that workflow.
