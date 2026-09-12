@@ -1,6 +1,20 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.45`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.46`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.46 verified scenarios
+
+The `0.0.46` artifact from source commit `1dc26dd` was deployed to the designated Dynatrace target environment on 2026-09-11 and exercised through a fresh Chrome session. No provider configuration, provider credential, Credential Vault record, service mapping, custom terms record, evidence decision, Dynatrace entity, or cloud resource was created or changed. The production theme remained dark.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.46` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and fresh Chrome smoke; source commit `1dc26dd` |
+| Release gate | Type checks, lint, 19 test suites with 121 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed | Release commands completed locally with zero production dependency vulnerabilities |
+| Direct first use | The installed app opened directly in Coverage with no setup wizard, provider confirmation screen, or `Start setup` action | Fresh production startup and accessibility-tree smoke |
+| Live provider evidence | Coverage selected AWS from the environment and loaded two services matched from provider-native topology, eight total services, and no evidence-backed exceptions | Installed production Coverage smoke |
+| Optional guidance | Settings exposed one Walkthrough page, stated that the walkthrough changes nothing, and opened the five-step product tour only after an explicit action | Installed production Settings and walkthrough interaction |
+| Release history | Change log showed `0.0.46 Current release` and the direct-to-Coverage release details | Installed production change-log smoke |
+| Runtime quality | Production startup, navigation, provider evidence loading, Settings, change log, and walkthrough completed without a captured browser warning or error | Fresh Chrome browser-log and interaction smoke |
 
 ## 0.0.45 verified scenarios
 
