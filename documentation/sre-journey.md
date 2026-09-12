@@ -4,7 +4,7 @@
 
 The primary user is an on-call SRE or platform engineer. When a monitored service degrades, they need to determine whether the affected service has a defensible provider boundary and which published or tenant-specific terms apply, without treating correlation as proof of provider fault.
 
-The first useful moment is not completing setup. It is seeing provider-backed services identified from current Dynatrace evidence and a short queue containing only coverage exceptions that need judgment.
+The first useful moment is not completing setup. It is seeing every loaded service classified from current Dynatrace evidence, with covered services and genuine review work clearly separated.
 
 ## Journey map
 
@@ -12,11 +12,11 @@ The first useful moment is not completing setup. It is seeing provider-backed se
 | --- | --- | --- | --- | --- | --- |
 | Install and open | Dynatrace Apps | Open SLA Review | “Show me what this environment already knows.” | A wizard delays evidence and repeats automatic detection | Open directly in Coverage and start read-only detection |
 | Provider detection | Coverage status | Review detected providers and matched services | Confidence when the result reflects the environment | “Detected” could be mistaken for confirmed contract coverage | Label environment detection separately from provider terms, fault, and eligibility |
-| Coverage review | Coverage exceptions | Resolve only ambiguous, conflicting, or manually requested mappings | Focused, low-noise work | Large environments become an unbounded checklist | Default to exceptions, keep search and paging, and expose incomplete inventory |
+| Coverage review | Service coverage | See all loaded services, then focus Covered or Needs review | Complete context without hidden states | Large environments become an unbounded checklist | Default to All, keep visible filters, search, paging, and incomplete-inventory disclosure |
 | Review defaults | Settings | Choose the focused provider, tag convention, and evidence lookback | Consistent review behavior without duplicating provider setup | A stale focus could be mistaken for current evidence | Constrain the chooser to providers discovered from evidence, confirmed coverage, or enabled connections |
 | Incident connection | Settings | Optionally connect account-specific provider notices | Useful only when customer-scoped provider evidence is needed | Credentials and IAM setup interrupt first value | Ask for credentials only after the user chooses a provider connection |
 | Incident triage | Incidents | Review active and provider-relevant Problems, then choose Coverage, Evidence, or native Problems | A short, familiar worklist with one clear next step | A summary could become a noisy second Problems app or imply provider responsibility | Keep only decision context, preserve exact entity boundaries, and hand deep investigation to Problems |
-| Evidence decision | Evidence | Validate or dismiss a candidate for operational follow-up | A bounded decision with traceable context | Validation could be mistaken for claim approval | State that the provider determines fault, eligibility, and credit |
+| Evidence decision | Evidence | Mark a package ready or not provider-related | A bounded decision with traceable context and a clear stop | Readiness could be mistaken for submission or claim approval | State that nothing is sent and the provider determines fault, eligibility, and credit |
 | Follow-up | Review terms and future FinOps Agent | Review filing requirements or hand off later | Clear next action | Planned automation could imply an available capability | Keep the agent disabled until a verified implementation exists |
 
 ## Product decisions
@@ -25,6 +25,7 @@ The first useful moment is not completing setup. It is seeing provider-backed se
 - Make Coverage the first screen for every new and returning user.
 - Keep provider additions and optional incident connections in Settings.
 - Keep the walkthrough explicit, replayable, and non-mutating.
+- End the SRE path in Evidence with an explicit package-ready or not-provider-related state. Keep submission outside the current product.
 - Measure success by time to evidence, resolved coverage exceptions, and repeat incident review, not onboarding completion.
 
 ## Critical checks

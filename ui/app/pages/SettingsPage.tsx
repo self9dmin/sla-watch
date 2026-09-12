@@ -146,7 +146,7 @@ const WatchSettings = () => {
           <select value={lookbackHours} onChange={(event) => setLookbackHours(Number(event.target.value) as EvidenceLookbackHours)}>
             {EVIDENCE_LOOKBACK_OPTIONS.map(({ value, label }) => <option key={value} value={value}>Last {label}</option>)}
           </select>
-          <small>A wider window helps with slow-moving incidents but can add unrelated history.</small>
+          <small>This shared workspace window is also used by Incidents and Evidence. A wider window can add unrelated history.</small>
         </label>
       </div>
       <div className="settings-connection" role="status" aria-label="sla.directory connection status">
@@ -500,9 +500,15 @@ const SlaOverrideSettings = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { preferences } = useSlaPreferences();
-  const directoryRequest = useMemo(() => ({ vendor: preferences.providerSlug }), [preferences.providerSlug]);
+  const requestedProviderSlug = useMemo(() => {
+    const routeProvider = new URLSearchParams(location.search).get("provider")?.trim().toLowerCase();
+    return routeProvider && /^[a-z0-9-]+$/.test(routeProvider)
+      ? routeProvider
+      : preferences.providerSlug;
+  }, [location.search, preferences.providerSlug]);
+  const directoryRequest = useMemo(() => ({ vendor: requestedProviderSlug }), [requestedProviderSlug]);
   const directoryQuery = useAppFunction<SlaProviderResponse>({ name: "slaDirectory", data: directoryRequest, responseType: "json" });
-  const activeDirectory = directoryQuery.data?.provider.slug === preferences.providerSlug ? directoryQuery.data : undefined;
+  const activeDirectory = directoryQuery.data?.provider.slug === requestedProviderSlug ? directoryQuery.data : undefined;
   const serviceQuery = useDql({ query: SERVICES_QUERY });
   const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
   const contractSettings = useContractOverrides();
@@ -592,7 +598,7 @@ const SlaOverrideSettings = () => {
     <section className="settings-page settings-page-wide">
       <div className="page-intro sla-override-page-intro">
         <Text className="eyebrow">Settings · custom terms</Text>
-        <Heading level={1}>Add custom terms.</Heading>
+        <Heading level={1}>{activeDirectory ? `Add ${activeDirectory.provider.name} custom terms.` : "Add custom terms."}</Heading>
         <Paragraph>Define operational terms for a provider service and an explicit Dynatrace scope. Published terms remain available as the comparison baseline.</Paragraph>
       </div>
       {loading ? <div className="settings-callout" role="status"><strong>Loading contract scope</strong><span>Reading the provider record, service inventory, Smartscape topology, and tenant settings.</span></div> : null}
@@ -610,8 +616,14 @@ const SlaOverrideSettings = () => {
             initialValue={initialValue}
             canWrite={contractSettings.canWrite}
             saving={contractSettings.mutating}
-            onDismiss={() => { void navigate("/directory?tab=overrides"); }}
-            onSave={async (value) => contractSettings.createOverride(value)}
+            onDismiss={() => { void navigate(`/directory?provider=${encodeURIComponent(requestedProviderSlug)}&tab=overrides`); }}
+            onSave={async (value) => {
+              if (
+                value.providerSlug !== requestedProviderSlug ||
+                activeDirectory.provider.slug !== requestedProviderSlug
+              ) throw new Error("The selected provider changed. Return to Directory and start this custom term again.");
+              await contractSettings.createOverride(value);
+            }}
             onDelete={contractSettings.deleteOverride}
           />
         </>

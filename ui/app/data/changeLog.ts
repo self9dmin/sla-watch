@@ -7,8 +7,21 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.51",
+    version: "0.0.52",
     label: "Current release",
+    summary: "Completed the SRE journey from coverage to a ready evidence package.",
+    details: [
+      "Coverage now opens with every loaded service visible and keeps All, Covered, and Needs review as prominent count-backed controls.",
+      "One normalized service model drives Coverage totals, groups, status, and recommendations so completion signals stay consistent.",
+      "Incidents and Evidence preserve the provider, Problem, affected service, and return destination through a Coverage repair.",
+      "Coverage and Performance now display the same native Dynatrace objective evaluation.",
+      "Evidence assembles current impact, coverage, terms, and required evidence into a human-reviewed package with an explicit stopping state and no submission.",
+      "Custom terms remain bound to the selected provider, repeated empty-state actions are removed, and the walkthrough ends at the Evidence decision.",
+    ],
+  },
+  {
+    version: "0.0.51",
+    label: "Previous release",
     summary: "Focused Incidents on Dynatrace Problem triage.",
     details: [
       "Incidents now presents active and provider-relevant Problems first in bounded pages of eight.",

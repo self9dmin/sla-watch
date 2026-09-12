@@ -181,7 +181,7 @@ export const Header = ({
           <p>
             Use Coverage to confirm the provider boundary, Performance to track
             customer objectives, Incidents to inspect Dynatrace Problems, and
-            Evidence to validate review candidates or compare provider reports.
+            Evidence to prepare review packages or compare provider reports.
             FinOps Agent is planned and is not available in this release.
           </p>
           <section>
@@ -208,11 +208,12 @@ export const Header = ({
             </p>
           </section>
           <section>
-            <h3>4. Validate evidence</h3>
+            <h3>4. Finish the evidence review</h3>
             <p>
               Evidence lists Problems that overlap confirmed or suggested
-              provider coverage. Record a human validation or dismissal, then
-              review any provider-owned report as separate supporting evidence.
+              provider coverage. Mark a package ready or not provider-related,
+              then review any provider-owned report as separate supporting evidence.
+              Nothing is submitted from this workspace.
             </p>
           </section>
           <section>

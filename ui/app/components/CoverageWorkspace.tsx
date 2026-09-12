@@ -1,34 +1,35 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { openApp } from "@dynatrace-sdk/navigation";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { HostsIcon, ServicesIcon, SmartscapeIcon } from "@dynatrace/strato-icons";
 import type {
   CoverageInventoryStatus,
-  ProblemRecord,
   ProviderScopeAssignmentRecord,
   ProviderScopeAssignmentValue,
   ServiceRecord,
   SetupRecommendation,
   SlaProviderResponse,
-  SmartscapeScopeEdge,
 } from "../types";
-import { prioritizeServicesByProblemActivity } from "../data/providerAttribution";
 import { resolveEffectiveContractTerms } from "../data/contractOverrides";
+import {
+  rowIsCovered,
+  rowNeedsReview,
+  rowSearchValue,
+  rowServiceId,
+  rowServiceName,
+  type CoverageFilter,
+  type CoverageRow,
+  type ProviderCoverageModel,
+} from "../data/providerCoverage";
 import {
   createProviderScopeAssignmentKey,
   createServiceScopeAssignment,
-  createServiceScopeAssignmentKey,
-  inferProviderServiceCandidate,
   isServiceScopeAssignment,
-  resolveProviderServiceCandidates,
   runtimeEntityIdForEdge,
   serviceEntityIdForEdge,
-  type ProviderServiceCandidate,
-  type ProviderServiceResolution,
 } from "../data/providerScopeAssignments";
-import { providerTagValues } from "../data/providerTags";
-import { topologyAnchorRank } from "../data/topology";
+import { safeWorkspaceReturnPath } from "../data/reviewRoutes";
 import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAssignments";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { SetupAdvisor } from "./SetupAdvisor";
@@ -36,38 +37,11 @@ import { ServiceObjectivePreview } from "./ServiceObjectivePreview";
 
 type Tone = "neutral" | "warning" | "positive";
 
-type ScopeCoverageRow = {
-  kind: "scope";
-  key: string;
-  edge: SmartscapeScopeEdge;
-  assignment?: ProviderScopeAssignmentRecord;
-  candidate: ProviderServiceCandidate | null;
-  observed: boolean;
-  ambiguous: boolean;
-  evidenceCount: number;
-  sourceTag: boolean;
-  problemCount: number;
-};
-
-type ServiceCoverageRow = {
-  kind: "service";
-  key: string;
-  service: ServiceRecord;
-  assignment?: ProviderScopeAssignmentRecord;
-  values: string[];
-  sourceTag: boolean;
-  conflicting: boolean;
-  problemCount: number;
-};
-
-type CoverageRow = ScopeCoverageRow | ServiceCoverageRow;
-
 type CoverageWorkspaceProps = {
   provider?: SlaProviderResponse;
-  topology: SmartscapeScopeEdge[];
   services: ServiceRecord[];
-  problems: ProblemRecord[];
   providerTagKey: string;
+  coverageModel: ProviderCoverageModel;
   loading: boolean;
   error?: Error;
   scopeSettings: ProviderScopeAssignmentsState;
@@ -81,41 +55,13 @@ const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode 
   <span className={`status-pill status-pill-${tone}`}>{children}</span>
 );
 
-const rowIsCovered = (row: CoverageRow): boolean => Boolean(
-  row.assignment || row.sourceTag || (row.kind === "scope" && row.observed),
-);
-
-const rowNeedsReview = (row: CoverageRow): boolean => {
-  if (rowIsCovered(row)) return false;
-  return row.kind === "scope" && Boolean(
-    row.ambiguous || row.candidate || row.edge.providerSlug,
-  );
-};
-
-const rowServiceName = (row: CoverageRow): string =>
-  row.kind === "scope" ? row.edge.serviceName : row.service.name;
-
-const rowSortRank = (row: CoverageRow): number => {
-  if (rowIsCovered(row)) return 3;
-  if (row.problemCount > 0) return 0;
-  if (row.kind === "scope" && row.candidate) return 1;
-  return 2;
-};
-
 const COVERAGE_PAGE_SIZE = 50;
-
-const rowSearchValue = (row: CoverageRow): string => (
-  row.kind === "scope"
-    ? `${row.edge.serviceName} ${row.edge.targetName} ${row.edge.targetType} ${row.edge.location ?? ""} ${row.candidate?.providerServiceName ?? ""}`
-    : `${row.service.name} ${row.service.id} ${row.values.join(" ")}`
-).toLowerCase();
 
 export const CoverageWorkspace = ({
   provider,
-  topology,
   services,
-  problems,
   providerTagKey,
+  coverageModel,
   loading,
   error,
   scopeSettings,
@@ -124,137 +70,30 @@ export const CoverageWorkspace = ({
   limitedContext,
   inventory,
 }: CoverageWorkspaceProps) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [selectedProviderServiceId, setSelectedProviderServiceId] = useState("");
   const [feedback, setFeedback] = useState<{ tone: Tone; message: string }>();
-  const [coverageFilter, setCoverageFilter] = useState<"review" | "covered" | "all">("review");
+  const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
   const [searchText, setSearchText] = useState("");
   const [page, setPage] = useState(0);
+  const lastFocusedService = useRef<string | null>(null);
   const contractSettings = useContractOverrides();
   const providerSlug = provider?.provider.slug ?? "";
   const providerName = provider?.provider.name ?? providerSlug;
+  const routeParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const focusedServiceId = routeParams.get("service");
+  const focusedProblemId = routeParams.get("problem");
+  const returnPath = safeWorkspaceReturnPath(
+    routeParams.get("return"),
+    focusedProblemId ? `/incidents?provider=${encodeURIComponent(providerSlug)}&problem=${encodeURIComponent(focusedProblemId)}` : "/incidents",
+  );
   const assignmentDisplayName = (assignment: ProviderScopeAssignmentRecord): string =>
     assignment.providerServiceId === "*" ? `${providerName} (provider-wide)` : assignment.providerServiceName;
-
-  const providerAssignments = useMemo(
-    () => scopeSettings.assignments.filter((assignment) =>
-      assignment.enabled && assignment.providerSlug === providerSlug,
-    ),
-    [providerSlug, scopeSettings.assignments],
-  );
-
-  const problemCounts = useMemo(
-    () => new Map(
-      prioritizeServicesByProblemActivity(services, problems)
-        .map(({ service, problemCount }) => [service.id, problemCount]),
-    ),
-    [problems, services],
-  );
-
-  const serviceById = useMemo(
-    () => new Map(services.map((service) => [service.id, service])),
-    [services],
-  );
-
-  const candidateResolutions = useMemo<Map<string, ProviderServiceResolution>>(
-    () => provider ? resolveProviderServiceCandidates(topology, provider) : new Map<string, ProviderServiceResolution>(),
-    [provider, topology],
-  );
-
-  const scopeRows = useMemo<ScopeCoverageRow[]>(() => {
-    const edgesByService = new Map<string, SmartscapeScopeEdge[]>();
-    topology.forEach((edge) => {
-      const serviceEntityId = serviceEntityIdForEdge(edge);
-      const hasAssignment = providerAssignments.some((assignment) => assignment.serviceEntityId === serviceEntityId);
-      if (edge.providerSlug !== providerSlug && !hasAssignment) return;
-      edgesByService.set(serviceEntityId, [
-        ...(edgesByService.get(serviceEntityId) ?? []),
-        edge,
-      ]);
-    });
-
-    return Array.from(edgesByService.entries()).map(([serviceEntityId, edges]) => {
-      const serviceAssignments = providerAssignments.filter((assignment) => assignment.serviceEntityId === serviceEntityId);
-      const exactAssignmentByRuntime = new Map(serviceAssignments.map((assignment) => [assignment.runtimeEntityId, assignment]));
-      const resolution = candidateResolutions.get(serviceEntityId);
-      const orderedEdges = [...edges].sort((left, right) => {
-        const leftAssigned = exactAssignmentByRuntime.has(runtimeEntityIdForEdge(left)) ? 0 : 1;
-        const rightAssigned = exactAssignmentByRuntime.has(runtimeEntityIdForEdge(right)) ? 0 : 1;
-        if (leftAssigned !== rightAssigned) return leftAssigned - rightAssigned;
-        const leftCandidate = provider ? inferProviderServiceCandidate(left, provider) : null;
-        const rightCandidate = provider ? inferProviderServiceCandidate(right, provider) : null;
-        const leftMatches = resolution?.candidate?.providerServiceId === leftCandidate?.providerServiceId ? 0 : 1;
-        const rightMatches = resolution?.candidate?.providerServiceId === rightCandidate?.providerServiceId ? 0 : 1;
-        return leftMatches - rightMatches || topologyAnchorRank(left) - topologyAnchorRank(right);
-      });
-      const edge = orderedEdges[0];
-      const assignment = exactAssignmentByRuntime.get(runtimeEntityIdForEdge(edge))
-        ?? serviceAssignments.find(isServiceScopeAssignment)
-        ?? serviceAssignments[0];
-      const values = providerTagValues(
-        serviceById.get(serviceEntityId)?.tags ?? edge.serviceTags,
-        providerTagKey,
-        providerSlug,
-      );
-      return {
-        kind: "scope" as const,
-        key: `scope:${providerSlug}:${serviceEntityId}`,
-        edge,
-        assignment,
-        candidate: resolution?.candidate ?? null,
-        observed: resolution?.candidate?.confidence === "observed" && !resolution.ambiguous,
-        ambiguous: resolution?.ambiguous ?? false,
-        evidenceCount: resolution?.evidenceCount ?? 0,
-        sourceTag: values.includes(providerSlug.toLowerCase()),
-        problemCount: problemCounts.get(serviceEntityId) ?? 0,
-      };
-    });
-  }, [candidateResolutions, problemCounts, provider, providerAssignments, providerSlug, providerTagKey, serviceById, topology]);
-
-  const topologyServiceIds = useMemo(
-    () => new Set(scopeRows.map((row) => serviceEntityIdForEdge(row.edge))),
-    [scopeRows],
-  );
-
-  const serviceRows = useMemo<ServiceCoverageRow[]>(() =>
-    prioritizeServicesByProblemActivity(
-      services.filter((service) => !topologyServiceIds.has(service.id)),
-      problems,
-    ).map(({ service, problemCount }) => {
-      const values = providerTagValues(service.tags, providerTagKey, providerSlug);
-      const sourceTag = values.includes(providerSlug.toLowerCase());
-      const assignmentKey = createServiceScopeAssignmentKey(providerSlug, service.id);
-      const assignment = providerAssignments.find((item) =>
-        item.assignmentKey === assignmentKey && isServiceScopeAssignment(item),
-      );
-      return {
-        kind: "service" as const,
-        key: `service:${assignmentKey}`,
-        service,
-        assignment,
-        values,
-        sourceTag,
-        conflicting: values.length > 0 && !sourceTag,
-        problemCount,
-      };
-    }),
-  [problems, providerAssignments, providerSlug, providerTagKey, services, topologyServiceIds]);
-
-  const coverageRows = useMemo(
-    () => [...scopeRows, ...serviceRows].sort((left, right) => {
-      const rank = rowSortRank(left) - rowSortRank(right);
-      if (rank !== 0) return rank;
-      const activity = right.problemCount - left.problemCount;
-      if (activity !== 0) return activity;
-      const name = rowServiceName(left).localeCompare(rowServiceName(right));
-      if (name !== 0) return name;
-      return left.kind.localeCompare(right.kind);
-    }),
-    [scopeRows, serviceRows],
-  );
-
-  const reviewRows = coverageRows.filter(rowNeedsReview);
-  const coveredRows = coverageRows.filter(rowIsCovered);
+  const coverageRows = coverageModel.rows;
+  const reviewRows = coverageModel.reviewRows;
+  const coveredRows = coverageModel.coveredRows;
 
   const filteredRows = useMemo(() => {
     const rows = coverageFilter === "review"
@@ -285,6 +124,21 @@ export const CoverageWorkspace = ({
   useEffect(() => {
     if (page >= pageCount) setPage(pageCount - 1);
   }, [page, pageCount]);
+
+  useEffect(() => {
+    if (!focusedServiceId || loading || scopeSettings.loading) return;
+    const focusKey = `${providerSlug}:${focusedServiceId}`;
+    if (lastFocusedService.current === focusKey) return;
+    const targetIndex = coverageRows.findIndex(
+      (row) => rowServiceId(row) === focusedServiceId,
+    );
+    if (targetIndex < 0) return;
+    lastFocusedService.current = focusKey;
+    setCoverageFilter("all");
+    setSearchText("");
+    setPage(Math.floor(targetIndex / COVERAGE_PAGE_SIZE));
+    setSelectedRowKey(coverageRows[targetIndex].key);
+  }, [coverageRows, focusedServiceId, loading, providerSlug, scopeSettings.loading]);
 
   useEffect(() => {
     if (!provider || loading || scopeSettings.loading) return;
@@ -380,6 +234,10 @@ export const CoverageWorkspace = ({
     try {
       if (selectedAssignment) await scopeSettings.updateAssignment(selectedAssignment, value);
       else await scopeSettings.createAssignment(value);
+      if (focusedProblemId && focusedServiceId) {
+        void navigate(returnPath);
+        return;
+      }
       setFeedback({
         tone: "positive",
         message: `${value.providerServiceName} will be reused for incidents affecting ${value.serviceEntityName}.`,
@@ -506,12 +364,25 @@ export const CoverageWorkspace = ({
   return (
     <section className="scope-map-view setup-scope-map" aria-labelledby="service-coverage-title">
       <div className="scope-map-toolbar">
-        <div className="scope-map-title"><ServicesIcon /><div><strong id="service-coverage-title">Coverage exceptions</strong><span>Dynatrace applies provider-native matches. Review only provider evidence that needs a service match.</span></div></div>
+        <div className="scope-map-title"><ServicesIcon /><div><strong id="service-coverage-title">Service coverage</strong><span>See every loaded service. Only ambiguous provider evidence needs a decision.</span></div></div>
         <div className="scope-map-toolbar-actions">
           <Button size="condensed" onClick={() => openApp("dynatrace.smartscape", "view/dynatrace.smartscape.smartscape-on-grail")}><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
         </div>
       </div>
       <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed mappings, and matching source tags identify the provider service. Incidents and Evidence then resolve the applicable terms automatically. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>
+      {focusedProblemId ? (
+        <div className="coverage-review-context" role="status">
+          <div>
+            <strong>Resolve coverage for {focusedProblemId}</strong>
+            <span>
+              {focusedServiceId
+                ? `Review ${services.find((service) => service.id === focusedServiceId)?.name ?? focusedServiceId}. Saving a mapping returns you to the same review.`
+                : "Review the affected service, then return to the same incident."}
+            </span>
+          </div>
+          <Button as={Link} to={returnPath} size="condensed">Back to review</Button>
+        </div>
+      ) : null}
       {inventory.incomplete || inventory.unverified ? (
         <div className="coverage-inventory-warning" role="status">
           <strong>{inventory.incomplete ? "Inventory incomplete" : "Inventory could not be verified"}</strong>
@@ -531,11 +402,24 @@ export const CoverageWorkspace = ({
           <div className="coverage-worklist">
             <div className="coverage-list-toolbar">
               <input type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Find a service or runtime" aria-label="Search provider coverage" />
-              <select value={coverageFilter} onChange={(event) => setCoverageFilter(event.target.value as "review" | "covered" | "all")} aria-label="Coverage worklist filter">
-                <option value="review">Needs review ({reviewRows.length})</option>
-                <option value="covered">Covered ({coveredRows.length})</option>
-                <option value="all">All loaded ({coverageRows.length})</option>
-              </select>
+              <div className="coverage-filter-tabs" role="group" aria-label="Coverage worklist views">
+                {([
+                  ["all", "All", coverageRows.length],
+                  ["covered", "Covered", coveredRows.length],
+                  ["review", "Needs review", reviewRows.length],
+                ] as const).map(([value, label, count]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={coverageFilter === value ? "active" : ""}
+                    aria-pressed={coverageFilter === value}
+                    onClick={() => setCoverageFilter(value)}
+                  >
+                    <span>{label}</span>
+                    <strong>{count.toLocaleString()}</strong>
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="scope-map-list" role="listbox" aria-label="Provider coverage worklist">
               {visibleRows.length > 0 ? (
@@ -547,7 +431,7 @@ export const CoverageWorkspace = ({
               ) : (
                 <div className="coverage-list-empty">
                   <strong>{coverageFilter === "review" ? "No evidence-backed exceptions in the loaded inventory" : "No matching services"}</strong>
-                  <span>{inventory.incomplete ? "This is not a complete-coverage result because the inventory is bounded." : coverageFilter === "review" ? "Use All loaded only when you need to map a service without provider evidence." : "Change the filter or search to review another service."}</span>
+                  <span>{inventory.incomplete ? "This is not a complete-coverage result because the inventory is bounded." : coverageFilter === "review" ? "Choose All to inspect covered services and services without provider evidence." : "Change the view or search to review another service."}</span>
                   {coverageFilter === "review" && coveredRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("covered")}>Inspect covered services</Button> : coverageFilter === "review" && coverageRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("all")}>View all loaded services</Button> : null}
                 </div>
               )}
@@ -601,7 +485,7 @@ export const CoverageWorkspace = ({
               <div className="scope-mapping-state">
                 <StatusPill tone="positive">No exceptions</StatusPill>
                 <strong>No provider match needs review</strong>
-                <span>Switch to Covered to inspect automatic matches, or All loaded to map a service without provider evidence.</span>
+                <span>Choose Covered to inspect automatic matches, or All to map a service without provider evidence.</span>
               </div>
             )}
             <div className="coverage-detail-checks">

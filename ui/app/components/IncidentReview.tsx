@@ -21,6 +21,11 @@ import {
   formatEvidenceLookback,
 } from "../data/lookback";
 import { prioritizeProblems } from "../data/incidentPrioritization";
+import {
+  createCoverageReviewPath,
+  createEvidenceReviewPath,
+  createIncidentReviewPath,
+} from "../data/reviewRoutes";
 import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
 
 type Tone = "neutral" | "warning" | "positive";
@@ -93,13 +98,17 @@ const candidateByProblem = (
 const IncidentDetail = ({
   problem,
   candidate,
+  serviceIds,
   serviceNames,
+  providerSlug,
   providerName,
   matchingLoading,
 }: {
   problem: ProblemRecord;
   candidate?: EvidenceCandidate;
+  serviceIds: string[];
   serviceNames: string[];
+  providerSlug: string;
   providerName: string;
   matchingLoading: boolean;
 }) => {
@@ -136,7 +145,15 @@ const IncidentDetail = ({
     : candidate?.mappingEvidence ??
       (hasAffectedServiceScope
         ? `No affected service currently overlaps ${providerName} coverage. Confirm the boundary before treating this Problem as provider evidence.`
-        : "Dynatrace did not return an affected service that SLA Review can compare with provider coverage.");
+         : "Dynatrace did not return an affected service that SLA Review can compare with provider coverage.");
+  const incidentPath = createIncidentReviewPath({ providerSlug, problemId: problem.id });
+  const evidencePath = createEvidenceReviewPath({ providerSlug, problemId: problem.id });
+  const coveragePath = createCoverageReviewPath({
+    providerSlug,
+    problemId: problem.id,
+    serviceId: serviceIds[0],
+    returnTo: incidentPath,
+  });
 
   return (
     <article className="incident-detail">
@@ -178,14 +195,14 @@ const IncidentDetail = ({
         {!matchingLoading && candidate ? (
           <Button
             as={Link}
-            to={`/evidence?problem=${encodeURIComponent(problem.id)}`}
+            to={evidencePath}
             size="condensed"
             variant="emphasized"
           >
             Review evidence
           </Button>
         ) : !matchingLoading && hasAffectedServiceScope ? (
-          <Button as={Link} to="/" size="condensed">
+          <Button as={Link} to={coveragePath} size="condensed">
             Resolve coverage
           </Button>
         ) : null}
@@ -279,6 +296,9 @@ export const IncidentReview = ({
         .map((id) => serviceNamesById.get(id))
         .filter((name): name is string => Boolean(name))
     : [];
+  const selectedServiceIds = selectedProblem
+    ? selectedProblem.affectedEntityIds.filter((id) => serviceNamesById.has(id))
+    : [];
   const activeProblems = problems.filter(
     (problem) => problem.status.toUpperCase() === "ACTIVE",
   ).length;
@@ -369,7 +389,7 @@ export const IncidentReview = ({
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
-          <small>tenant evidence window</small>
+          <small>shared workspace window</small>
         </div>
       </div>
 
@@ -484,7 +504,9 @@ export const IncidentReview = ({
             <IncidentDetail
               problem={selectedProblem}
               candidate={selectedCandidate}
+              serviceIds={selectedServiceIds}
               serviceNames={selectedServiceNames}
+              providerSlug={provider?.provider.slug ?? "provider"}
               providerName={provider?.provider.name ?? "the selected provider"}
               matchingLoading={matchingLoading}
             />

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.52
+
+- Opens Coverage in a complete All view with visible All, Covered, and Needs review controls instead of hiding the full inventory behind a dropdown.
+- Derives the Coverage summary, worklist groups, and filter counts from one normalized service model so a service cannot appear covered and unresolved at the same time.
+- Preserves provider, Problem, affected service, and return context when Incidents or Evidence sends an SRE to repair Coverage.
+- Uses the native Dynatrace objective evaluation in both Coverage and Performance so the same objective does not show competing values.
+- Turns Evidence into a compact claim-package review with an explicit package-ready or not-provider-related stopping state. Nothing is submitted.
+- Pins custom-term creation to the provider selected in the route, removes duplicate empty-state actions, clarifies the shared evidence window, and finishes the walkthrough on Evidence.
+
 ## 0.0.51
 
 - Redesigned Incidents as a compact Dynatrace Problems triage workspace instead of a second investigation or contract screen.

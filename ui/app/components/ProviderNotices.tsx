@@ -216,6 +216,9 @@ export const ProviderNotices = ({ providerSlug, lookbackHours, topology = [], em
   const currentStateOnly = providerSlug === "oci" && response?.source === "public";
   const sourceScope = connection?.displayName ?? response?.scopeLabel ?? response?.projectId ?? "Public provider status";
   const connectionKind = awsSupported ? "account" : azureSupported ? "subscription" : ociSupported ? "tenancy" : "project";
+  const showHeaderSourceAction = !configuredSourceRequired && supported && Boolean(
+    response || savedConnections.length > 0 || hasPublicSource,
+  );
 
   const content = (
     <>
@@ -232,7 +235,7 @@ export const ProviderNotices = ({ providerSlug, lookbackHours, topology = [], em
               {hasPublicSource ? <option value="public">Public {providerName} status</option> : null}
             </select>
           ) : null}
-          <Button as={Link} to="/settings/provider-connections" size="condensed">{accountConnectionSupported ? "Configure source" : "Source details"}</Button>
+          {showHeaderSourceAction ? <Button as={Link} to="/settings/provider-connections" size="condensed">Manage sources</Button> : null}
         </div>
       </div>
 
