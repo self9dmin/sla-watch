@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.46`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.48`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.48 verified scenarios
+
+The `0.0.48` artifact from source commit `b153ff6` was deployed to the designated Dynatrace target environment on 2026-09-11 and exercised through the connected Chrome profile. No provider configuration, provider credential, Credential Vault record, service mapping, custom terms record, evidence decision, Dynatrace entity, or cloud resource was created or changed. The production theme remained dark.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.48` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `b153ff6` |
+| Release gate | Type checks, lint, 20 test suites with 126 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed | `npm run verify:release`; zero production dependency vulnerabilities |
+| Direct Coverage entry | The installed app opened directly in Coverage, selected AWS from tenant evidence, and reported two services matched from provider-native topology without a setup wizard or provider checklist | Installed production Coverage smoke |
+| Single mapping source | Incident review exposed no provider-service or Dynatrace-scope selector. It resolved the selected Problem through Coverage and conservatively used provider-wide terms when no unique mapping existed | Installed production Incidents smoke |
+| Evidence separation | Evidence kept review candidates separate from provider reports and routed the missing AWS account source to Provider connections without treating it as local impact | Installed production Evidence and Provider reports smoke |
+| Directory completeness | AWS terms exposed published availability, credit policy and tiers, filing instructions, evidence requirements, exclusions, vendor provenance, and the 62-service catalog entry point | Installed production Directory smoke against the live `sla.directory` response |
+| AWS connection guidance | Provider connections required `health:DescribeEvents`, `health:DescribeEventDetails`, and `health:DescribeAffectedEntities`, accepted only a Credential Vault ID, and remained unsaved | Installed production Settings smoke; no credential was entered or stored |
+| Release history | Change log showed `0.0.48 Current release` and the Coverage inheritance and exact AWS resource-correlation changes | Installed production change-log smoke |
+| Runtime quality | Coverage, Incidents, Evidence, Directory, Settings, and change log loaded without a captured browser warning or error | Connected Chrome browser-log and interaction smoke |
 
 ## 0.0.46 verified scenarios
 
