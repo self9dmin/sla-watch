@@ -5,6 +5,7 @@ import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import type {
   EvidenceDecisionRecord,
+  EvidenceDecisionStatus,
   EvidenceLookbackHours,
   ProblemRecord,
   ProviderScopeAssignmentRecord,
@@ -12,6 +13,7 @@ import type {
   SlaProviderResponse,
   SmartscapeScopeEdge,
 } from "../types";
+import type { ServiceTelemetryMap } from "../data/serviceTelemetry";
 import {
   buildEvidenceCandidates,
   evidenceDecisionInputError,
@@ -23,12 +25,20 @@ import {
 import { resolveEffectiveContractTerms } from "../data/contractOverrides";
 import { formatEvidenceLookback } from "../data/lookback";
 import {
+  correlateProviderNoticesToCandidate,
+} from "../data/providerNoticeCorrelation";
+import { summarizeServiceTelemetry } from "../data/serviceTelemetry";
+import { formatObjectiveTimeframe } from "../data/serviceObjectives";
+import {
   createCoverageReviewPath,
   createEvidenceReviewPath,
   createIncidentReviewPath,
 } from "../data/reviewRoutes";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { useEvidenceDecisions } from "../hooks/useEvidenceDecisions";
+import { useObjectiveEvaluations } from "../hooks/useObjectiveEvaluations";
+import { useProviderNoticeSource } from "../hooks/useProviderNoticeSource";
+import { useServiceObjectives } from "../hooks/useServiceObjectives";
 import { ProviderNotices } from "./ProviderNotices";
 
 type Tone = "neutral" | "warning" | "positive";
@@ -43,6 +53,9 @@ type EvidenceWorkspaceProps = {
   services: ServiceRecord[];
   topology: SmartscapeScopeEdge[];
   assignments: ProviderScopeAssignmentRecord[];
+  serviceTelemetry: ServiceTelemetryMap;
+  serviceTelemetryLoading: boolean;
+  serviceTelemetryError?: Error;
   lookbackHours: EvidenceLookbackHours;
   loading: boolean;
   error?: Error;
@@ -86,9 +99,77 @@ const CandidateState = ({
 }) => {
   if (decision?.status === "validated")
     return <StatusPill tone="positive">Package ready</StatusPill>;
+  if (decision?.status === "not-ready")
+    return <StatusPill tone="warning">Not ready</StatusPill>;
   if (decision?.status === "dismissed")
     return <StatusPill tone="neutral">Not provider-related</StatusPill>;
-  return <StatusPill tone="warning">Not ready</StatusPill>;
+  return <StatusPill tone="warning">Needs review</StatusPill>;
+};
+
+const formatCount = (value: number): string =>
+  Math.round(value).toLocaleString();
+
+const formatAvailability = (requests: number, failures: number): string => {
+  if (requests <= 0) return "No request data";
+  const value = Math.max(0, (1 - failures / requests) * 100);
+  return `${value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}%`;
+};
+
+const objectiveState = (status?: string): string => {
+  if (status === "SUCCESS") return "On target";
+  if (status === "WARNING") return "At risk";
+  if (status === "FAILURE") return "Below target";
+  return "No result";
+};
+
+const EvidenceObjectiveRow = ({
+  service,
+  providerSlug,
+}: {
+  service: ServiceRecord;
+  providerSlug: string;
+}) => {
+  const objectives = useServiceObjectives({
+    enabled: Boolean(service.id),
+    providerSlug,
+    serviceClassicId: service.id,
+    pageSize: 1,
+  });
+  const objective = objectives.objectives[0];
+  const selectedObjectives = useMemo(
+    () => objective ? [objective] : [],
+    [objective],
+  );
+  const evaluations = useObjectiveEvaluations(selectedObjectives);
+  const evaluation = objective ? evaluations[objective.id] : undefined;
+  const target = objective?.criteria[0]?.target;
+  const result = evaluation?.result;
+  const observed = typeof result?.value === "number"
+    ? `${result.value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}%`
+    : "No result";
+
+  return (
+    <li>
+      <span>
+        <strong>{service.name}</strong>
+        <small>{objective
+          ? formatObjectiveTimeframe(objective.criteria[0]?.timeframeFrom)
+          : "No managed objective"}</small>
+      </span>
+      <span>
+        <strong>{objectives.loading
+          ? "Checking"
+          : objectives.error
+            ? "Unavailable"
+            : objective
+              ? objectiveState(result?.status)
+              : "Not created"}</strong>
+        <small>{objective
+          ? `${observed} observed · ${typeof target === "number" ? `${target}% target` : "target unavailable"}`
+          : "Use Performance to add one when useful."}</small>
+      </span>
+    </li>
+  );
 };
 
 const CandidateDetail = ({
@@ -96,16 +177,31 @@ const CandidateDetail = ({
   decision,
   provider,
   settings,
+  topology,
+  serviceTelemetry,
+  serviceTelemetryLoading,
+  serviceTelemetryError,
+  lookbackHours,
 }: {
   candidate: EvidenceCandidate;
   decision?: EvidenceDecisionRecord;
   provider: SlaProviderResponse;
   settings: ReturnType<typeof useEvidenceDecisions>;
+  topology: SmartscapeScopeEdge[];
+  serviceTelemetry: ServiceTelemetryMap;
+  serviceTelemetryLoading: boolean;
+  serviceTelemetryError?: Error;
+  lookbackHours: EvidenceLookbackHours;
 }) => {
   const [note, setNote] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
+  const [acknowledgedEvidence, setAcknowledgedEvidence] = useState<string[]>([]);
   const [saveError, setSaveError] = useState<string>();
   const contractSettings = useContractOverrides();
+  const providerReports = useProviderNoticeSource(
+    provider.provider.slug,
+    lookbackHours,
+  );
   const decisionIsCurrent = decision
     ? evidenceDecisionMatchesCandidate(decision, candidate)
     : false;
@@ -116,14 +212,26 @@ const CandidateDetail = ({
     setAcknowledged(
       decisionIsCurrent && decision?.status === "validated",
     );
+    setAcknowledgedEvidence(
+      decisionIsCurrent ? decision?.acknowledgedEvidence ?? [] : [],
+    );
     setSaveError(undefined);
-  }, [candidate.key, decision?.decisionNote, decision?.status, decisionIsCurrent]);
+  }, [
+    candidate.key,
+    decision?.acknowledgedEvidence,
+    decision?.decisionNote,
+    decision?.status,
+    decisionIsCurrent,
+  ]);
 
-  const save = async (status: "validated" | "dismissed") => {
+  const requiredEvidence = provider.provider.claimProcess?.requiredEvidence ?? [];
+  const save = async (status: EvidenceDecisionStatus) => {
     const inputError = evidenceDecisionInputError({
       status,
       note,
       acknowledged,
+      requiredEvidence,
+      acknowledgedEvidence,
     });
     if (inputError) {
       setSaveError(inputError);
@@ -137,6 +245,7 @@ const CandidateDetail = ({
           provider.provider.slug,
           status,
           note,
+          acknowledgedEvidence,
         ),
       );
     } catch (error) {
@@ -155,6 +264,7 @@ const CandidateDetail = ({
       await settings.deleteDecision(decision);
       setNote("");
       setAcknowledged(false);
+      setAcknowledgedEvidence([]);
     } catch (error) {
       setSaveError(
         error instanceof Error
@@ -194,14 +304,84 @@ const CandidateDetail = ({
     providerSlug: provider.provider.slug,
     problemId: candidate.problem.id,
     serviceId,
+    providerServiceId,
     returnTo: evidencePath,
   });
-  const readyEnough = Boolean(
-    candidate.scopeConfirmed &&
-    candidate.problem.startedAt &&
-    candidate.problem.affectedEntityIds.length > 0,
+  const reportParams = new URLSearchParams({
+    provider: provider.provider.slug,
+    view: "provider-reports",
+    problem: candidate.problem.id,
+  });
+  const serviceIds = useMemo(
+    () => candidate.affectedServices.length > 0
+      ? candidate.affectedServices.map((service) => service.id)
+      : candidate.problem.affectedEntityIds,
+    [candidate.affectedServices, candidate.problem.affectedEntityIds],
   );
-  const requiredEvidence = provider.provider.claimProcess?.requiredEvidence ?? [];
+  const telemetry = useMemo(
+    () => summarizeServiceTelemetry(serviceTelemetry, serviceIds),
+    [serviceIds, serviceTelemetry],
+  );
+  const telemetryAvailable = serviceIds.some((id) =>
+    serviceTelemetry.has(id.trim().toLowerCase()),
+  );
+  const noticeMatches = useMemo(
+    () => correlateProviderNoticesToCandidate(
+      providerReports.response?.notices ?? [],
+      topology,
+      {
+        affectedServiceIds: candidate.problem.affectedEntityIds,
+        providerServiceIds: candidate.providerServiceIds,
+        startedAt: candidate.problem.startedAt,
+        endedAt: candidate.problem.endedAt,
+      },
+    ),
+    [
+      candidate.problem.affectedEntityIds,
+      candidate.problem.endedAt,
+      candidate.problem.startedAt,
+      candidate.providerServiceIds,
+      providerReports.response?.notices,
+      topology,
+    ],
+  );
+  const providerReport = noticeMatches[0];
+  const publicReport = providerReport && (
+    providerReport.notice.source === "provider-public" ||
+    providerReport.notice.source === "gcp-public"
+  );
+  const providerServiceIds = new Set(candidate.providerServiceIds);
+  const publishedExclusions = Array.from(new Set([
+    ...(provider.provider.exclusions ?? []),
+    ...provider.services
+      .filter((service) => providerServiceIds.has(service.id))
+      .flatMap((service) => service.exclusions ?? []),
+  ].map((item) => item.trim()).filter(Boolean)));
+  const effectiveAcknowledgedEvidence = currentDecision?.status === "validated" &&
+    currentDecision.acknowledgedEvidence.length === 0
+    ? requiredEvidence
+    : acknowledgedEvidence;
+  const requiredEvidenceComplete = requiredEvidence.every((item) =>
+    effectiveAcknowledgedEvidence.includes(item),
+  );
+  const packageGaps = [
+    !candidate.scopeConfirmed ? "Confirm the provider-service scope." : null,
+    !candidate.problem.startedAt ? "Confirm the impact start time." : null,
+    candidate.problem.affectedEntityIds.length === 0
+      ? "Identify at least one affected Dynatrace entity."
+      : null,
+    !requiredEvidenceComplete
+      ? "Confirm each published evidence requirement below."
+      : null,
+  ].filter((item): item is string => Boolean(item));
+  const readyEnough = packageGaps.length === 0;
+  const objectiveServices = candidate.affectedServices.slice(0, 3);
+
+  const toggleEvidence = (item: string) => {
+    setAcknowledgedEvidence((current) => current.includes(item)
+      ? current.filter((value) => value !== item)
+      : [...current, item]);
+  };
 
   return (
     <article className="candidate-detail">
@@ -229,8 +409,8 @@ const CandidateDetail = ({
           <dd title={providerServices}>{providerServices}</dd>
         </div>
         <div>
-          <dt>Problem state</dt>
-          <dd>{candidate.problem.status}</dd>
+          <dt>Problem context</dt>
+          <dd>{candidate.problem.status} · {candidate.problem.hasRootCause ? "root cause identified" : "root cause not returned"}</dd>
         </div>
       </dl>
 
@@ -256,7 +436,7 @@ const CandidateDetail = ({
             <span>Prepared from the current Dynatrace evidence and applicable terms.</span>
           </div>
           <StatusPill tone={readyEnough ? "positive" : "warning"}>
-            {readyEnough ? "Ready for decision" : "Missing coverage"}
+            {readyEnough ? "Ready for decision" : "Needs evidence"}
           </StatusPill>
         </div>
         <dl className="candidate-package-facts">
@@ -267,16 +447,106 @@ const CandidateDetail = ({
           <div><dt>Claim method</dt><dd>{terms.claimMethod ?? "Not published"}</dd></div>
           <div><dt>Maximum credit</dt><dd>{formatPercent(terms.maxCreditPercent)}</dd></div>
         </dl>
+        <div className="candidate-evidence-grid">
+        <section className="candidate-evidence-block" aria-label="Customer evidence">
+          <div className="candidate-evidence-heading">
+            <strong>Customer evidence</strong>
+            <span>{formatEvidenceLookback(lookbackHours)}</span>
+          </div>
+          <dl className="candidate-evidence-facts">
+            <div><dt>Requests</dt><dd>{serviceTelemetryLoading ? "Checking" : telemetryAvailable ? formatCount(telemetry.requestCount) : "No data"}</dd></div>
+            <div><dt>Failed requests</dt><dd>{serviceTelemetryLoading ? "Checking" : telemetryAvailable ? formatCount(telemetry.failureCount) : "No data"}</dd></div>
+            <div><dt>Observed availability</dt><dd>{serviceTelemetryLoading ? "Checking" : telemetryAvailable ? formatAvailability(telemetry.requestCount, telemetry.failureCount) : "No data"}</dd></div>
+          </dl>
+          {serviceTelemetryError ? <span className="candidate-evidence-warning">Request telemetry is unavailable. Use the Dynatrace Problem and attach other customer-impact evidence before filing.</span> : !serviceTelemetryLoading && !telemetryAvailable ? <span className="candidate-evidence-warning">No request telemetry was returned for the affected services. The Dynatrace Problem remains evidence, but add another impact signal before filing.</span> : null}
+        </section>
+        <section className="candidate-evidence-block" aria-label="Dynatrace objectives">
+          <div className="candidate-evidence-heading">
+            <strong>Dynatrace objectives</strong>
+            <Link to={`/performance?provider=${encodeURIComponent(provider.provider.slug)}`}>Open Performance</Link>
+          </div>
+          {objectiveServices.length > 0 ? (
+            <ul className="candidate-objective-list">
+              {objectiveServices.map((service) => (
+                <EvidenceObjectiveRow
+                  key={service.id}
+                  service={service}
+                  providerSlug={provider.provider.slug}
+                />
+              ))}
+            </ul>
+          ) : (
+            <span className="candidate-evidence-note">No affected Dynatrace service was resolved for objective lookup.</span>
+          )}
+          {candidate.affectedServices.length > objectiveServices.length ? (
+            <span className="candidate-evidence-note">Showing 3 of {candidate.affectedServices.length} affected services. Open Performance for the full objective inventory.</span>
+          ) : null}
+        </section>
+        <section className="candidate-evidence-block" aria-label="Correlated provider report">
+          <div className="candidate-evidence-heading">
+            <strong>Provider report</strong>
+            <Link to={`/evidence?${reportParams.toString()}`}>Review reports</Link>
+          </div>
+          {providerReports.loading ? (
+            <span className="candidate-evidence-note">Checking the configured provider source.</span>
+          ) : providerReport ? (
+            <div className="candidate-provider-match">
+              <span>
+                <strong>{providerReport.notice.title}</strong>
+                <small>{providerReport.basis === "exact-resource"
+                  ? `Exact runtime overlap${providerReport.matchedServiceNames.length > 0 ? `: ${providerReport.matchedServiceNames.join(", ")}` : ""}.`
+                  : "The provider service and incident window overlap."}{publicReport ? " This is a public, non-customer-specific report." : ""}</small>
+              </span>
+              <StatusPill tone={providerReport.basis === "exact-resource" ? "positive" : "neutral"}>
+                {providerReport.basis === "exact-resource" ? "Exact match" : "Supporting match"}
+              </StatusPill>
+            </div>
+          ) : (
+            <span className="candidate-evidence-note">
+              {providerReports.configuredSourceRequired
+                ? "No account-specific source is connected. This optional evidence does not invalidate customer-observed impact."
+                : providerReports.error
+                  ? "The provider source is unavailable. This optional evidence does not invalidate customer-observed impact."
+                  : "No provider report overlaps this incident. Provider silence does not invalidate customer-observed impact."}
+            </span>
+          )}
+        </section>
+        </div>
+        <details className="candidate-package-disclosure">
+          <summary>Published exclusions ({publishedExclusions.length})</summary>
+          {publishedExclusions.length > 0 ? (
+            <ul>{publishedExclusions.map((item) => <li key={item}>{item}</li>)}</ul>
+          ) : (
+            <span>No provider or service exclusions are published for this scope.</span>
+          )}
+        </details>
         <div className="candidate-package-requirements">
-          <strong>Provider-required evidence</strong>
+          <strong>Provider evidence checklist</strong>
           {requiredEvidence.length > 0 ? (
-            <ul>{requiredEvidence.map((item) => <li key={item}>{item}</li>)}</ul>
+            <div className="candidate-evidence-checklist">
+              {requiredEvidence.map((item) => (
+                <label key={item}>
+                  <input
+                    type="checkbox"
+                    checked={effectiveAcknowledgedEvidence.includes(item)}
+                    onChange={() => toggleEvidence(item)}
+                    disabled={!settings.canWrite || settings.mutating || Boolean(currentDecision)}
+                  />
+                  <span>{item}</span>
+                </label>
+              ))}
+            </div>
           ) : (
             <span>No evidence checklist is published in the provider record.</span>
           )}
-          <span>Provider reports are optional supporting evidence. A missing report does not invalidate observed customer impact.</span>
+          <span>Check an item only after it is present in the package. Nothing is submitted from this screen.</span>
         </div>
-        {!readyEnough ? (
+        {packageGaps.length > 0 ? (
+          <ul className="candidate-package-gaps">
+            {packageGaps.map((item) => <li key={item}>{item}</li>)}
+          </ul>
+        ) : null}
+        {!candidate.scopeConfirmed ? (
           <Button as={Link} to={coveragePath} size="condensed">Resolve coverage</Button>
         ) : null}
       </section>
@@ -292,10 +562,16 @@ const CandidateDetail = ({
         </div>
         {currentDecision ? (
           <div className={`candidate-completion candidate-completion-${currentDecision.status}`} role="status">
-            <strong>{currentDecision.status === "validated" ? "Claim package ready" : "Review complete: not provider-related"}</strong>
+            <strong>{currentDecision.status === "validated"
+              ? "Claim package ready"
+              : currentDecision.status === "not-ready"
+                ? "Saved as not ready"
+                : "Review complete: not provider-related"}</strong>
             <span>{currentDecision.status === "validated"
               ? "Your review is complete. Nothing has been sent. A contract owner can use this package for provider follow-up."
-              : "Nothing has been sent. This Problem remains available in Dynatrace, but it is excluded from provider follow-up."}</span>
+              : currentDecision.status === "not-ready"
+                ? "The candidate stays in the review queue with its current checklist and note. Nothing has been sent."
+                : "Nothing has been sent. This Problem remains available in Dynatrace, but it is excluded from provider follow-up."}</span>
             {currentDecision.decisionNote ? <small>Note: {currentDecision.decisionNote}</small> : null}
             <Button size="condensed" disabled={!settings.canWrite || settings.mutating} onClick={() => void resetDecision()}>
               Reopen review
@@ -309,7 +585,7 @@ const CandidateDetail = ({
               </div>
             ) : null}
             <label className="candidate-review-note">
-              <span>Review note (required when not provider-related)</span>
+              <span>Review note (required for Not ready and Not provider-related)</span>
               <textarea
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
@@ -350,6 +626,13 @@ const CandidateDetail = ({
               <Button
                 size="condensed"
                 disabled={!settings.canWrite || settings.mutating}
+                onClick={() => void save("not-ready")}
+              >
+                Save as not ready
+              </Button>
+              <Button
+                size="condensed"
+                disabled={!settings.canWrite || settings.mutating}
                 onClick={() => void save("dismissed")}
               >
                 Not provider-related
@@ -373,6 +656,9 @@ const CandidateWorkspace = ({
   services,
   topology,
   assignments,
+  serviceTelemetry,
+  serviceTelemetryLoading,
+  serviceTelemetryError,
   lookbackHours,
   loading,
   error,
@@ -440,7 +726,10 @@ const CandidateWorkspace = ({
   const dismissed = candidates.filter(
     (candidate) => currentDecisionFor(candidate)?.status === "dismissed",
   ).length;
-  const needsReview = candidates.length - validated - dismissed;
+  const notReady = candidates.filter(
+    (candidate) => currentDecisionFor(candidate)?.status === "not-ready",
+  ).length;
+  const needsReview = candidates.length - validated - notReady - dismissed;
 
   if (error) {
     return (
@@ -490,7 +779,8 @@ const CandidateWorkspace = ({
   return (
     <div className="evidence-candidates-view">
       <dl className="evidence-candidate-summary" aria-label="Evidence candidate status">
-        <div><dt>Not ready</dt><dd>{needsReview}</dd></div>
+        <div><dt>Needs review</dt><dd>{needsReview}</dd></div>
+        <div><dt>Not ready</dt><dd>{notReady}</dd></div>
         <div><dt>Package ready</dt><dd>{validated}</dd></div>
         <div><dt>Not provider-related</dt><dd>{dismissed}</dd></div>
       </dl>
@@ -533,6 +823,11 @@ const CandidateWorkspace = ({
             decision={decisionByKey.get(selected.key)}
             provider={provider}
             settings={settings}
+            topology={topology}
+            serviceTelemetry={serviceTelemetry}
+            serviceTelemetryLoading={serviceTelemetryLoading}
+            serviceTelemetryError={serviceTelemetryError}
+            lookbackHours={lookbackHours}
           />
         ) : null}
       </div>

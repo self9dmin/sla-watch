@@ -6,6 +6,7 @@ import {
   SMARTSCAPE_COVERAGE_COUNT_QUERY,
   SMARTSCAPE_RESULT_LIMIT,
   SMARTSCAPE_SERVICE_RUNTIME_QUERY,
+  createIncidentServiceMetricsQuery,
   createIncidentServicesQuery,
   createIncidentSmartscapeQuery,
 } from "../ui/app/data/queries";
@@ -55,5 +56,18 @@ describe("bounded inventory queries", () => {
     expect(query.match(/"SERVICE-ABC"/g)).toHaveLength(1);
     expect(query).not.toContain("fetch logs");
     expect(query).toContain(`limit ${INCIDENT_SERVICE_FILTER_LIMIT}`);
+  });
+
+  it("loads request and failure evidence only for exact affected services", () => {
+    const query = createIncidentServiceMetricsQuery([
+      "service-abc",
+      "SERVICE-ABC",
+      'SERVICE-ABC") | fetch logs',
+    ], 720);
+    expect(query).toContain("dt.service.request.count");
+    expect(query).toContain("dt.service.request.failure_count");
+    expect(query.match(/"SERVICE-ABC"/g)).toHaveLength(1);
+    expect(query).not.toContain("fetch logs");
+    expect(query).toContain("from:-720h");
   });
 });

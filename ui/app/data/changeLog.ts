@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.52",
+    version: "0.0.53",
     label: "Current release",
+    summary: "Completed the customer-evidence package and its three stopping states.",
+    details: [
+      "Evidence now brings together the Dynatrace Problem, exact affected-service request telemetry, native objective posture, applicable terms, exclusions, and required evidence.",
+      "Optional provider reports are correlated only by exact runtime evidence or provider service plus time, and never override customer-observed impact.",
+      "An SRE can save Package ready, Not ready, or Not provider-related, with the evidence checklist and concise note retained in the shared decision.",
+      "Coverage repair keeps the selected provider service as well as the provider, Problem, service, and return destination.",
+      "Earlier decisions remain readable; reopening a review applies the current evidence checklist before it can be marked ready again.",
+    ],
+  },
+  {
+    version: "0.0.52",
+    label: "Previous release",
     summary: "Completed the SRE journey from coverage to a ready evidence package.",
     details: [
       "Coverage now opens with every loaded service visible and keeps All, Covered, and Needs review as prominent count-backed controls.",

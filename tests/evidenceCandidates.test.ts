@@ -250,6 +250,7 @@ describe("evidence candidates", () => {
       "aws",
       "validated",
       "Scope and dates reviewed.",
+      [],
       "2026-09-10T12:00:00.000Z",
     );
     expect(normalizeEvidenceDecision(value)).toEqual(value);
@@ -300,6 +301,18 @@ describe("evidence candidates", () => {
       acknowledged: false,
     })).toMatch(/Confirm the review boundary/);
     expect(evidenceDecisionInputError({
+      status: "validated",
+      note: "",
+      acknowledged: true,
+      requiredEvidence: ["Impact timestamps"],
+      acknowledgedEvidence: [],
+    })).toMatch(/Confirm each provider evidence requirement/);
+    expect(evidenceDecisionInputError({
+      status: "not-ready",
+      note: "",
+      acknowledged: false,
+    })).toMatch(/package still needs/);
+    expect(evidenceDecisionInputError({
       status: "dismissed",
       note: "",
       acknowledged: true,
@@ -336,5 +349,19 @@ describe("evidence candidates", () => {
       ...value,
       decisionNote: "y".repeat(MAX_EVIDENCE_DECISION_NOTE_LENGTH + 10),
     })?.decisionNote).toHaveLength(MAX_EVIDENCE_DECISION_NOTE_LENGTH);
+  });
+
+  it("reads older decisions without a persisted checklist", () => {
+    const [candidate] = buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [service],
+      topology: [edge],
+      assignments: [assignment],
+      providerLabelKey: "provider",
+    });
+    const value = evidenceDecisionValue(candidate, "aws", "not-ready", "Attach logs.");
+    const { acknowledgedEvidence: _acknowledgedEvidence, ...legacy } = value;
+    expect(normalizeEvidenceDecision(legacy)?.acknowledgedEvidence).toEqual([]);
   });
 });

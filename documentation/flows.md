@@ -11,7 +11,7 @@ Precondition: AppEngine can run the app, and the user has the declared read scop
 Sequence:
 
 1. `App` restores personal and workspace state. If app-state reads fail, it uses local browser state and displays the degraded storage message.
-2. `Dashboard` issues bounded DQL reads for services, Problems, logs, spans, service-request telemetry, and preferred Smartscape coverage anchors. Separate aggregate queries verify whether the returned service or relationship inventory is complete.
+2. `Dashboard` issues bounded DQL reads for services, Problems, logs, spans, service-request telemetry, and preferred Smartscape coverage anchors. Separate aggregate queries verify whether the returned service or relationship inventory is complete. Exact affected-service IDs also drive incident-scoped topology, service, request, and failure reads, so Evidence does not depend on a global service-list cap.
 3. `Dashboard` builds the active-provider list from detected topology, cloud dimensions, source-owned provider tags, saved scope mappings, and enabled incident connections. It calls the `slaDirectory` AppEngine function with the focused provider slug. Unrelated catalog providers do not enter the operating selector.
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
 5. The app reads active tenant custom terms, confirmed provider-service scope mappings, and prior human evidence decisions from App Settings. It preserves the public directory record as the fallback baseline.
@@ -157,13 +157,14 @@ Actor: signed-in user with `app-settings:objects:read`; saving a decision also r
 
 1. Evidence compares each returned Problem with exact saved scope mappings, explicit provider tags, observed provider-native topology, and lower-confidence Smartscape suggestions for the active provider.
 2. A Problem enters the candidate queue only when at least one exact affected service overlaps one of those boundaries. Saved mappings take precedence over provider tags, which take precedence over topology.
-3. The detail view gives one direct explanation of why the candidate appears, identifies the mapping basis, and assembles the observed window, coverage basis, terms source, filing window, claim method, maximum credit, and required evidence into a claim package. Provider reports stay separate and do not establish local impact.
-4. The SRE reviews those records. Provider-native topology is labeled observed, while hostname-only or conflicting topology remains visibly unconfirmed.
-5. Marking a package ready requires an explicit acknowledgement that the service scope and current terms were reviewed. Classifying a candidate as not provider-related requires a concise operational reason.
-6. App Settings stores one bounded Problem snapshot, exact affected entity IDs, provider services, mapping basis, decision, review time, and concise note.
-7. A saved decision remains current only while the mapping basis, affected entities, and provider-service scope still match. A changed boundary returns the candidate to Needs review.
+3. The detail view gives one direct explanation of why the candidate appears and assembles the Problem window, affected services, exact incident-scoped request and failure totals, observed availability, up to three native objective snapshots, coverage basis, resolved terms, filing reference, exclusions, and published evidence requirements.
+4. Evidence checks the optional provider source for a time-overlapping report. An exact affected-resource-to-Smartscape-runtime match is labeled exact; provider service plus time is supporting only. A public, missing, unavailable, or contradictory provider report never invalidates customer-observed impact.
+5. A Coverage repair preserves provider, Problem, affected service, selected provider service, and return destination. Provider-native topology is labeled observed, while hostname-only or conflicting topology remains visibly unconfirmed.
+6. Marking a package ready requires every published evidence item plus an explicit review-boundary acknowledgement. Saving Not ready requires a concise description of what remains. Classifying a candidate as Not provider-related requires a concise operational reason.
+7. App Settings stores one bounded Problem snapshot, exact affected entity IDs, provider services, mapping basis, three-state decision, acknowledged evidence items, review time, and concise note.
+8. A saved decision remains current only while the mapping basis, affected entities, and provider-service scope still match. A changed boundary returns the candidate to Needs review. Reopening removes the decision and requires the current checklist before a new Package ready outcome.
 
-Deny or degraded behavior: a failed Problem, topology, directory, or decision-store read is shown as incomplete rather than empty. A read-only user can inspect candidates and saved decisions but cannot mark a package ready or classify it as not provider-related. A decision does not establish provider fault, SLA eligibility, credit approval, or claim submission.
+Deny or degraded behavior: a failed Problem, topology, directory, telemetry, objective, provider-source, or decision-store read is shown as incomplete rather than empty. A read-only user can inspect candidates and saved decisions but cannot save, reopen, or change an outcome. A decision does not establish provider fault, SLA eligibility, credit approval, or claim submission.
 
 ## Confirm service coverage without runtime context
 
