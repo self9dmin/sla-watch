@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.47
+
+- Removed the manual provider cards and custom provider-slug field from Settings.
+- Derives providers automatically from Dynatrace topology, cloud dimensions, source-owned tags, confirmed Coverage mappings, and enabled incident connections.
+- Ignores obsolete manually saved provider entries so they do not reappear in operating views.
+- Renamed Provider configuration to Review defaults and kept only the focused provider, source tag convention, and evidence window controls.
+
 ## 0.0.46
 
 - Removed the five-step first-run wizard and its duplicate provider confirmation.

@@ -218,7 +218,6 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const scopeSettings = useProviderScopeAssignments();
   const providerConnections = useProviderConnections();
   const {
-    manualProviderSlugs,
     providerSlug: requestedProviderSlug,
     providerLabelKey,
     lookbackHours,
@@ -384,13 +383,11 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
       tagged: tagDetectedProviders,
       assigned: assignedProviders,
       connected: connectedProviders,
-      manual: manualProviderSlugs,
       fallback: requestedProviderSlug,
     }),
     [
       assignedProviders,
       connectedProviders,
-      manualProviderSlugs,
       requestedProviderSlug,
       tagDetectedProviders,
       topologyDetectedProviders,
@@ -648,7 +645,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 void updatePreferences({ providerSlug: event.target.value })
               }
               aria-label="Active provider"
-              title="Providers detected in this environment or added in Settings"
+              title="Providers detected from this environment"
             >
               {enabledProviderSlugs.map((slug) => (
                 <option key={slug} value={slug}>

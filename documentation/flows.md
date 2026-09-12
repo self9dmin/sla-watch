@@ -12,7 +12,7 @@ Sequence:
 
 1. `App` restores personal and workspace state. If app-state reads fail, it uses local browser state and displays the degraded storage message.
 2. `Dashboard` issues bounded DQL reads for services, Problems, logs, spans, service-request telemetry, and preferred Smartscape coverage anchors. Separate aggregate queries verify whether the returned service or relationship inventory is complete.
-3. `Dashboard` builds the active-provider list from detected topology, cloud dimensions, source-owned provider tags, saved scope mappings, enabled incident connections, and explicit manual additions. It calls the `slaDirectory` AppEngine function with the focused provider slug. Unrelated catalog providers remain available only in Settings.
+3. `Dashboard` builds the active-provider list from detected topology, cloud dimensions, source-owned provider tags, saved scope mappings, and enabled incident connections. It calls the `slaDirectory` AppEngine function with the focused provider slug. Unrelated catalog providers do not enter the operating selector.
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
 5. The app reads active tenant custom terms, confirmed provider-service scope mappings, and prior human evidence decisions from App Settings. It preserves the public directory record as the fallback baseline.
 6. Coverage classifies the current provider boundary as loading, access-incomplete, inventory-incomplete, contract-unavailable, action-required, boundary-ready, or review-available. It never reports complete coverage from a truncated or unverified inventory.
@@ -25,8 +25,8 @@ Deny or degraded behavior: a missing read scope is shown as access incomplete, n
 
 Actor: user with `state:app-states:write`.
 
-1. Settings marks providers detected in the current environment as enabled and read-only. The user may add providers that Dynatrace cannot observe directly, choose the focused provider, and edit the tag key or lookback.
-2. Inputs are normalized before persistence. Provider slugs are restricted to lowercase slug characters, common cloud aliases are canonicalized, manual additions are stored separately, and the focused provider must belong to the resulting collection.
+1. Settings lets the user choose among providers automatically placed in scope, then edit the tag key or evidence lookback. Providers enter scope from Dynatrace evidence, confirmed Coverage mappings, or enabled incident connections.
+2. Inputs are normalized before persistence. The focused provider is a valid lowercase slug and the operating surface constrains it to the runtime provider collection.
 3. The context optimistically updates the UI and writes the workspace state with an expiry just inside the platform's 90-day limit.
 4. If the shared write is denied, the same normalized value is kept in local storage and a status message explains the fallback.
 

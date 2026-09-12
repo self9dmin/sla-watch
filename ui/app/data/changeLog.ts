@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.46",
+    version: "0.0.47",
     label: "Current release",
+    summary: "Made provider discovery automatic end to end.",
+    details: [
+      "Removed the manual provider cards and custom provider-slug field from Settings.",
+      "Derives providers from Dynatrace topology, cloud dimensions, source-owned tags, confirmed Coverage mappings, and enabled incident connections.",
+      "Ignores obsolete manually saved provider entries so they do not reappear in Coverage, Incidents, Evidence, or Directory.",
+      "Renamed Provider configuration to Review defaults and kept only the focused provider, source tag convention, and evidence window controls.",
+    ],
+  },
+  {
+    version: "0.0.46",
+    label: "Previous release",
     summary: "Opened directly on live Coverage instead of a setup wizard.",
     details: [
       "Removed the five-step first-run wizard and its duplicate provider confirmation.",
