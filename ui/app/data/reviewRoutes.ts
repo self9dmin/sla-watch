@@ -5,6 +5,7 @@ type ProblemRouteContext = {
 
 type CoverageRouteContext = ProblemRouteContext & {
   serviceId?: string;
+  providerServiceId?: string;
   returnTo: string;
 };
 
@@ -37,11 +38,13 @@ export const createCoverageReviewPath = ({
   providerSlug,
   problemId,
   serviceId,
+  providerServiceId,
   returnTo,
 }: CoverageRouteContext): string => withParams("/", {
   provider: providerSlug.toLowerCase(),
   problem: problemId,
   service: serviceId,
+  providerService: providerServiceId,
   return: returnTo,
 });
 

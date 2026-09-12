@@ -118,11 +118,14 @@ fetch spans, from:-${lookbackHours}h, to:now()
 | summarize span_count = count()
 `;
 
-export const createServiceMetricsQuery = (lookbackHours: number): string => `
-timeseries request_count = sum(dt.service.request.count, scalar: true),
+const serviceMetricsQuery = (lookbackHours: number): string => `
+timeseries {
+    request_count = sum(dt.service.request.count, scalar: true),
+    failure_count = sum(dt.service.request.failure_count, scalar: true)
+  },
   by:{dt.smartscape.service, dt.service.name, aws.account.id, aws.region, azure.location, azure.subscription, gcp.project.id, gcp.region},
   from:-${lookbackHours}h, to:now(), nonempty:true
-| fields request_count,
+| fields request_count, failure_count,
     service_node_id = dt.smartscape.service,
     service_classic_id = getNodeField(dt.smartscape.service, "id_classic"),
     service_name = dt.service.name,
@@ -133,8 +136,27 @@ timeseries request_count = sum(dt.service.request.count, scalar: true),
     azure_location = azure.location,
     gcp_project_id = gcp.project.id,
     gcp_region = gcp.region
+`;
+
+export const createServiceMetricsQuery = (lookbackHours: number): string => `
+${serviceMetricsQuery(lookbackHours)}
 | limit 500
 `;
+
+export const createIncidentServiceMetricsQuery = (
+  serviceIds: string[],
+  lookbackHours: number,
+): string => {
+  const ids = safeServiceIds(serviceIds);
+  const filter = ids.length > 0
+    ? `in(service_classic_id, array(${ids.map((id) => `"${id}"`).join(", ")}))`
+    : `service_classic_id == "__NO_SERVICE__"`;
+  return `
+${serviceMetricsQuery(lookbackHours)}
+| filter ${filter}
+| limit ${INCIDENT_SERVICE_FILTER_LIMIT}
+`;
+};
 
 export const PROBLEMS_QUERY = createProblemsQuery(24);
 export const LOGS_COUNT_QUERY = createLogsCountQuery(24);

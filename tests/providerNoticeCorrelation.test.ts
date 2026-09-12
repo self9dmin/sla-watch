@@ -1,4 +1,4 @@
-import { correlateProviderNoticeToTopology } from "../ui/app/data/providerNoticeCorrelation";
+import { correlateProviderNoticesToCandidate, correlateProviderNoticeToTopology } from "../ui/app/data/providerNoticeCorrelation";
 import type { ProviderNotice, SmartscapeScopeEdge } from "../ui/app/types";
 
 const ACCOUNT_ID = "123456789012";
@@ -17,6 +17,8 @@ const notice = (overrides: Partial<ProviderNotice> = {}): ProviderNotice => ({
     arn: "arn:aws:ec2:us-east-1:123456789012:instance/i-0123456789abcdef0",
     accountId: ACCOUNT_ID,
   }],
+  startTime: "2026-09-09T10:01:00.000Z",
+  endTime: "2026-09-09T10:05:00.000Z",
   ...overrides,
 });
 
@@ -74,5 +76,33 @@ describe("provider notice correlation", () => {
   it("rejects an exact identifier when the AWS account or region conflicts", () => {
     expect(correlateProviderNoticeToTopology(notice(), [edge({ accountId: "210987654321" })]).matches).toHaveLength(0);
     expect(correlateProviderNoticeToTopology(notice(), [edge({ region: "eu-west-1", location: "eu-west-1a" })]).matches).toHaveLength(0);
+  });
+
+  it("prefers an exact affected-resource overlap for the candidate services", () => {
+    expect(correlateProviderNoticesToCandidate([notice()], [edge()], {
+      affectedServiceIds: ["SERVICE-1"],
+      providerServiceIds: ["ec2"],
+      startedAt: "2026-09-09T10:00:00.000Z",
+      endedAt: "2026-09-09T10:07:00.000Z",
+    })[0]).toMatchObject({
+      basis: "exact-resource",
+      matchedServiceNames: ["Checkout"],
+    });
+  });
+
+  it("uses service and time overlap only as supporting evidence", () => {
+    const supporting = notice({ affectedResources: [] });
+    expect(correlateProviderNoticesToCandidate([supporting], [edge()], {
+      affectedServiceIds: ["SERVICE-1"],
+      providerServiceIds: ["ec2"],
+      startedAt: "2026-09-09T10:00:00.000Z",
+      endedAt: "2026-09-09T10:07:00.000Z",
+    })[0]?.basis).toBe("provider-service");
+    expect(correlateProviderNoticesToCandidate([supporting], [edge()], {
+      affectedServiceIds: ["SERVICE-1"],
+      providerServiceIds: ["ec2"],
+      startedAt: "2026-09-10T10:00:00.000Z",
+      endedAt: "2026-09-10T10:07:00.000Z",
+    })).toEqual([]);
   });
 });

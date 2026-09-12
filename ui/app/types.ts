@@ -61,7 +61,7 @@ export type ProviderScopeAssignmentRecord = ProviderScopeAssignmentValue & {
   lastModifiedTime?: string;
 };
 
-export type EvidenceDecisionStatus = "validated" | "dismissed";
+export type EvidenceDecisionStatus = "validated" | "not-ready" | "dismissed";
 export type EvidenceMappingBasis =
   | "confirmed-scope"
   | "provider-tag"
@@ -84,6 +84,7 @@ export type EvidenceDecisionValue = {
   mappingBasis: EvidenceMappingBasis;
   mappingEvidence: string;
   status: EvidenceDecisionStatus;
+  acknowledgedEvidence: string[];
   decisionNote?: string | null;
   reviewedAt: string;
 };

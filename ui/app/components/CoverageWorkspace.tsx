@@ -84,6 +84,7 @@ export const CoverageWorkspace = ({
   const providerName = provider?.provider.name ?? providerSlug;
   const routeParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const focusedServiceId = routeParams.get("service");
+  const focusedProviderServiceId = routeParams.get("providerService");
   const focusedProblemId = routeParams.get("problem");
   const returnPath = safeWorkspaceReturnPath(
     routeParams.get("return"),
@@ -160,6 +161,12 @@ export const CoverageWorkspace = ({
       setSelectedProviderServiceId("");
     } else if (selectedRow.kind === "scope") {
       setSelectedProviderServiceId(
+        (focusedServiceId === rowServiceId(selectedRow) &&
+          focusedProviderServiceId &&
+          (focusedProviderServiceId === "*" ||
+            provider?.services.some((service) => service.id === focusedProviderServiceId))
+          ? focusedProviderServiceId
+          : null) ??
         selectedRow.assignment?.providerServiceId ??
         (selectedRow.ambiguous ? "" : selectedRow.candidate?.providerServiceId) ??
         (selectedRow.sourceTag ? "*" : ""),
@@ -168,7 +175,7 @@ export const CoverageWorkspace = ({
       setSelectedProviderServiceId(selectedRow.assignment?.providerServiceId ?? "*");
     }
     setFeedback(undefined);
-  }, [selectedRow]);
+  }, [focusedProviderServiceId, focusedServiceId, provider, selectedRow]);
 
   const selectedProviderService = useMemo(() => selectedProviderServiceId === "*"
     ? { id: "*", name: providerName || "Provider" }

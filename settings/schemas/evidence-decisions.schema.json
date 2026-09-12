@@ -2,10 +2,10 @@
   "$schema": "https://developer.dynatrace.com/docs-assets/schema_strict_apps.json",
   "dynatrace": "1",
   "schemaId": "evidence-decisions",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "displayName": "Evidence review decisions",
-  "description": "Human validation or dismissal of provider-review candidates discovered from Dynatrace evidence.",
-  "documentation": "A validated candidate is approved for operational follow-up only. It does not establish provider fault, SLA eligibility, or a service credit. Store concise operational notes only. Do not include credentials, confidential contract text, or personal data.",
+  "description": "Human package-ready, not-ready, or not-provider-related decisions for review candidates discovered from Dynatrace evidence.",
+  "documentation": "A package-ready decision approves operational follow-up only. It does not establish provider fault, SLA eligibility, a service credit, or claim submission. Store concise operational notes only. Do not include credentials, confidential contract text, or personal data.",
   "multiObject": true,
   "maxObjects": 1000,
   "summaryPattern": "{problemId} · {status}",
@@ -18,8 +18,9 @@
       "type": "enum",
       "displayName": "Review decision",
       "items": [
-        { "value": "validated", "displayName": "Validated for follow-up" },
-        { "value": "dismissed", "displayName": "Dismissed" }
+        { "value": "validated", "displayName": "Package ready" },
+        { "value": "not-ready", "displayName": "Not ready" },
+        { "value": "dismissed", "displayName": "Not provider-related" }
       ]
     },
     "MappingBasis": {
@@ -134,6 +135,14 @@
       "type": { "$ref": "#/enums/DecisionStatus" },
       "default": "validated",
       "nullable": false
+    },
+    "acknowledgedEvidence": {
+      "displayName": "Acknowledged provider evidence requirements",
+      "type": "set",
+      "items": { "type": "text" },
+      "default": [],
+      "nullable": false,
+      "maxObjects": 50
     },
     "decisionNote": {
       "displayName": "Operational review note",

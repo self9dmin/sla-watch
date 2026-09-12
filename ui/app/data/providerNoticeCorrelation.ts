@@ -14,7 +14,38 @@ export type ProviderNoticeCorrelation = {
   matchedServiceNames: string[];
 };
 
+export type CandidateProviderNoticeMatch = {
+  notice: ProviderNotice;
+  basis: "exact-resource" | "provider-service";
+  matchedServiceNames: string[];
+};
+
+type CandidateNoticeContext = {
+  affectedServiceIds: string[];
+  providerServiceIds: string[];
+  startedAt?: string;
+  endedAt?: string;
+};
+
 const normalized = (value: string | undefined): string => value?.trim().toLowerCase() ?? "";
+
+const timestamp = (value: string | undefined): number | null => {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const timeOverlaps = (
+  notice: ProviderNotice,
+  context: CandidateNoticeContext,
+): boolean => {
+  const problemStart = timestamp(context.startedAt);
+  const noticeStart = timestamp(notice.startTime);
+  if (problemStart === null || noticeStart === null) return false;
+  const problemEnd = timestamp(context.endedAt) ?? Number.POSITIVE_INFINITY;
+  const noticeEnd = timestamp(notice.endTime) ?? Number.POSITIVE_INFINITY;
+  return noticeStart <= problemEnd && noticeEnd >= problemStart;
+};
 
 const identifierTokens = (value: string | undefined): string[] => {
   const exact = normalized(value);
@@ -101,4 +132,57 @@ export const correlateProviderNoticeToTopology = (
     matchedResourceCount: matchedResources.size,
     matchedServiceNames: Array.from(new Set(values.map((match) => match.serviceName))).sort(),
   };
+};
+
+export const correlateProviderNoticesToCandidate = (
+  notices: ProviderNotice[],
+  topology: SmartscapeScopeEdge[],
+  context: CandidateNoticeContext,
+): CandidateProviderNoticeMatch[] => {
+  const affectedServiceIds = new Set(
+    context.affectedServiceIds.map(normalized).filter(Boolean),
+  );
+  const providerServiceIds = new Set(
+    context.providerServiceIds
+      .map(normalized)
+      .filter((value) => value && value !== "*"),
+  );
+
+  return notices.flatMap<CandidateProviderNoticeMatch>((notice) => {
+    if (!timeOverlaps(notice, context)) return [];
+    const resourceCorrelation = correlateProviderNoticeToTopology(
+      notice,
+      topology,
+    );
+    const exactMatches = resourceCorrelation.matches.filter((match) =>
+      affectedServiceIds.has(normalized(match.serviceEntityId)),
+    );
+    if (exactMatches.length > 0) {
+      return [{
+        notice,
+        basis: "exact-resource" as const,
+        matchedServiceNames: Array.from(
+          new Set(exactMatches.map((match) => match.serviceName)),
+        ).sort(),
+      }];
+    }
+
+    const productMatch = notice.products.some((product) =>
+      product.directoryServiceIds.some((id) =>
+        providerServiceIds.has(normalized(id)),
+      ),
+    );
+    return productMatch
+      ? [{
+        notice,
+        basis: "provider-service" as const,
+        matchedServiceNames: [] as string[],
+      }]
+      : [];
+  }).sort((left, right) => {
+    if (left.basis !== right.basis)
+      return left.basis === "exact-resource" ? -1 : 1;
+    return (timestamp(right.notice.startTime) ?? 0) -
+      (timestamp(left.notice.startTime) ?? 0);
+  });
 };

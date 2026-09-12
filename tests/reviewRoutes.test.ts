@@ -19,13 +19,14 @@ describe("review routes", () => {
       providerSlug: "AWS",
       problemId: "P-260934",
       serviceId: "SERVICE-1",
+      providerServiceId: "ec2",
       returnTo: incidentPath,
     });
 
     expect(incidentPath).toBe("/incidents?provider=aws&problem=P-260934");
     expect(evidencePath).toBe("/evidence?provider=aws&problem=P-260934");
     expect(coveragePath).toBe(
-      "/?provider=aws&problem=P-260934&service=SERVICE-1&return=%2Fincidents%3Fprovider%3Daws%26problem%3DP-260934",
+      "/?provider=aws&problem=P-260934&service=SERVICE-1&providerService=ec2&return=%2Fincidents%3Fprovider%3Daws%26problem%3DP-260934",
     );
   });
 

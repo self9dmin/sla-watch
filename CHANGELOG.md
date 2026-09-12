@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.53
+
+- Completes the Evidence package with exact incident-scoped request and failure telemetry, affected-service objective posture, applicable exclusions, and optional provider-report correlation.
+- Keeps provider reports supporting and source-labeled. Missing, public, or contradictory provider reports never invalidate customer-observed Dynatrace impact.
+- Adds a persisted **Not ready** outcome beside **Package ready** and **Not provider-related**, with a saved evidence checklist and concise reason.
+- Carries the selected provider-service ID through Coverage repair so an SRE returns to the exact decision instead of reselecting terms.
+- Preserves compatibility with earlier evidence decisions while requiring the current checklist whenever an SRE reopens a review.
+
 ## 0.0.52
 
 - Opens Coverage in a complete All view with visible All, Covered, and Needs review controls instead of hiding the full inventory behind a dropdown.

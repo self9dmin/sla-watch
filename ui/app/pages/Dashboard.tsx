@@ -23,6 +23,7 @@ import {
 } from "../data/providerAttribution";
 import { buildProviderCoverageModel } from "../data/providerCoverage";
 import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
+import { parseServiceTelemetry } from "../data/serviceTelemetry";
 import {
   detectedProviderSlugs,
   mergeSmartscapeScopeEdges,
@@ -37,6 +38,7 @@ import {
   SMARTSCAPE_COVERAGE_COUNT_QUERY,
   SMARTSCAPE_RESULT_LIMIT,
   createIncidentServicesQuery,
+  createIncidentServiceMetricsQuery,
   createIncidentSmartscapeQuery,
   createLogsCountQuery,
   createProblemsQuery,
@@ -316,12 +318,20 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     () => createIncidentServicesQuery(affectedServiceIds),
     [affectedServiceIds],
   );
+  const incidentMetricsQueryText = useMemo(
+    () => createIncidentServiceMetricsQuery(affectedServiceIds, lookbackHours),
+    [affectedServiceIds, lookbackHours],
+  );
   const incidentTopologyQuery = useDql(
     { query: incidentTopologyQueryText },
     { enabled: affectedServiceIds.length > 0 },
   );
   const incidentServicesQuery = useDql(
     { query: incidentServicesQueryText },
+    { enabled: affectedServiceIds.length > 0 },
+  );
+  const incidentMetricsQuery = useDql(
+    { query: incidentMetricsQueryText },
     { enabled: affectedServiceIds.length > 0 },
   );
   const incidentEntityServices = useMemo<ServiceRecord[]>(
@@ -351,6 +361,10 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const serviceCloudContexts = useMemo(
     () => parseServiceCloudContexts(metricsData),
     [metricsData],
+  );
+  const serviceTelemetry = useMemo(
+    () => parseServiceTelemetry(incidentMetricsQuery.data),
+    [incidentMetricsQuery.data],
   );
   const providerEvidence = useMemo(
     () => mergeSmartscapeScopeEdges(topology, serviceCloudContexts),
@@ -777,6 +791,9 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             services={services}
             topology={providerEvidence}
             assignments={scopeSettings.assignments}
+            serviceTelemetry={serviceTelemetry}
+            serviceTelemetryLoading={incidentMetricsQuery.isLoading}
+            serviceTelemetryError={incidentMetricsQuery.error ?? undefined}
             lookbackHours={lookbackHours}
             loading={
               problemsLoading ||

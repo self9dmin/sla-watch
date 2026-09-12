@@ -71,7 +71,9 @@ export const normalizeEvidenceDecision = (
   const problemStatus = requiredText(row.problemStatus);
   const mappingEvidence = requiredText(row.mappingEvidence);
   const reviewedAt = requiredText(row.reviewedAt);
-  const status = row.status === "validated" || row.status === "dismissed"
+  const status = row.status === "validated" ||
+    row.status === "not-ready" ||
+    row.status === "dismissed"
     ? row.status
     : null;
   const mappingBasis = row.mappingBasis === "confirmed-scope" ||
@@ -109,6 +111,7 @@ export const normalizeEvidenceDecision = (
     mappingBasis,
     mappingEvidence,
     status,
+    acknowledgedEvidence: stringList(row.acknowledgedEvidence, 50),
     decisionNote:
       requiredText(row.decisionNote)?.slice(
         0,
@@ -133,15 +136,25 @@ export const evidenceDecisionInputError = ({
   status,
   note,
   acknowledged,
+  requiredEvidence = [],
+  acknowledgedEvidence = [],
 }: {
   status: EvidenceDecisionValue["status"];
   note: string;
   acknowledged: boolean;
+  requiredEvidence?: string[];
+  acknowledgedEvidence?: string[];
 }): string | null => {
   if (note.trim().length > MAX_EVIDENCE_DECISION_NOTE_LENGTH)
     return `Keep the review note to ${MAX_EVIDENCE_DECISION_NOTE_LENGTH} characters or fewer.`;
   if (status === "validated" && !acknowledged)
     return "Confirm the review boundary before marking this package ready.";
+  if (
+    status === "validated" &&
+    requiredEvidence.some((item) => !acknowledgedEvidence.includes(item))
+  ) return "Confirm each provider evidence requirement before marking this package ready.";
+  if (status === "not-ready" && note.trim().length === 0)
+    return "Add a short note describing what the package still needs.";
   if (status === "dismissed" && note.trim().length === 0)
     return "Add a short reason before marking this review not provider-related.";
   return null;
@@ -271,6 +284,7 @@ export const evidenceDecisionValue = (
   providerSlug: string,
   status: EvidenceDecisionValue["status"],
   decisionNote: string,
+  acknowledgedEvidence: string[] = [],
   reviewedAt = new Date().toISOString(),
 ): EvidenceDecisionValue => ({
   decisionKey: createEvidenceDecisionKey(providerSlug, candidate.problem.id),
@@ -291,6 +305,7 @@ export const evidenceDecisionValue = (
   mappingBasis: candidate.mappingBasis,
   mappingEvidence: candidate.mappingEvidence,
   status,
+  acknowledgedEvidence: stringList(acknowledgedEvidence, 50),
   decisionNote:
     decisionNote.trim().slice(0, MAX_EVIDENCE_DECISION_NOTE_LENGTH) || null,
   reviewedAt,

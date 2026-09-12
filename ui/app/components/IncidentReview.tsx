@@ -152,6 +152,7 @@ const IncidentDetail = ({
     providerSlug,
     problemId: problem.id,
     serviceId: serviceIds[0],
+    providerServiceId: candidate?.providerServiceIds[0],
     returnTo: incidentPath,
   });
 
