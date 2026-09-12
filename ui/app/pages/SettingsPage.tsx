@@ -394,7 +394,7 @@ const ProviderConnectionsSettings = () => {
         <span className="connection-state connected">{providerConnections.connections.filter((item) => CONNECTED_PROVIDER_OPTIONS.some((provider) => provider.slug === item.providerSlug)).length} saved</span>
       </div>
 
-      <div className="provider-connection-prerequisite"><strong>Before you connect</strong><span>Allow the listed provider hosts under Dynatrace Settings &gt; General &gt; External requests. Create a Token in Credential Vault with AppEngine scope, access limited to SLA Review, and access for the administrators who will test it. Paste only the credential ID below.</span></div>
+      <div className="provider-connection-prerequisite"><strong>Before you connect</strong><span>Allow the listed provider hosts under Dynatrace Settings &gt; General &gt; External requests. Create a Token in Credential Vault with AppEngine scope, access limited to SLA Review, and access for the administrators who will test it. Paste only the credential ID below. For live acceptance, prefer disposable credentials and remove both the provider credential and vault record afterward.</span></div>
 
       <div className="provider-connection-switcher">
         <label className="field-label">Connection type
@@ -414,7 +414,7 @@ const ProviderConnectionsSettings = () => {
       {connectionProvider === "aws" ? (
         <ol className="provider-connection-steps" aria-label="AWS connection requirements">
           <li><span>1</span><div><strong>Confirm AWS Health API access</strong><small>The account needs Business Support+, Enterprise Support, or Unified Operations.</small></div></li>
-          <li><span>2</span><div><strong>Grant two read actions</strong><small>Use a dedicated identity with <code>health:DescribeEvents</code> and <code>health:DescribeEventDetails</code>.</small></div></li>
+          <li><span>2</span><div><strong>Grant three read actions</strong><small>Use a dedicated identity with <code>health:DescribeEvents</code>, <code>health:DescribeEventDetails</code>, and <code>health:DescribeAffectedEntities</code>.</small></div></li>
           <li><span>3</span><div><strong>Vault the signing JSON</strong><small>Store <code>accessKeyId</code>, <code>secretAccessKey</code>, and optional <code>sessionToken</code>. Allow <code>sts.us-east-1.amazonaws.com</code> and <code>health.us-east-1.amazonaws.com</code>.</small></div></li>
         </ol>
       ) : connectionProvider === "azure" ? (

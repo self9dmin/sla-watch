@@ -106,6 +106,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(app.locator(".advisor-count")).toHaveText(/required|recommended|No blockers/i);
     await expect(app.getByText("Reuse coverage outside SLA Review")).toHaveCount(0);
     await expect(app.getByText("Review native SLO coverage next")).toHaveCount(0);
+    await expect(app.getByRole("button", { name: "Add custom terms" })).toHaveCount(0);
     await expectNoPageScroll(app);
 
     await app.getByRole("link", { name: "Incidents" }).click();
@@ -115,6 +116,8 @@ test.describe("SLA Review deployed smoke", () => {
     });
     await expect(lookback).toBeVisible();
     await expect(lookback.locator("option")).toHaveCount(7);
+    await expect(app.getByRole("combobox", { name: "Provider service" })).toHaveCount(0);
+    await expect(app.getByRole("combobox", { name: "Dynatrace scope" })).toHaveCount(0);
     await expect(
       app.getByText(
         /The provider determines fault, eligibility, and any service credit/i,

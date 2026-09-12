@@ -3,7 +3,7 @@ jest.mock("@dynatrace-sdk/client-classic-environment-v2", () => ({
 }));
 
 import { credentialVaultClient } from "@dynatrace-sdk/client-classic-environment-v2";
-import getAwsHealth, { parseAwsHealthEvents } from "../api/awsHealth.function";
+import getAwsHealth, { parseAwsAffectedEntities, parseAwsHealthEvents } from "../api/awsHealth.function";
 import { mapAwsServiceToDirectoryIds } from "../api/awsNoticeMappings";
 
 const ACCOUNT_ID = "123456789012";
@@ -55,6 +55,28 @@ describe("AWS Health account events", () => {
     expect(mapAwsServiceToDirectoryIds("APP_RUNNER")).toEqual(["app-runner"]);
   });
 
+  it("normalizes affected AWS resources by event without retaining tags", () => {
+    const resources = parseAwsAffectedEntities({
+      entities: [{
+        eventArn: EVENT_ARN,
+        entityValue: "i-0123456789abcdef0",
+        entityArn: `arn:aws:ec2:us-east-1:${ACCOUNT_ID}:instance/i-0123456789abcdef0`,
+        awsAccountId: ACCOUNT_ID,
+        statusCode: "IMPAIRED",
+        lastUpdatedTime: Date.parse("2026-09-10T11:30:00Z") / 1_000,
+        tags: { Owner: "private-team" },
+      }],
+    });
+
+    expect(resources.get(EVENT_ARN)).toEqual([{
+      id: "i-0123456789abcdef0",
+      arn: `arn:aws:ec2:us-east-1:${ACCOUNT_ID}:instance/i-0123456789abcdef0`,
+      accountId: ACCOUNT_ID,
+      status: "IMPAIRED",
+      updateTime: "2026-09-10T11:30:00.000Z",
+    }]);
+  });
+
   it("verifies the account with STS and reads bounded Health details", async () => {
     const vaultMock = credentialVaultClient.getCredentialsDetails as jest.Mock;
     vaultMock.mockResolvedValue(signingCredential());
@@ -63,14 +85,27 @@ describe("AWS Health account events", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ events: [accountEvent] }), { status: 200, headers: { "Content-Type": "application/json" } }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         successfulSet: [{ event: { arn: EVENT_ARN }, eventDescription: { latestDescription: "AWS reported an account event." } }],
+      }), { status: 200, headers: { "Content-Type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        entities: [{
+          eventArn: EVENT_ARN,
+          entityValue: "i-0123456789abcdef0",
+          entityArn: `arn:aws:ec2:us-east-1:${ACCOUNT_ID}:instance/i-0123456789abcdef0`,
+          awsAccountId: ACCOUNT_ID,
+          statusCode: "IMPAIRED",
+        }],
       }), { status: 200, headers: { "Content-Type": "application/json" } }));
 
     try {
       const result = await getAwsHealth({ accountId: ACCOUNT_ID, credentialId: CREDENTIAL_ID, lookbackHours: 24 });
       expect(result).toMatchObject({ provider: "aws", source: "personalized", connectionState: "connected", scopeLabel: ACCOUNT_ID });
-      expect(result.notices[0]).toMatchObject({ id: EVENT_ARN, summary: "AWS reported an account event." });
+      expect(result.notices[0]).toMatchObject({
+        id: EVENT_ARN,
+        summary: "AWS reported an account event.",
+        affectedResources: [{ id: "i-0123456789abcdef0", accountId: ACCOUNT_ID, status: "IMPAIRED" }],
+      });
       expect(vaultMock).toHaveBeenCalledWith({ id: CREDENTIAL_ID });
-      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
 
       const [stsUrl, stsInit] = fetchMock.mock.calls[0] as [string, RequestInit];
       expect(stsUrl).toBe("https://sts.us-east-1.amazonaws.com/");
@@ -83,6 +118,10 @@ describe("AWS Health account events", () => {
 
       const [, detailInit] = fetchMock.mock.calls[2] as [string, RequestInit];
       expect(new Headers(detailInit.headers).get("x-amz-target")).toBe("AWSHealth_20160804.DescribeEventDetails");
+
+      const [, affectedInit] = fetchMock.mock.calls[3] as [string, RequestInit];
+      expect(new Headers(affectedInit.headers).get("x-amz-target")).toBe("AWSHealth_20160804.DescribeAffectedEntities");
+      expect(JSON.parse(String(affectedInit.body))).toEqual(expect.objectContaining({ filter: { eventArns: [EVENT_ARN] }, maxResults: 100 }));
     } finally {
       fetchMock.mockRestore();
     }

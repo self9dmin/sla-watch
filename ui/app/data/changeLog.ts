@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.47",
+    version: "0.0.48",
     label: "Current release",
+    summary: "Made Coverage the single provider-mapping source and added exact AWS resource correlation.",
+    details: [
+      "Coverage now decides only which provider service applies; effective terms and custom-term creation remain outside that workflow.",
+      "Incidents inherit confirmed Coverage or unique provider-native Smartscape mappings without offering a separate one-off selection.",
+      "Suggested, absent, and conflicting mappings use provider-wide terms until the SRE resolves Coverage.",
+      "AWS Health can retrieve bounded affected-entity records and correlate only exact resource identifiers with compatible Smartscape runtime context.",
+      "AWS setup now includes DescribeAffectedEntities and a disposable least-privilege acceptance and cleanup path.",
+    ],
+  },
+  {
+    version: "0.0.47",
+    label: "Previous release",
     summary: "Made provider discovery automatic end to end.",
     details: [
       "Removed the manual provider cards and custom provider-slug field from Settings.",

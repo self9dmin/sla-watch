@@ -5,14 +5,16 @@ import { Button } from "@dynatrace/strato-components/buttons";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import { useProviderConnections } from "../hooks/useProviderConnections";
-import type { AwsProviderNoticesResponse, AzureProviderNoticesResponse, EvidenceLookbackHours, GcpProviderNoticesResponse, OciProviderNoticesResponse, ProviderNotice, ProviderNoticesResponse, PublicProviderNoticesResponse } from "../types";
+import type { AwsProviderNoticesResponse, AzureProviderNoticesResponse, EvidenceLookbackHours, GcpProviderNoticesResponse, OciProviderNoticesResponse, ProviderNotice, ProviderNoticesResponse, PublicProviderNoticesResponse, SmartscapeScopeEdge } from "../types";
 import { formatEvidenceLookback } from "../data/lookback";
 import { providerConnectionScopeId } from "../data/providerConnections";
+import { correlateProviderNoticeToTopology, type ProviderNoticeCorrelation } from "../data/providerNoticeCorrelation";
 import { providerDisplayName } from "../data/providers";
 
 type ProviderNoticesProps = {
   providerSlug: string;
   lookbackHours: EvidenceLookbackHours;
+  topology?: SmartscapeScopeEdge[];
   embedded?: boolean;
 };
 
@@ -47,7 +49,7 @@ const SourceLabel = ({ response }: { response: ProviderNoticesResponse }) => {
   return <StatusPill tone="neutral">Public status</StatusPill>;
 };
 
-const NoticeDetail = ({ notice, providerName }: { notice: ProviderNotice; providerName: string }) => (
+const NoticeDetail = ({ notice, providerName, correlation }: { notice: ProviderNotice; providerName: string; correlation: ProviderNoticeCorrelation }) => (
   <article className="provider-notice-detail" aria-label={`Provider notice ${notice.title}`}>
     <div className="provider-notice-detail-heading">
       <div>
@@ -73,11 +75,33 @@ const NoticeDetail = ({ notice, providerName }: { notice: ProviderNotice; provid
         )) : <span className="muted-inline">No product list was provided.</span>}
       </div>
     </div>
+    {notice.affectedResources?.length ? (
+      <div className="provider-notice-products">
+        <span className="eyebrow">Account-affected resources</span>
+        <div>
+          {notice.affectedResources.slice(0, 6).map((resource) => (
+            <span className="provider-product" key={`${resource.id}|${resource.arn ?? ""}`} title={resource.arn ?? resource.id}>
+              {resource.id}{resource.status ? <small>{formatEnum(resource.status)}</small> : null}
+            </span>
+          ))}
+          {notice.affectedResources.length > 6 ? <span className="muted-inline">+{notice.affectedResources.length - 6} more</span> : null}
+        </div>
+      </div>
+    ) : null}
+    {notice.affectedResources?.length ? (
+      <div className={`provider-notice-correlation${correlation.matchedResourceCount > 0 ? " matched" : ""}`}>
+        <strong>{correlation.matchedResourceCount > 0 ? "Exact Dynatrace overlap" : "No exact Smartscape resource match"}</strong>
+        <span>{correlation.matchedResourceCount > 0
+          ? `${correlation.matchedResourceCount} affected resource${correlation.matchedResourceCount === 1 ? "" : "s"} matched ${correlation.matchedServiceNames.length} Dynatrace service${correlation.matchedServiceNames.length === 1 ? "" : "s"}: ${correlation.matchedServiceNames.slice(0, 4).join(", ")}${correlation.matchedServiceNames.length > 4 ? ", …" : ""}.`
+          : "AWS returned affected resource identifiers, but none matched the current Smartscape runtime identifiers. Account or region overlap alone is not treated as local impact."}</span>
+        {correlation.matchedResourceCount > 0 ? <Link to="/">Review Coverage</Link> : null}
+      </div>
+    ) : null}
     {notice.url ? <a className="inline-action" href={notice.url} target="_blank" rel="noreferrer">Open provider status record</a> : null}
   </article>
 );
 
-export const ProviderNotices = ({ providerSlug, lookbackHours, embedded = false }: ProviderNoticesProps) => {
+export const ProviderNotices = ({ providerSlug, lookbackHours, topology = [], embedded = false }: ProviderNoticesProps) => {
   const connectionSettings = useProviderConnections();
   const savedConnections = useMemo(() => connectionSettings.connections
     .filter((item) => item.providerSlug === providerSlug && item.enabled)
@@ -165,6 +189,10 @@ export const ProviderNotices = ({ providerSlug, lookbackHours, embedded = false 
   const [selectedId, setSelectedId] = useState<string>();
   const response = query.data?.provider === providerSlug ? query.data : undefined;
   const selected = response?.notices.find((notice) => notice.id === selectedId) ?? response?.notices[0];
+  const selectedCorrelation = useMemo(
+    () => selected ? correlateProviderNoticeToTopology(selected, topology) : { matches: [], matchedResourceCount: 0, matchedServiceNames: [] },
+    [selected, topology],
+  );
 
   useEffect(() => {
     setSourceConnectionKey("auto");
@@ -244,7 +272,7 @@ export const ProviderNotices = ({ providerSlug, lookbackHours, embedded = false 
                   ))}
                 </div>
               </aside>
-              {selected ? <NoticeDetail notice={selected} providerName={response.providerName} /> : null}
+              {selected ? <NoticeDetail notice={selected} providerName={response.providerName} correlation={selectedCorrelation} /> : null}
             </div>
           )}
         </>

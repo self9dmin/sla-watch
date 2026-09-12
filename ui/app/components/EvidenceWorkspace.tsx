@@ -477,6 +477,7 @@ export const EvidenceWorkspace = ({
       <ProviderNotices
         providerSlug={props.providerSlug}
         lookbackHours={props.lookbackHours}
+        topology={props.topology}
         embedded
       />
     ) : (

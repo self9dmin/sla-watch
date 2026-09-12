@@ -579,6 +579,12 @@ a { color: var(--sla-accent); }
 .provider-notice-products > div { display: flex; flex-wrap: wrap; gap: 6px; }
 .provider-product { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; border: 1px solid var(--sla-border-soft); border-radius: 999px; padding: 4px 8px; overflow-wrap: anywhere; color: var(--sla-text); background: var(--sla-surface-subtle); font-size: 9px; }
 .provider-product small { overflow: hidden; max-width: 170px; color: var(--sla-accent-strong); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.provider-notice-correlation { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 12px; margin: 0 0 10px; border: 1px solid var(--sla-border-soft); border-radius: 6px; padding: 8px 10px; color: var(--sla-muted); background: var(--sla-surface-subtle); font-size: 9px; line-height: 1.4; }
+.provider-notice-correlation.matched { border-color: color-mix(in srgb, var(--sla-positive) 32%, var(--sla-border)); background: color-mix(in srgb, var(--sla-positive-bg) 35%, var(--sla-surface)); }
+.provider-notice-correlation strong { color: var(--sla-text); font-size: 10px; }
+.provider-notice-correlation span { grid-column: 1; }
+.provider-notice-correlation a { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--sla-accent); font-weight: 700; text-decoration: none; }
+.provider-notice-correlation a:hover { text-decoration: underline; text-underline-offset: 2px; }
 .muted-inline { color: var(--sla-muted); font-size: 10px; }
 .provider-notices-empty { display: flex; flex: 1; align-items: center; justify-content: center; flex-direction: column; gap: 6px; min-height: 150px; padding: 22px; color: var(--sla-muted); text-align: center; font-size: 11px; }
 .provider-notices-empty strong { color: var(--sla-text); font-size: 13px; }

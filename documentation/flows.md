@@ -36,14 +36,16 @@ Deny behavior: saving provider defaults never writes to Dynatrace entity setting
 
 Actor: administrator with App Settings write access, access to the selected Credential Vault record, an AWS Health API eligible support plan, and permission to configure AWS IAM.
 
-1. The administrator creates a dedicated AWS identity with only `health:DescribeEvents` and `health:DescribeEventDetails`.
+1. The administrator creates a dedicated AWS identity with only `health:DescribeEvents`, `health:DescribeEventDetails`, and `health:DescribeAffectedEntities`.
 2. The administrator stores JSON containing `accessKeyId`, `secretAccessKey`, and an optional `sessionToken` as a Token credential with AppEngine scope and application access limited to SLA Review.
 3. The administrator allowlists `sts.us-east-1.amazonaws.com` and `health.us-east-1.amazonaws.com` in Dynatrace External requests.
 4. The administrator enters a 12-digit AWS account ID and Credential Vault record ID under Provider connections. More than one account connection can be retained.
 5. Test connection signs an STS `GetCallerIdentity` request and rejects a credential whose returned account differs from the configured account.
-6. A new or access-modified connection can be saved only after the current fields pass Test connection. After account verification, the function signs bounded AWS Health `DescribeEvents` and `DescribeEventDetails` requests and returns only events explicitly marked `ACCOUNT_SPECIFIC`.
+6. A new or access-modified connection can be saved only after the current fields pass Test connection. After account verification, the function signs bounded AWS Health `DescribeEvents`, `DescribeEventDetails`, and `DescribeAffectedEntities` requests and returns only events explicitly marked `ACCOUNT_SPECIFIC`.
+7. Evidence compares returned affected-resource identifiers with Smartscape runtime identifiers only when account and location context are compatible. An exact match can identify overlapping Dynatrace services; account or region overlap alone never qualifies as local impact.
+8. Live acceptance uses a disposable least-privilege identity where practical. After the test, the administrator removes the app connection, deletes the Credential Vault record, and revokes the AWS credential.
 
-Deny or degraded behavior: a missing support plan, inaccessible credential, invalid signature, wrong account, IAM denial, throttled endpoint, or malformed response is shown as unavailable. The app does not silently replace a selected AWS account with a public source, modify AWS, or represent an account event as proof of local impact or credit eligibility.
+Deny or degraded behavior: a missing support plan, inaccessible credential, invalid signature, wrong account, IAM denial, throttled endpoint, malformed response, or unmatched resource identifier is shown explicitly. The app does not silently replace a selected AWS account with a public source, modify AWS, or represent an account event as proof of local impact or credit eligibility.
 
 ## Configure Azure provider notices
 
