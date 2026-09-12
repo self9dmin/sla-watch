@@ -1,6 +1,23 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.49`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.50`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.50 verified scenarios
+
+The `0.0.50` artifact from source commit `b327e49` was deployed to the designated Dynatrace target environment on 2026-09-12 and exercised through the connected Chrome profile. The smoke was read-only apart from switching the personal theme from light to dark. It did not create, update, or delete an objective or change provider configuration, credentials, mappings, custom terms, evidence decisions, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.50` manifest, six AppEngine functions, App Settings schemas, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `b327e49` |
+| Release gate | Type checks, lint, 21 test suites with 134 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24 | `npm run verify:release`; 81.02% statement coverage and zero production dependency vulnerabilities |
+| SRE flow | The installed navigation presents Coverage, Performance, Incidents, Evidence, and the disabled FinOps Agent in that order | Installed production navigation and accessibility-tree smoke |
+| Objective portfolio | Performance loaded one AWS customer objective and displayed compact status facts, an objective tile, and selected-objective detail inside the app shell | Installed production Performance smoke against live Dynatrace objective data |
+| Objective evidence | `content-pipeline-catalog availability (AWS)` evaluated at 63.794% against a 99.99% target for the last 30 days, reported Below target, and showed a -36.196% error budget | Installed production Performance accessibility-tree and visual smoke |
+| Native presentation | The Service objectives header and Open SLOs action use the native objective icon, and the observed result is rendered with the native single-value visualization | Installed production DOM and visual smoke; Open SLOs contained one SVG icon |
+| Evidence boundary | Performance states that objective status comes from customer-observed Dynatrace service telemetry while provider reports remain separate evidence | Installed production Performance copy and selected-objective smoke |
+| Bounded layout | The production app body reported equal client and scroll dimensions of 1646 by 803 CSS pixels in light and dark themes, with no document scrolling or horizontal overflow | Installed production dimension and visual checks |
+| Release history | Change log showed `0.0.50 Current release` and the Performance portfolio details | Installed production change-log smoke |
+| Runtime quality | Coverage, Performance, and change log loaded without a captured browser warning or error | Connected Chrome browser-log and interaction smoke |
 
 ## 0.0.49 verified scenarios
 
