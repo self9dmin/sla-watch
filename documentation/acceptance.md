@@ -1,6 +1,21 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.59`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.60`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.60 verified scenarios
+
+The `0.0.60` artifact from source commit `ce45979` was deployed to the designated Dynatrace target environment on 2026-09-13 and exercised through the connected Chrome profile. The production smoke was read-only. It did not change provider configuration, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.60` manifest, six AppEngine functions, environment-driven provider rail, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `ce45979` |
+| Release gate | Type checks, lint, 29 test suites with 166 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24 | Local release commands; 83.39% statement coverage; zero production dependency vulnerabilities |
+| Applicable-provider rail | The target environment displayed exactly one provider button, AWS, with one selected bundled logo and no disabled Azure, GCP, or OCI placeholders | Installed production Coverage DOM and dark-theme visual smoke |
+| Summary continuity | The Coverage provider fact settled on `1` and `AWS selected`, matching the visible rail | Installed production Coverage DOM smoke after asynchronous data loading completed |
+| Empty environment | The local tenant-backed preview with no detected, confirmed, or connected providers omitted the rail and reported `0` with `none detected or configured` | Local App Toolkit visual and DOM smoke |
+| Extensible marks | Unit coverage verifies bundled local marks for AWS, Azure, GCP, and OCI plus deterministic local monograms for dynamically detected provider slugs without a bundled mark | `tests/providerPresentation.test.ts` |
+| Release history | Change log showed `0.0.60 Current release` and `Made provider context follow the environment.` | Installed production change-log smoke |
+| Runtime observation | Local and production rail checks completed without a captured browser warning or error | Connected Chrome browser diagnostics |
 
 ## 0.0.59 verified scenarios
 
