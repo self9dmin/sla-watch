@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.53`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.54`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.54 verified scenarios
+
+The `0.0.54` artifact from source commit `cb7cf52` was deployed to the designated Dynatrace target environment on 2026-09-12 and exercised through the connected Chrome profile. The production smoke was read-only. It did not create, update, or delete an objective or change provider configuration, credentials, mappings, custom terms, evidence decisions, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.54` manifest, six AppEngine functions, root-cause decision fields, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `cb7cf52` |
+| Release gate | Type checks, lint, 27 test suites with 155 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 82.62% statement coverage; zero production dependency vulnerabilities |
+| Release history | Change log showed `0.0.54 Current release` and the guarded root-cause-assisted triage details | Installed production change-log smoke |
+| Coverage continuity | Coverage finished Ready with eight loaded services, three covered, five not attributed, and zero ambiguous matches. The provider-scope tile and All, Covered, and Needs review counts agreed | Installed production Coverage accessibility-tree smoke |
+| Conservative incident triage | Incidents loaded seven provider-relevant Problems over seven days: six needing review, one existing Not provider-related decision, and zero active. Dynatrace returned no root-cause entity for these Problems, so Select multiple correctly remained disabled instead of treating missing data as provider absence | Installed production Incidents accessibility-tree and visual smoke |
+| Evidence continuity | Evidence reported six Needs review, zero Not ready, zero Package ready, and one Not provider-related. The existing decision, current telemetry, terms, and no-submission boundary remained intact | Installed production Evidence smoke; no decision write was performed |
+| Directory source | AWS published terms loaded through the deployed directory function with 62 services, 99.99% availability, a 30-day filing reference, credit policy, claim inputs, exclusions, support metadata, and record provenance | Installed production Directory smoke |
+| Bounded runtime | The AppShell and app iframe had matching client and scroll dimensions of 1492 by 803 and 1444 by 803 CSS pixels, respectively, with no horizontal or document overflow and no captured browser errors | Connected Chrome dimension and browser-log smoke |
+| Open bulk-mutation acceptance | Exact-root grouping, eligibility, per-Problem persistence, partial failure, stale-state invalidation, and the 50-record limit have executable coverage. The live tenant had no eligible Problem with a returned root cause, so production bulk persistence was deliberately not forced | `tests/incidentTriage.test.ts`, `tests/problems.test.ts`, `tests/evidenceCandidates.test.ts`; requires a disposable qualifying Problem for live mutation acceptance |
 
 ## 0.0.53 verified scenarios
 
