@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.66`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.67`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.67 verified scenarios
+
+The `0.0.67` artifact from source commit `b26343f` was built and deployed to the designated Dynatrace target environment with Node 24.19.0 on 2026-09-13, then exercised through the connected Chrome profile. The production smoke was read-only and changed only the selected application views. It did not change provider connections, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.67` manifest, six AppEngine functions, shared evidence-state resolver, versioned review artifact, and revised Evidence workspace deployed successfully under the unchanged `my.sla` application ID | Supported-runtime deployment and connected Chrome smoke; source commit `b26343f` |
+| Release gate | UI and API type checks, lint, 35 test suites with 193 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed. The Dynatrace build and analyzer were also run directly with Node 24.19.0 | `npm run verify:release`; 83.97% statement coverage; zero production dependency vulnerabilities |
+| Review queue | Evidence opened on `Review cases`, exposed search and explicit All, Needs review, Needs evidence, Ready, and Excluded filters, and reported three excluded cases without truncating the queue | Installed Evidence DOM and visual smoke |
+| Shared review state | Incidents organized seven Problems into three provider-relevant cases and showed the same three cases as Excluded. Evidence reported Needs review 0, Needs evidence 0, Ready 0, and Excluded 3. No stale `Potential SLA impact` label remained | Installed Incidents and Evidence DOM smoke |
+| Readiness hierarchy | The selected case led with Coverage, Customer impact, Terms, optional Provider corroboration, Required items, and the explicit `Nothing has been sent.` boundary | Installed Evidence DOM and dark-theme visual smoke |
+| Provider corroboration | The optional view stated that account-specific AWS events require a read-only connection and that Dynatrace Problems and directory terms remain available without one. It did not present missing provider data as healthy evidence | Installed Provider corroboration DOM smoke; no connection was created |
+| Portable handoff | `Copy follow-up summary` and `Download evidence review` were available on the selected case. Their versioned content, UTC timestamps, state labels, and filename rules passed unit coverage; neither action was activated during production smoke | Installed control smoke and `tests/evidenceReviewArtifact.test.ts` |
+| Installed version | The installed change log showed `0.0.67 Current release` and described the complete portable SRE handoff | Installed production change-log smoke |
+| Runtime quality | Evidence, Provider corroboration, Incidents, and the change log rendered without horizontal page overflow or captured browser warnings and errors | Connected Chrome post-deploy smoke and browser diagnostics |
 
 ## 0.0.66 verified scenarios
 
