@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.56",
+    version: "0.0.57",
     label: "Current release",
+    summary: "Made provider context visible and immediate.",
+    details: [
+      "Replaced the active-provider dropdown with a compact AWS, Azure, GCP, and OCI logo rail that keeps all four core providers visible.",
+      "Only providers evidenced by the environment can be selected; the active provider has one clear illuminated state and detected providers carry a status marker.",
+      "Aligned the logo rail with the workflow navigation, enlarged the provider marks, and removed the white logo tile in dark mode.",
+      "Bundled the SLA.directory brand SVGs locally because the v1 vendor response does not expose a logo or icon field.",
+      "Removed the separate Review terms action and promoted Directory to a peer workflow tab after Evidence.",
+    ],
+  },
+  {
+    version: "0.0.56",
+    label: "Previous release",
     summary: "Made manual multi-select available without root-cause data.",
     details: [
       "Closed Problems with confirmed provider scope can now be selected together even when Dynatrace did not return a root-cause entity.",

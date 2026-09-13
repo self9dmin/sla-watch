@@ -27,7 +27,7 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="directory"]',
     title: "Open provider records",
-    body: "Review terms opens the directory record for the active provider, including published terms, service coverage, claim requirements, support options, and tenant overrides.",
+    body: "Directory holds the active provider's published terms, service coverage, claim requirements, support options, and tenant overrides.",
   },
   {
     target: '[data-tour="settings"]',
