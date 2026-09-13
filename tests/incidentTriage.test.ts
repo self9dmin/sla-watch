@@ -139,6 +139,36 @@ describe("incident root-cause triage", () => {
     }).eligible).toBe(false);
   });
 
+  it("allows explicit manual bulk review when Dynatrace returns no root cause", () => {
+    const record = {
+      ...problem("P-NO-ROOT"),
+      hasRootCause: false,
+      rootCause: undefined,
+    };
+    const rootCause = assessment(record);
+    const item = {
+      problem: record,
+      candidate: candidate(record),
+      assessment: rootCause,
+      contextComplete: true,
+    };
+
+    expect(bulkDismissalEligibility(item)).toEqual({
+      eligible: true,
+      reason: "Available for manual bulk review. Dynatrace did not return a root cause.",
+    });
+    expect(createRootCauseReviewGroups([item])).toEqual([]);
+    expect(createBulkDismissalNote({
+      problem: record,
+      assessment: rootCause,
+      providerName: "AWS",
+    })).toContain("was not inferred from root-cause data");
+    expect(bulkDismissalEligibility({
+      ...item,
+      contextComplete: false,
+    }).eligible).toBe(false);
+  });
+
   it("does not overwrite an existing current review decision", () => {
     const record = problem("P-4");
     const decision = {

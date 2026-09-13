@@ -37,6 +37,6 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 - Returning users keep their workspace configuration and do not see first-run ceremony again.
 - Evidence does not ask the SRE to rediscover coverage or terms. A repair link carries the exact provider service and returns to the same Problem.
 - Missing or contradictory provider-owned evidence never erases a Dynatrace-observed customer-impact signal.
-- Root-cause-assisted bulk triage never includes active, provider-linked, incomplete, missing-root-cause, unconfirmed-scope, or previously reviewed Problems.
+- Root-cause-assisted grouping requires one exact returned root cause. Manual bulk triage may include a missing-root-cause candidate only when it is closed, provider scope is confirmed, relationship and decision context are complete, and no prior decision exists.
 - A bulk outcome remains a human Not provider-related classification. It is not proof that the provider was uninvolved.
 - Package ready requires each published evidence requirement to be present and acknowledged; Not ready records what is still missing.

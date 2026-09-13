@@ -168,12 +168,15 @@ export const bulkDismissalEligibility = (
     return { eligible: false, reason: "Confirm the provider scope first." };
   if (item.decision)
     return { eligible: false, reason: "This Problem already has a review decision." };
-  if (!item.problem.rootCause)
-    return { eligible: false, reason: "Dynatrace did not return a root cause." };
   if (!item.contextComplete)
     return { eligible: false, reason: "Provider relationship data is incomplete." };
   if (item.assessment.relation === "provider-linked")
     return { eligible: false, reason: "The root cause is linked to this provider." };
+  if (!item.problem.rootCause)
+    return {
+      eligible: true,
+      reason: "Available for manual bulk review. Dynatrace did not return a root cause.",
+    };
   if (
     item.assessment.relation !== "other-provider" &&
     item.assessment.relation !== "unscoped"
@@ -218,7 +221,7 @@ export const createBulkDismissalNote = ({
 }): string => {
   const rootCause = problem.rootCause;
   if (!rootCause)
-    return `Bulk triage marked this Problem not provider-related for ${providerName}.`;
+    return `Manual bulk review marked this Problem not provider-related to ${providerName}. Dynatrace did not return a root-cause entity, so this decision was not inferred from root-cause data.`;
   const entity = `${rootCause.name} (${formatSmartscapeEntityType(rootCause.type)})`;
   if (assessment.relation === "other-provider") {
     const providers = assessment.linkedProviderSlugs.map(providerDisplayName).join(", ");

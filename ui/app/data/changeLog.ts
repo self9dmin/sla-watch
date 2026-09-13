@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.55",
+    version: "0.0.56",
     label: "Current release",
+    summary: "Made manual multi-select available without root-cause data.",
+    details: [
+      "Closed Problems with confirmed provider scope can now be selected together even when Dynatrace did not return a root-cause entity.",
+      "Missing root-cause evidence remains visible in selection and confirmation instead of being interpreted as proof.",
+      "Exact root-cause matches still power the faster group suggestion, while active, provider-linked, incomplete, and previously reviewed Problems remain protected.",
+    ],
+  },
+  {
+    version: "0.0.55",
+    label: "Previous release",
     summary: "Introduced the Signal Review app mark.",
     details: [
       "The new icon shows multiple evidence signals converging into one guarded review outcome.",

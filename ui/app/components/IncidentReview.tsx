@@ -470,6 +470,9 @@ export const IncidentReview = ({
       Boolean(item.candidate) &&
       eligibilityByProblem.get(item.problem.id)?.eligible === true,
   ).slice(0, MAX_BULK_REVIEW);
+  const selectedWithoutRootCauseCount = selectedBulkItems.filter(
+    (item) => !item.problem.rootCause,
+  ).length;
 
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
@@ -681,7 +684,7 @@ export const IncidentReview = ({
                 : !bulkReviewContextComplete
                   ? "Provider relationships or existing review decisions are incomplete. Review Problems individually."
                 : eligibleBulkCount === 0
-                  ? "No closed unresolved candidate has a reviewable root cause."
+                  ? "No closed confirmed candidate is available for manual bulk review."
                   : undefined}
               onClick={() => {
                 if (selectionMode) closeBulkReview();
@@ -721,8 +724,10 @@ export const IncidentReview = ({
               ? `Mark ${selectedBulkItems.length} not provider-related?`
               : `${selectedBulkItems.length} selected`}</strong>
             <span>{confirmingBulkReview
-              ? "Each Problem receives its own audited decision. Dynatrace root cause is a triage aid, not proof, and nothing is submitted."
-              : `Select up to ${MAX_BULK_REVIEW} closed candidates. Active, provider-linked, incomplete, and previously reviewed Problems stay individual.`}</span>
+              ? selectedWithoutRootCauseCount > 0
+                ? `${selectedWithoutRootCauseCount} selected Problem${selectedWithoutRootCauseCount === 1 ? " has" : "s have"} no returned root cause. Each receives its own audited decision. This is your classification, not proof, and nothing is submitted.`
+                : "Each Problem receives its own audited decision. Dynatrace root cause is a triage aid, not proof, and nothing is submitted."
+              : `Select up to ${MAX_BULK_REVIEW} closed candidates. A missing root cause does not block manual review. Active, provider-linked, incomplete, and previously reviewed Problems stay individual.`}</span>
           </div>
           <div className="incident-bulk-actions">
             {confirmingBulkReview ? (
