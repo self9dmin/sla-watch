@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.63",
+    version: "0.0.64",
     label: "Current release",
+    summary: "Made Coverage follow the evidence Dynatrace actually found.",
+    details: [
+      "Coverage now opens on Detected topology when a provider is present but Dynatrace returned no verified service relationship.",
+      "The topology view shows provider scope, compute, monitored-host, and Smartscape node-type evidence from the bounded environment scan.",
+      "Raw Smartscape node types and their aggregate counts remain visible without treating those records as unique resources or service links.",
+      "The complete environment service inventory stays available in a separate Service links view for deliberate manual mapping.",
+      "AWS, Azure, and Google Cloud handoffs open the matching provider overview in Smartscape.",
+    ],
+  },
+  {
+    version: "0.0.63",
+    label: "Previous release",
     summary: "Separated provider discovery from verified service links.",
     details: [
       "Coverage now reports the selected provider's verified service links separately from the complete environment service inventory that Dynatrace checked.",

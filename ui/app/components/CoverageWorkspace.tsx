@@ -27,6 +27,10 @@ import {
   type ProviderInfrastructureCandidate,
 } from "../data/providerInfrastructure";
 import {
+  providerInventoryNodeTypeLabel,
+  type ProviderInventorySummary,
+} from "../data/providerInventory";
+import {
   createProviderScopeAssignmentKey,
   createServiceScopeAssignment,
   isServiceScopeAssignment,
@@ -35,12 +39,14 @@ import {
 } from "../data/providerScopeAssignments";
 import { safeWorkspaceReturnPath } from "../data/reviewRoutes";
 import { providerDisplayName } from "../data/providers";
+import type { ProviderHostContextSummary } from "../data/topology";
 import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAssignments";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { SetupAdvisor } from "./SetupAdvisor";
 import { ServiceObjectivePreview } from "./ServiceObjectivePreview";
 
 type Tone = "neutral" | "warning" | "positive";
+type CoverageEvidenceView = "topology" | "services";
 
 type CoverageWorkspaceProps = {
   provider?: SlaProviderResponse;
@@ -55,6 +61,8 @@ type CoverageWorkspaceProps = {
   limitedContext: boolean;
   inventory: CoverageInventoryStatus;
   infrastructureCandidate?: ProviderInfrastructureCandidate;
+  providerInventory?: ProviderInventorySummary;
+  providerHostContext?: ProviderHostContextSummary;
 };
 
 const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode }) => (
@@ -62,6 +70,19 @@ const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode 
 );
 
 const COVERAGE_PAGE_SIZE = 50;
+
+const providerScopeNoun = (providerSlug: string): string => {
+  if (providerSlug === "azure") return "Subscriptions";
+  if (providerSlug === "gcp") return "Projects";
+  if (providerSlug === "oci") return "Tenancies";
+  return "Accounts";
+};
+
+const providerComputeNoun = (providerSlug: string): string => {
+  if (providerSlug === "aws") return "EC2 instances";
+  if (providerSlug === "azure") return "Virtual machines";
+  return "Compute instances";
+};
 
 export const CoverageWorkspace = ({
   provider,
@@ -76,6 +97,8 @@ export const CoverageWorkspace = ({
   limitedContext,
   inventory,
   infrastructureCandidate,
+  providerInventory,
+  providerHostContext,
 }: CoverageWorkspaceProps) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -83,6 +106,7 @@ export const CoverageWorkspace = ({
   const [selectedProviderServiceId, setSelectedProviderServiceId] = useState("");
   const [feedback, setFeedback] = useState<{ tone: Tone; message: string }>();
   const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
+  const [evidenceView, setEvidenceView] = useState<CoverageEvidenceView>("services");
   const [searchText, setSearchText] = useState("");
   const [page, setPage] = useState(0);
   const lastFocusedService = useRef<string | null>(null);
@@ -102,6 +126,16 @@ export const CoverageWorkspace = ({
   const coverageRows = coverageModel.rows;
   const reviewRows = coverageModel.reviewRows;
   const coveredRows = coverageModel.coveredRows;
+  const hasProviderTopology = Boolean(
+    infrastructureCandidate || providerInventory || providerHostContext,
+  );
+  const preferTopology = Boolean(
+    infrastructureCandidate && coveredRows.length === 0 && reviewRows.length === 0,
+  );
+
+  useEffect(() => {
+    setEvidenceView(focusedServiceId || !preferTopology ? "services" : "topology");
+  }, [focusedServiceId, preferTopology, providerSlug]);
 
   const filteredRows = useMemo(() => {
     const rows = coverageFilter === "review"
@@ -381,25 +415,49 @@ export const CoverageWorkspace = ({
     !selectionUsesObservedMatch &&
     (!selectedSourceTag || selectedAssignment || selectedProviderService.id !== "*"),
   );
+  const monitoredHostCount = providerHostContext?.hostCount ?? infrastructureCandidate?.hostCount ?? 0;
+  const topologyFacts = [
+    providerInventory && providerInventory.accountScopeCount > 0
+      ? { label: providerScopeNoun(providerSlug), value: providerInventory.accountScopeCount }
+      : null,
+    providerInventory && providerInventory.computeResourceCount > 0
+      ? { label: providerComputeNoun(providerSlug), value: providerInventory.computeResourceCount }
+      : null,
+    monitoredHostCount > 0
+      ? { label: "Monitored hosts", value: monitoredHostCount }
+      : null,
+    providerInventory && providerInventory.nodeTypes.length > 0
+      ? { label: "Smartscape types", value: providerInventory.nodeTypes.length }
+      : null,
+  ].filter((fact): fact is { label: string; value: number } => fact !== null);
+  const topologyTypeCounts = providerInventory?.nodeTypeCounts ?? [];
+  const smartscapeView = providerSlug === "aws"
+    ? "view/dynatrace.smartscape.aws-overview"
+    : providerSlug === "azure"
+      ? "view/dynatrace.smartscape.azure-overview"
+      : providerSlug === "gcp"
+        ? "view/dynatrace.smartscape.gcp-overview"
+        : "view/dynatrace.smartscape.smartscape-on-grail";
 
   return (
     <section className="scope-map-view setup-scope-map" aria-labelledby="service-coverage-title">
       <div className="scope-map-toolbar">
-        <div className="scope-map-title"><ServicesIcon /><div><strong id="service-coverage-title">Service coverage</strong><span>{infrastructureCandidate ? `Dynatrace detected ${providerName} infrastructure and checked every loaded service for a verified relationship.` : `See every loaded service and its verified ${providerName} relationship.`}</span></div></div>
+        <div className="scope-map-title"><SmartscapeIcon /><div><strong id="service-coverage-title">Provider coverage</strong><span>Start with what Dynatrace found, then review only the service relationships that matter.</span></div></div>
         <div className="scope-map-toolbar-actions">
-          <Button size="condensed" onClick={() => openApp("dynatrace.smartscape", "view/dynatrace.smartscape.smartscape-on-grail")}><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
+          <Button size="condensed" onClick={() => openApp("dynatrace.smartscape", smartscapeView)}><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
         </div>
       </div>
       <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed mappings, and matching source tags identify the provider service. Incidents and Evidence then resolve the applicable terms automatically. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>
-      {infrastructureCandidate ? (
-        <div className="coverage-infrastructure-candidate" role="status">
-          <HostsIcon />
-          <div>
-            <strong>{providerName} infrastructure detected</strong>
-            <span>{providerInfrastructureCandidateDetail(infrastructureCandidate)}</span>
-            <span>{coverageRows.length.toLocaleString()} environment service{coverageRows.length === 1 ? " was" : "s were"} checked. None has a verified {providerName} relationship.</span>
-          </div>
-          <StatusPill tone="warning">0 services linked</StatusPill>
+      {hasProviderTopology ? (
+        <div className="coverage-evidence-tabs" role="group" aria-label="Coverage evidence views">
+          <button type="button" className={evidenceView === "topology" ? "active" : ""} aria-pressed={evidenceView === "topology"} onClick={() => setEvidenceView("topology")}>
+            <span>Detected topology</span>
+            <strong>{providerInventory?.nodeTypes.length.toLocaleString() ?? "1"}</strong>
+          </button>
+          <button type="button" className={evidenceView === "services" ? "active" : ""} aria-pressed={evidenceView === "services"} onClick={() => setEvidenceView("services")}>
+            <span>Service links</span>
+            <strong>{coveredRows.length.toLocaleString()}</strong>
+          </button>
         </div>
       ) : null}
       {focusedProblemId ? (
@@ -424,7 +482,68 @@ export const CoverageWorkspace = ({
       {error ? <div className="error-box compact-error">Smartscape topology is unavailable. Service inventory remains available for coverage review.</div> : null}
       {scopeSettings.error ? <div className="error-box compact-error">Confirmed mappings are unavailable. Check App Settings read access.</div> : null}
       {loading || scopeSettings.loading ? (
-        <div className="directory-loading" role="status"><strong>Loading service coverage</strong><span>Reading service inventory, Smartscape relationships, and confirmed mappings.</span></div>
+        <div className="directory-loading" role="status"><strong>Loading provider coverage</strong><span>Reading provider topology, service inventory, and confirmed mappings.</span></div>
+      ) : evidenceView === "topology" && hasProviderTopology ? (
+        <section className="coverage-topology-view" aria-label={`${providerName} detected topology`}>
+          <div className="coverage-topology-heading">
+            <div>
+              <span className="coverage-topology-icon"><SmartscapeIcon /></span>
+              <div>
+                <strong>What Dynatrace found for {providerName}</strong>
+                <span>{infrastructureCandidate
+                  ? providerInfrastructureCandidateDetail(infrastructureCandidate)
+                  : `Dynatrace found ${providerInventory?.nodeCount.toLocaleString() ?? "provider"} provider-owned Smartscape nodes in the bounded inventory.`}</span>
+              </div>
+            </div>
+            <StatusPill tone="positive">Provider detected</StatusPill>
+          </div>
+          {topologyFacts.length > 0 ? (
+            <div className="coverage-topology-facts" aria-label={`${providerName} topology summary`}>
+              {topologyFacts.map((fact) => (
+                <div key={fact.label}>
+                  <strong>{fact.value.toLocaleString()}</strong>
+                  <span>{fact.label}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <div className="coverage-topology-types">
+            <div className="coverage-topology-types-heading">
+              <div>
+                <strong>Smartscape node types</strong>
+                <span>Counts are topology records from the bounded seven-day scan. They are not assumed to be unique cloud resources.</span>
+              </div>
+              <span>{topologyTypeCounts.length.toLocaleString()} types returned</span>
+            </div>
+            {topologyTypeCounts.length > 0 ? (
+              <div className="coverage-topology-type-list" role="list" aria-label={`${providerName} Smartscape node types`}>
+                {topologyTypeCounts.map(({ nodeType, nodeCount }) => (
+                  <div key={nodeType} role="listitem" className="coverage-topology-type">
+                    <strong>{nodeCount.toLocaleString()}</strong>
+                    <span>{providerInventoryNodeTypeLabel(nodeType, nodeCount)}</span>
+                    <small>{nodeType}</small>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="coverage-topology-empty">
+                <HostsIcon />
+                <span>Dynatrace returned provider metadata on monitored hosts, but no provider-native node-type summary.</span>
+              </div>
+            )}
+          </div>
+          <div className="coverage-topology-boundary">
+            <div>
+              <strong>{coveredRows.length > 0 ? `${coveredRows.length.toLocaleString()} verified service link${coveredRows.length === 1 ? "" : "s"}` : `No ${providerName} service links found`}</strong>
+              <span>{coveredRows.length > 0
+                ? `Service links are shown separately because provider inventory does not establish which Dynatrace service inherits ${providerName} terms.`
+                : `${coverageRows.length.toLocaleString()} environment service${coverageRows.length === 1 ? " was" : "s were"} checked. None is attributed from provider presence alone.`}</span>
+            </div>
+            <Button size="condensed" variant={coveredRows.length > 0 ? "emphasized" : "default"} onClick={() => setEvidenceView("services")}>
+              {coveredRows.length > 0 ? "Review service links" : "Map a service"}
+            </Button>
+          </div>
+        </section>
       ) : !provider ? (
         <div className="contract-empty"><strong>Provider terms are unavailable</strong><span>Load the selected provider before confirming service coverage.</span></div>
       ) : coverageRows.length === 0 ? (

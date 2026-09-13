@@ -79,7 +79,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app
         .getByText(
-          /Checking coverage|Access incomplete|Inventory incomplete|Contract unavailable|Action required|Boundary ready|Review available/i,
+          /Checking coverage|Access incomplete|Inventory incomplete|Contract unavailable|Review needed|Coverage ready|Infrastructure detected|No service links/i,
         )
         .first(),
     ).toBeVisible();
@@ -93,7 +93,17 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByRole("navigation", { name: "Coverage views" }),
     ).toHaveCount(0);
-    await expect(app.getByText("Service coverage")).toBeVisible();
+    await expect(app.getByText("Provider coverage", { exact: true })).toBeVisible();
+    const coverageEvidenceViews = app.getByRole("group", {
+      name: "Coverage evidence views",
+    });
+    await expect(coverageEvidenceViews).toBeVisible();
+    await expect(
+      coverageEvidenceViews.getByRole("button", { name: /^Service links/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      coverageEvidenceViews.getByRole("button", { name: /^Detected topology/ }),
+    ).toBeVisible();
     await expect(
       app.getByRole("listbox", { name: "Provider coverage worklist" }),
     ).toBeVisible();
