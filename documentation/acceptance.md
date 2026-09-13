@@ -1,6 +1,21 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.65`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.66`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.66 verified scenarios
+
+The `0.0.66` artifact from source commit `50a0527` was built and deployed to the designated Dynatrace target environment with Node 24.19.0 on 2026-09-13, then exercised through the connected Chrome profile. The production smoke was read-only except for changing and restoring the focused provider. It did not change provider connections, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.66` manifest, six AppEngine functions, Smartscape-native service inventory, provider-aware direct topology, and optional Davis impact context deployed successfully under the unchanged `my.sla` application ID | Supported-runtime deployment and connected Chrome smoke; source commit `50a0527` |
+| Release gate | UI and API type checks, lint, 33 test suites with 189 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 83.95% statement coverage; zero production dependency vulnerabilities |
+| Service migration | `smartscapeNodes SERVICE` preserved the target tenant's six current service IDs and names during the read-only classic-equivalence probe; the installed Coverage model retained eight merged current or recently observed services | Target-tenant DQL probe, parser tests, and installed Coverage smoke |
+| AWS direct topology | AWS retained three verified service links. Two services run on EC2, and `wayfinder-engage-api-inter` now visibly `calls` the exact AWS RDS node instead of being reduced to a generic runtime label | Installed AWS Coverage accessibility-tree smoke |
+| Azure attribution boundary | Azure showed one subscription, one VM, one monitored host, and 12 Smartscape types, while reporting zero Azure service links across eight checked services | Installed Azure Coverage smoke after the provider and service queries settled |
+| Problem continuity | Incidents retained all seven Problems and organized them into three provider-relevant cases. Stable Davis impact fields were accepted but absent in these records, so Incidents and Evidence displayed `Not returned` rather than inventing impact | Installed Incidents and Evidence smoke |
+| Installed version | The installed change log showed `0.0.66 Current release` with the Smartscape service migration, relationship preservation, Davis context, and removed classic entity-read scope | Installed production change-log smoke |
+| Runtime quality | The supported-runtime redeploy settled on AWS Coverage with three links, seven observed Problems, and no new app-origin browser warning or error | Connected Chrome post-deploy smoke and browser diagnostics |
 
 ## 0.0.65 verified scenarios
 
