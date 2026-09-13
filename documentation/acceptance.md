@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.61`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.62`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.62 verified scenarios
+
+The `0.0.62` artifact from source commit `2a2e18e` was deployed to the designated Dynatrace target environment on 2026-09-13 and exercised through the connected Chrome profile. The production smoke was read-only. It did not change provider configuration, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.62` manifest, six AppEngine functions, bounded host cloud-context query, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `2a2e18e` |
+| Release gate | Type checks, lint, 31 test suites with 176 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 83.72% statement coverage; zero production dependency vulnerabilities |
+| Azure infrastructure candidate | Azure Coverage displayed one provider-level candidate from one monitored host with Azure metadata and one Azure VM in provider-native topology | Installed production Azure Coverage smoke after both Smartscape queries settled |
+| Deduplicated uncertainty | The host and VM signals appeared once, explicitly stated that they were not assumed to represent the same resource, and did not assign any service | Installed production candidate card and automated infrastructure-candidate coverage |
+| Service attribution boundary | Azure remained at `0 of 7` with all seven services under `NO SERVICE-LEVEL PROVIDER LINK`. Provider presence did not create service coverage or a service-level terms match | Installed production Azure Coverage worklist smoke |
+| AWS continuity | AWS retained three of seven covered services, including two exact Amazon EC2 service-cloud-context matches, and did not display the fallback infrastructure candidate | Installed production AWS Coverage smoke |
+| Provider context | The provider rail and Review defaults exposed AWS and Azure. AWS reported one account, nine EC2 instances, and 69 Smartscape types; Azure reported one subscription, one VM, and 12 Smartscape types | Installed production Coverage and Review defaults smoke |
+| Release history | Change log showed `0.0.62 Current release` and the four conservative infrastructure-candidate details | Installed production change-log smoke |
+| Bounded runtime | The Azure Coverage app frame reported equal client and scroll dimensions of 787 by 747 CSS pixels, with no document overflow and no captured browser warnings or errors | Connected Chrome dimension and browser-log smoke |
 
 ## 0.0.61 verified scenarios
 
