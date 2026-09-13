@@ -163,7 +163,7 @@ export const bulkDismissalEligibility = (
   if (item.problem.status.toUpperCase() !== "CLOSED")
     return { eligible: false, reason: "Only closed Problems can be reviewed in bulk." };
   if (!item.candidate)
-    return { eligible: false, reason: "No provider-review candidate exists." };
+    return { eligible: false, reason: "No provider-review case exists." };
   if (!item.candidate.scopeConfirmed)
     return { eligible: false, reason: "Confirm the provider scope first." };
   if (item.decision)

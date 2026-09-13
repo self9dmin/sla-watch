@@ -155,15 +155,15 @@ export const evidenceDecisionInputError = ({
   if (note.trim().length > MAX_EVIDENCE_DECISION_NOTE_LENGTH)
     return `Keep the review note to ${MAX_EVIDENCE_DECISION_NOTE_LENGTH} characters or fewer.`;
   if (status === "validated" && !acknowledged)
-    return "Confirm the review boundary before marking this package ready.";
+    return "Confirm the review boundary before marking this case ready for follow-up.";
   if (
     status === "validated" &&
     requiredEvidence.some((item) => !acknowledgedEvidence.includes(item))
-  ) return "Confirm each provider evidence requirement before marking this package ready.";
+  ) return "Confirm each provider requirement before marking this case ready for follow-up.";
   if (status === "not-ready" && note.trim().length === 0)
-    return "Add a short note describing what the package still needs.";
+    return "Add a short note describing what evidence is still needed.";
   if (status === "dismissed" && note.trim().length === 0)
-    return "Add a short reason before marking this review not provider-related.";
+    return "Add a short reason before excluding this case from provider follow-up.";
   return null;
 };
 

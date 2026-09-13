@@ -338,12 +338,12 @@ describe("evidence candidates", () => {
       acknowledged: true,
       requiredEvidence: ["Impact timestamps"],
       acknowledgedEvidence: [],
-    })).toMatch(/Confirm each provider evidence requirement/);
+    })).toMatch(/Confirm each provider requirement/);
     expect(evidenceDecisionInputError({
       status: "not-ready",
       note: "",
       acknowledged: false,
-    })).toMatch(/package still needs/);
+    })).toMatch(/evidence is still needed/);
     expect(evidenceDecisionInputError({
       status: "dismissed",
       note: "",

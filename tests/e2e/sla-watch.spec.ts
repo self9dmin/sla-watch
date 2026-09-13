@@ -202,7 +202,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByLabel("Incident status").locator(".overview-fact"),
     ).toHaveCount(4);
-    await expect(app.getByText("Potential impact cases", { exact: true })).toBeVisible();
+    await expect(app.getByText("Needs evidence review", { exact: true })).toBeVisible();
     await expect(app.getByText("Dynatrace Problems", { exact: true })).toBeVisible();
     await expect(
       app.getByRole("button", { name: /Select multiple \(\d+\)/ }),
@@ -239,17 +239,36 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByRole("heading", { name: "Evidence" }),
     ).toBeVisible();
-    await expect(app.getByRole("link", { name: "Review candidates" })).toHaveClass(/active/);
-    await expect(app.getByRole("link", { name: "Provider reports" })).toBeVisible();
+    await expect(app.getByRole("link", { name: "Review cases" })).toHaveClass(/active/);
+    await expect(app.getByRole("link", { name: "Provider corroboration" })).toBeVisible();
     await expect(
       app.getByText(/provider determines fault, eligibility, and any service credit/i),
     ).toBeVisible();
+    const evidenceQueue = app.getByLabel("Provider impact review cases");
+    if (await evidenceQueue.count()) {
+      await expect(
+        evidenceQueue.getByRole("searchbox", { name: "Search review cases" }),
+      ).toBeVisible();
+      await expect(
+        evidenceQueue.getByRole("group", { name: "Filter review cases" }),
+      ).toBeVisible();
+      expect(await evidenceQueue.locator(".candidate-queue-item").count()).toBeLessThanOrEqual(20);
+      await expect(app.getByText("Review readiness", { exact: true })).toBeVisible();
+      await expect(
+        app.getByLabel("Optional provider corroboration").getByText("Optional", { exact: true }),
+      ).toBeVisible();
+      await expect(app.getByRole("button", { name: "Copy follow-up summary" })).toBeVisible();
+      await expect(app.getByRole("button", { name: "Download evidence review" })).toBeVisible();
+      await expect(app.getByText("Claim package", { exact: false })).toHaveCount(0);
+      await expect(app.getByLabel("Evidence source status")).toBeVisible();
+    }
     await expectNoPageScroll(app);
 
-    await app.getByRole("link", { name: "Provider reports" }).click();
-    await expect(app.getByRole("heading", { name: "Provider reports" })).toBeVisible();
+    await app.getByRole("link", { name: "Provider corroboration" }).click();
+    await expect(app.getByRole("heading", { name: "Provider corroboration" })).toBeVisible();
+    await expect(app.getByText("Optional", { exact: true })).toBeVisible();
     await expect(
-      app.getByText(/supporting evidence and does not establish local impact/i),
+      app.getByText(/optional supporting evidence.*does not establish local impact/i),
     ).toBeVisible();
     await expectNoPageScroll(app);
 

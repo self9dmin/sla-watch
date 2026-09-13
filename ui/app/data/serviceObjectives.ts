@@ -123,7 +123,7 @@ export const createServiceObjectiveConfig = ({
   return {
     name: safeName(`${serviceName} availability (${providerName})`),
     description: safeName(
-      `Customer-observed availability for ${serviceName}, mapped to ${providerServiceName}. Built from Dynatrace service requests; provider reports remain separate evidence.`,
+      `Customer-observed availability for ${serviceName}, mapped to ${providerServiceName}. Built from Dynatrace service requests; provider corroboration remains optional evidence.`,
     ),
     customSli: { indicator },
     criteria: [{ timeframeFrom: OBJECTIVE_EVALUATION_WINDOW, target }],

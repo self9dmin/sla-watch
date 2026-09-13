@@ -42,6 +42,11 @@ import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignment
 import { useEvidenceDecisions } from "../hooks/useEvidenceDecisions";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { formatDavisImpact, summarizeDavisImpact } from "../data/problems";
+import {
+  evidenceReviewStatePresentation,
+  resolveEvidenceReviewState,
+  type EvidenceReviewStateResult,
+} from "../data/evidenceReviewState";
 
 type Tone = "neutral" | "warning" | "positive";
 
@@ -118,12 +123,18 @@ const IncidentDetail = ({
   providerSlug,
   providerName,
   matchingLoading,
+  reviewState,
+  reviewStateLoading,
+  reviewStateUnavailable,
 }: {
   reviewCase: IncidentReviewCase;
   triageItems: IncidentBulkReviewItem[];
   providerSlug: string;
   providerName: string;
   matchingLoading: boolean;
+  reviewState: EvidenceReviewStateResult;
+  reviewStateLoading: boolean;
+  reviewStateUnavailable: boolean;
 }) => {
   const problem = reviewCase.problems[0];
   const candidate = reviewCase.candidates[0];
@@ -146,18 +157,25 @@ const IncidentDetail = ({
   const hasAffectedServiceScope = reviewCase.affectedServices.length > 0;
   const allCandidatesConfirmed = reviewCase.candidates.length === reviewCase.problems.length &&
     reviewCase.candidates.every((item) => item.scopeConfirmed);
-  const nextTone: Tone = matchingLoading
+  const reviewPresentation = evidenceReviewStatePresentation(reviewState.state);
+  const nextTone: Tone = matchingLoading || reviewStateLoading || reviewStateUnavailable
     ? "neutral"
-    : candidate
+    : candidate && reviewState.state !== "needs-review"
+      ? reviewPresentation.tone
+      : candidate
       ? allCandidatesConfirmed
         ? "positive"
         : "warning"
       : hasAffectedServiceScope
         ? "warning"
         : "neutral";
-  const nextLabel = matchingLoading
+  const nextLabel = matchingLoading || reviewStateLoading
     ? "Checking coverage"
-    : candidate
+    : reviewStateUnavailable
+      ? "Review unavailable"
+    : candidate && reviewState.state !== "needs-review"
+      ? reviewPresentation.label
+      : candidate
       ? allCandidatesConfirmed
         ? "Ready for evidence"
         : "Review suggested match"
@@ -166,6 +184,18 @@ const IncidentDetail = ({
         : "No service scope";
   const nextDetail = matchingLoading
     ? "Comparing affected services with Coverage and provider-native topology."
+    : reviewStateLoading
+      ? "Reading the saved Evidence review before showing the next action."
+    : reviewStateUnavailable
+      ? "Saved Evidence decisions could not be read, so this case is not presented as unreviewed or complete."
+    : candidate && reviewState.state === "ready-for-follow-up"
+      ? "The Evidence review is complete and ready to copy or download for provider follow-up. Nothing has been submitted."
+    : candidate && reviewState.state === "needs-evidence"
+      ? "The SRE saved this case for more evidence before provider follow-up."
+    : candidate && reviewState.state === "excluded"
+      ? "The SRE excluded this case from provider follow-up. The saved decision remains available in Evidence."
+    : candidate && reviewState.state === "mixed"
+      ? "Some Problems in this case have a saved decision and others still need review."
     : candidate
       ? reviewCase.groupingEvidence
       :
@@ -212,8 +242,20 @@ const IncidentDetail = ({
           </span>
           <Heading level={3}>{title}</Heading>
         </div>
-        <StatusPill tone={candidate ? "warning" : reviewCase.active ? "warning" : "neutral"}>
-          {candidate ? "Potential SLA impact" : reviewCase.active ? "Active" : formatStatus(problem.status)}
+        <StatusPill tone={candidate && !reviewStateLoading && !reviewStateUnavailable
+          ? reviewPresentation.tone
+          : candidate || reviewCase.active
+            ? "warning"
+            : "neutral"}>
+          {candidate
+            ? reviewStateLoading
+              ? "Loading review"
+              : reviewStateUnavailable
+                ? "Review unavailable"
+              : reviewPresentation.label
+            : reviewCase.active
+              ? "Active"
+              : formatStatus(problem.status)}
         </StatusPill>
       </div>
 
@@ -250,19 +292,27 @@ const IncidentDetail = ({
       <section className={`incident-next-step incident-next-step-${nextTone}`}>
         <StatusPill tone={nextTone}>{nextLabel}</StatusPill>
         <div>
-          <strong>{candidate ? "Provider relevance found" : "Provider relevance not established"}</strong>
+          <strong>{candidate && reviewStateUnavailable
+            ? "Saved review unavailable"
+            : candidate
+            ? reviewState.state === "excluded"
+              ? "Excluded from follow-up"
+              : reviewState.state === "ready-for-follow-up"
+                ? "Evidence review complete"
+                : "Provider relevance found"
+            : "Provider relevance not established"}</strong>
           <span>{nextDetail}</span>
         </div>
-        {!matchingLoading && candidate ? (
+        {!matchingLoading && !reviewStateLoading && !reviewStateUnavailable && candidate ? (
           <Button
             as={Link}
             to={evidencePath}
             size="condensed"
             variant="emphasized"
           >
-            Review evidence
+            {reviewState.state === "needs-review" ? "Review evidence" : "Open evidence review"}
           </Button>
-        ) : !matchingLoading && hasAffectedServiceScope ? (
+        ) : !matchingLoading && !reviewStateLoading && !reviewStateUnavailable && !candidate && hasAffectedServiceScope ? (
           <Button as={Link} to={coveragePath} size="condensed">
             Resolve coverage
           </Button>
@@ -452,27 +502,28 @@ export const IncidentReview = ({
       services,
     ],
   );
-  const decisionStatusByCase = useMemo(() => new Map(reviewCases.map((reviewCase) => {
-    if (reviewCase.candidates.length === 0)
-      return [reviewCase.key, undefined] as const;
-    const statuses = reviewCase.candidates.map((candidate) =>
-      triageItemByProblem.get(candidate.problem.id)?.decision?.status);
-    const status = statuses.every((value) => value && value === statuses[0])
-      ? statuses[0]
-      : statuses.some(Boolean)
-        ? "mixed" as const
-        : undefined;
-    return [reviewCase.key, status] as const;
-  })), [reviewCases, triageItemByProblem]);
+  const reviewStateLoading = evidenceSettings.loading || contractSettings.loading;
+  const reviewStateUnavailable = !evidenceSettings.loading && (
+    Boolean(evidenceSettings.error) ||
+    evidenceSettings.incomplete ||
+    !evidenceSettings.canRead
+  );
+  const reviewStateByCase = useMemo(
+    () => new Map(reviewCases.map((reviewCase) => [
+      reviewCase.key,
+      resolveEvidenceReviewState(reviewCase, decisionByKey),
+    ])),
+    [decisionByKey, reviewCases],
+  );
   const orderedCases = useMemo(
     () => [...reviewCases].sort((left, right) => {
-      const leftStatus = decisionStatusByCase.get(left.key);
-      const rightStatus = decisionStatusByCase.get(right.key);
-      const score = (reviewCase: IncidentReviewCase, status?: string) =>
+      const leftState = reviewStateByCase.get(left.key)?.state;
+      const rightState = reviewStateByCase.get(right.key)?.state;
+      const score = (reviewCase: IncidentReviewCase, state?: string) =>
         (reviewCase.active ? 16 : 0) +
-        (reviewCase.candidates.length > 0 && status !== "validated" && status !== "dismissed" ? 8 : 0) +
+        (reviewCase.candidates.length > 0 && state !== "ready-for-follow-up" && state !== "excluded" ? 8 : 0) +
         (reviewCase.candidates.length > 0 ? 4 : 0);
-      const difference = score(right, rightStatus) - score(left, leftStatus);
+      const difference = score(right, rightState) - score(left, leftState);
       if (difference !== 0) return difference;
       const userDifference = (summarizeDavisImpact(right.problems).maximumAffectedUsers ?? -1) -
         (summarizeDavisImpact(left.problems).maximumAffectedUsers ?? -1);
@@ -480,7 +531,7 @@ export const IncidentReview = ({
       return (Date.parse(right.startedAt ?? "") || 0) -
         (Date.parse(left.startedAt ?? "") || 0);
     }),
-    [decisionStatusByCase, reviewCases],
+    [reviewCases, reviewStateByCase],
   );
   const pageCount = Math.max(1, Math.ceil(orderedCases.length / PAGE_SIZE));
   const visibleCases = useMemo(
@@ -521,9 +572,9 @@ export const IncidentReview = ({
   const eligibleBulkCount = Array.from(eligibilityByCase.values())
     .filter((eligibility) => eligibility.eligible).length;
   const unresolvedCandidateCases = reviewCases.filter((reviewCase) => {
-    const status = decisionStatusByCase.get(reviewCase.key);
+    const state = reviewStateByCase.get(reviewCase.key)?.state;
     return reviewCase.candidates.length > 0 &&
-      status !== "validated" && status !== "dismissed";
+      state !== "ready-for-follow-up" && state !== "excluded";
   }).length;
   const providerRelevantCases = reviewCases.filter(
     (reviewCase) => reviewCase.candidates.length > 0,
@@ -708,12 +759,20 @@ export const IncidentReview = ({
           tone={activeCases > 0 ? "warning" : "neutral"}
         />
         <IncidentFact
-          label="Potential impact cases"
-          value={matchingLoading || evidenceSettings.loading || contractSettings.loading
+          label="Needs evidence review"
+          value={matchingLoading || reviewStateLoading
             ? "Checking"
+            : reviewStateUnavailable
+              ? "Unavailable"
             : unresolvedCandidateCases.toLocaleString()}
-          detail={`${candidates.length.toLocaleString()} Problems in ${providerRelevantCases.toLocaleString()} provider-relevant cases`}
-          tone={unresolvedCandidateCases > 0 ? "warning" : "positive"}
+          detail={reviewStateUnavailable
+            ? "Saved review decisions could not be read"
+            : `${candidates.length.toLocaleString()} Problems grouped into ${providerRelevantCases.toLocaleString()} provider-relevant cases`}
+          tone={reviewStateUnavailable
+            ? "neutral"
+            : unresolvedCandidateCases > 0
+              ? "warning"
+              : "positive"}
         />
         <IncidentFact
           label="Affected services"
@@ -866,6 +925,10 @@ export const IncidentReview = ({
         <div className="error-box incidents-error">
           Provider matching is incomplete. The Problem list remains available.
         </div>
+      ) : reviewStateUnavailable ? (
+        <div className="error-box incidents-error">
+          Saved Evidence decisions are unavailable. Problem context remains visible, but review statuses and actions are paused.
+        </div>
       ) : null}
 
       {loading && problems.length === 0 ? (
@@ -885,29 +948,27 @@ export const IncidentReview = ({
               {visibleCases.map((reviewCase) => {
                 const problem = reviewCase.problems[0];
                 const candidate = reviewCase.candidates[0];
-                const decisionStatus = decisionStatusByCase.get(reviewCase.key);
+                const reviewState = reviewStateByCase.get(reviewCase.key) ??
+                  resolveEvidenceReviewState(reviewCase, decisionByKey);
+                const reviewPresentation = evidenceReviewStatePresentation(reviewState.state);
                 const eligibility = eligibilityByCase.get(reviewCase.key) ?? {
                   eligible: false,
                   reason: "This case is not available for bulk review.",
                 };
                 const checked = selectedCaseIds.has(reviewCase.key);
-                const decisionLabel = decisionStatus === "validated"
-                  ? "Package ready"
-                  : decisionStatus === "not-ready"
-                    ? "Not ready"
-                    : decisionStatus === "dismissed"
-                      ? "Not provider-related"
-                      : decisionStatus === "mixed"
-                        ? "Mixed review"
-                      : reviewCase.active
-                        ? "Active"
-                        : candidate
-                          ? "Potential SLA impact"
-                          : formatStatus(problem.status);
-                const decisionTone: Tone = reviewCase.active || decisionStatus === "not-ready" || (candidate && !decisionStatus)
-                  ? "warning"
-                  : decisionStatus === "validated"
-                    ? "positive"
+                const decisionLabel = candidate
+                  ? reviewStateLoading
+                    ? "Loading review"
+                    : reviewStateUnavailable
+                      ? "Review unavailable"
+                    : reviewPresentation.label
+                  : reviewCase.active
+                    ? "Active"
+                    : formatStatus(problem.status);
+                const decisionTone: Tone = candidate && !reviewStateLoading && !reviewStateUnavailable
+                  ? reviewPresentation.tone
+                  : reviewCase.active || candidate
+                    ? "warning"
                     : "neutral";
                 const title = reviewCase.problems.length > 1
                   ? `${reviewCase.providerServiceNames.join(", ") || providerName} impact review`
@@ -999,6 +1060,10 @@ export const IncidentReview = ({
               providerSlug={provider?.provider.slug ?? "provider"}
               providerName={provider?.provider.name ?? "the selected provider"}
               matchingLoading={matchingLoading}
+              reviewState={reviewStateByCase.get(selectedCase.key) ??
+                resolveEvidenceReviewState(selectedCase, decisionByKey)}
+              reviewStateLoading={reviewStateLoading}
+              reviewStateUnavailable={reviewStateUnavailable}
             />
           ) : null}
         </div>

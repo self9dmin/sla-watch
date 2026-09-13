@@ -15,8 +15,8 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 | Coverage review | Service coverage | See all loaded services, then focus Covered or Needs review | Complete context without hidden states | Large environments become an unbounded checklist | Default to All, keep visible filters, search, paging, and incomplete-inventory disclosure |
 | Review defaults | Settings | Choose the focused provider, tag convention, and evidence lookback | Consistent review behavior without duplicating provider setup | A stale focus could be mistaken for current evidence | Constrain the chooser to providers discovered from evidence, confirmed coverage, or enabled connections |
 | Incident connection | Settings | Optionally connect account-specific provider notices | Useful only when customer-scoped provider evidence is needed | Credentials and IAM setup interrupt first value | Ask for credentials only after the user chooses a provider connection |
-| Incident triage | Incidents | Review active and provider-relevant cases, inspect all supporting Problems and exact Dynatrace context, then choose Coverage, Evidence, native Problems, or a guarded bulk dismissal | Fewer review units without losing the source records | Same-vendor signals could be over-grouped or mistaken for a confirmed violation | Group only on provider service, effective terms scope, bounded time, and shared service or exact root cause; label the result Potential SLA impact; keep one audit record per Problem |
-| Evidence decision | Evidence | Review the complete case, customer telemetry, objective posture, terms, exclusions, and optional provider reports, then save Package ready, Not ready, or Not provider-related | One bounded decision with every underlying signal retained and a clear stop | Provider silence could be mistaken for proof against customer impact, or readiness for submission | Keep provider reports supporting only, persist the same outcome per included Problem, surface mixed state, and state that nothing is sent and the provider determines fault, eligibility, and credit |
+| Incident triage | Incidents | Review active and provider-relevant cases, inspect the root-cause and affected-service context, then choose Coverage, Evidence, native Problems, or a guarded bulk exclusion | Fewer review units without losing the source records | Same-vendor signals could be over-grouped or mistaken for a confirmed violation | Group only on provider service, effective terms scope, bounded time, and shared service or exact root cause; keep one audit record per Problem and reuse the Evidence state everywhere |
+| Evidence review | Evidence | Search or filter review cases, inspect readiness, customer telemetry, objective posture, terms, exclusions, and optional provider corroboration, then save Ready for follow-up, Needs evidence, or Excluded from provider follow-up | One bounded decision with every underlying signal retained, a portable artifact, and a clear stop | Provider silence could be mistaken for proof against customer impact, or readiness for submission | Keep provider corroboration supporting only, persist the same outcome per included Problem, surface mixed or unavailable state, and state that nothing is sent and the provider determines fault, eligibility, and credit |
 | Follow-up | Directory and future FinOps Agent | Review filing requirements or hand off later | Clear next action | Planned automation could imply an available capability | Keep the agent disabled until a verified implementation exists |
 
 ## Product decisions
@@ -25,7 +25,7 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 - Make Coverage the first screen for every new and returning user.
 - Keep provider additions and optional incident connections in Settings.
 - Keep the walkthrough explicit, replayable, and non-mutating.
-- End the SRE path in Evidence with an explicit package-ready, not-ready, or not-provider-related state. Keep submission outside the current product.
+- End the SRE path in Evidence with an explicit ready-for-follow-up, needs-evidence, or excluded state. Keep submission outside the current product.
 - Measure success by time to evidence, resolved coverage exceptions, and repeat incident review, not onboarding completion.
 
 ## Critical checks
@@ -40,5 +40,7 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 - Missing or contradictory provider-owned evidence never erases a Dynatrace-observed customer-impact signal.
 - Automatic case grouping requires one provider service, one effective terms scope, a bounded review window, and either one shared affected service or one exact returned root cause. Provider identity by itself is never enough.
 - Manual bulk triage may include a missing-root-cause case only when every underlying Problem is closed, provider scope is confirmed, relationship and decision context are complete, and no prior decision exists.
-- A bulk outcome remains a human Not provider-related classification. It is not proof that the provider was uninvolved.
-- Package ready requires each published evidence requirement to be present and acknowledged; Not ready records what is still missing.
+- A bulk exclusion remains a human operational classification. It is not proof that the provider was uninvolved.
+- Ready for follow-up requires each published evidence requirement to be present and acknowledged; Needs evidence records what is still missing.
+- Evidence separates facts collected automatically, facts confirmed externally, and missing items. Provider corroboration stays optional.
+- Copying a follow-up summary or downloading the JSON review never submits, routes, or changes the saved decision.

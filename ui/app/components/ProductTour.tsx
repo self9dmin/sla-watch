@@ -17,7 +17,7 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="performance"]',
     title: "Track customer objectives",
-    body: "Performance evaluates the customer objectives created from Coverage. It keeps provider reports separate and opens native Dynatrace objectives for deeper analysis.",
+    body: "Performance evaluates the customer objectives created from Coverage. It keeps optional provider corroboration separate and opens native Dynatrace objectives for deeper analysis.",
   },
   {
     target: '[data-tour="incidents"]',
@@ -37,7 +37,7 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="evidence"]',
     title: "Finish the human review",
-    body: "Evidence assembles the observed impact, provider relationship, current terms, and required evidence. Mark the package ready or not provider-related. Nothing is sent, and this is where the SRE review stops.",
+    body: "Evidence assembles the observed impact, provider relationship, current terms, and required evidence. Mark the case ready, save it for more evidence, or exclude it. Nothing is sent, and this is where the SRE review stops.",
   },
 ];
 

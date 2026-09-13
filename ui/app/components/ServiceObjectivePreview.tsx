@@ -122,8 +122,8 @@ export const ServiceObjectivePreview = ({
       </div>
       <p className="service-objective-note">
         {existing
-          ? "Observed value comes from the Dynatrace objective evaluation. Provider reports remain separate evidence."
-          : "This preview measures customer-observed availability for one Dynatrace service. Provider reports remain separate evidence."}
+          ? "Observed value comes from the Dynatrace objective evaluation. Provider corroboration remains optional evidence."
+          : "This preview measures customer-observed availability for one Dynatrace service. Provider corroboration remains optional evidence."}
       </p>
       {!existing && preview && preview.totalRequests > 0 ? (
         <p className="service-objective-traffic">{preview.totalRequests.toLocaleString()} requests, {preview.failedRequests.toLocaleString()} failed in the 30-day evaluation window.</p>

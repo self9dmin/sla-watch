@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import type { Slo } from "@dynatrace-sdk/client-service-level-objectives";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import type {
-  EvidenceDecisionRecord,
   EvidenceDecisionStatus,
   EvidenceLookbackHours,
   ProblemRecord,
@@ -17,7 +17,6 @@ import type { ServiceTelemetryMap } from "../data/serviceTelemetry";
 import {
   buildEvidenceCandidates,
   evidenceDecisionInputError,
-  evidenceDecisionMatchesCandidate,
   evidenceDecisionValue,
   MAX_EVIDENCE_DECISION_NOTE_LENGTH,
   type EvidenceCandidate,
@@ -40,15 +39,43 @@ import {
   type IncidentReviewCase,
 } from "../data/incidentReviewCases";
 import { formatDavisImpact } from "../data/problems";
+import {
+  buildEvidenceReviewArtifact,
+  evidenceReviewArtifactFilename,
+  formatEvidenceFollowUpSummary,
+  type EvidenceObjectiveSnapshot,
+} from "../data/evidenceReviewArtifact";
+import {
+  evidenceReviewStatePresentation,
+  resolveEvidenceReviewState,
+  type EvidenceReviewState,
+  type EvidenceReviewStateResult,
+} from "../data/evidenceReviewState";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { useEvidenceDecisions } from "../hooks/useEvidenceDecisions";
-import { useObjectiveEvaluations } from "../hooks/useObjectiveEvaluations";
+import {
+  useObjectiveEvaluations,
+  type ObjectiveEvaluation,
+} from "../hooks/useObjectiveEvaluations";
 import { useProviderNoticeSource } from "../hooks/useProviderNoticeSource";
 import { useServiceObjectives } from "../hooks/useServiceObjectives";
 import { ProviderNotices } from "./ProviderNotices";
 
 type Tone = "neutral" | "warning" | "positive";
 type EvidenceView = "candidates" | "provider-reports";
+type EvidenceQueueFilter = "all" | EvidenceReviewState;
+
+const EVIDENCE_CASE_PAGE_SIZE = 20;
+const EVIDENCE_QUEUE_FILTERS: Array<{
+  value: EvidenceQueueFilter;
+  label: string;
+}> = [
+  { value: "all", label: "All" },
+  { value: "needs-review", label: "Needs review" },
+  { value: "needs-evidence", label: "Needs evidence" },
+  { value: "ready-for-follow-up", label: "Ready" },
+  { value: "excluded", label: "Excluded" },
+];
 
 type EvidenceWorkspaceProps = {
   view: EvidenceView;
@@ -86,6 +113,18 @@ const formatDateTime = (value?: string): string => {
       }).format(parsed);
 };
 
+const formatUtcDateTime = (value?: string): string => {
+  if (!value) return "Unavailable";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? "Unavailable"
+    : `${new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "UTC",
+      }).format(parsed)} UTC`;
+};
+
 const formatPercent = (value: number | null): string =>
   value === null ? "Not published" : `${value}%`;
 
@@ -98,24 +137,9 @@ const formatMappingBasis = (candidate: EvidenceCandidate): string =>
         ? "Observed topology"
         : "Smartscape candidate";
 
-const CandidateState = ({
-  decision,
-  status,
-  partial = false,
-}: {
-  decision?: EvidenceDecisionRecord;
-  status?: EvidenceDecisionStatus;
-  partial?: boolean;
-}) => {
-  const effectiveStatus = status ?? decision?.status;
-  if (partial) return <StatusPill tone="warning">Mixed review</StatusPill>;
-  if (effectiveStatus === "validated")
-    return <StatusPill tone="positive">Package ready</StatusPill>;
-  if (effectiveStatus === "not-ready")
-    return <StatusPill tone="warning">Not ready</StatusPill>;
-  if (effectiveStatus === "dismissed")
-    return <StatusPill tone="neutral">Not provider-related</StatusPill>;
-  return <StatusPill tone="warning">Potential SLA impact</StatusPill>;
+const CandidateState = ({ state }: { state: EvidenceReviewState }) => {
+  const presentation = evidenceReviewStatePresentation(state);
+  return <StatusPill tone={presentation.tone}>{presentation.label}</StatusPill>;
 };
 
 const formatCount = (value: number): string =>
@@ -136,24 +160,17 @@ const objectiveState = (status?: string): string => {
 
 const EvidenceObjectiveRow = ({
   service,
-  providerSlug,
+  objective,
+  evaluation,
+  loading,
+  error,
 }: {
   service: ServiceRecord;
-  providerSlug: string;
+  objective?: Slo;
+  evaluation?: ObjectiveEvaluation;
+  loading: boolean;
+  error?: string;
 }) => {
-  const objectives = useServiceObjectives({
-    enabled: Boolean(service.id),
-    providerSlug,
-    serviceClassicId: service.id,
-    pageSize: 1,
-  });
-  const objective = objectives.objectives[0];
-  const selectedObjectives = useMemo(
-    () => objective ? [objective] : [],
-    [objective],
-  );
-  const evaluations = useObjectiveEvaluations(selectedObjectives);
-  const evaluation = objective ? evaluations[objective.id] : undefined;
   const target = objective?.criteria[0]?.target;
   const result = evaluation?.result;
   const observed = typeof result?.value === "number"
@@ -169,9 +186,9 @@ const EvidenceObjectiveRow = ({
           : "No managed objective"}</small>
       </span>
       <span>
-        <strong>{objectives.loading
+        <strong>{loading
           ? "Checking"
-          : objectives.error
+          : error
             ? "Unavailable"
             : objective
               ? objectiveState(result?.status)
@@ -184,9 +201,18 @@ const EvidenceObjectiveRow = ({
   );
 };
 
+const objectiveForService = (
+  objectives: Slo[],
+  serviceId: string,
+): Slo | undefined => {
+  const tag = `service:${serviceId.trim().toLowerCase()}`;
+  return objectives.find((objective) =>
+    objective.tags?.some((value) => value.trim().toLowerCase() === tag));
+};
+
 const CandidateDetail = ({
   reviewCase,
-  decisions,
+  reviewState,
   provider,
   settings,
   contractSettings,
@@ -197,7 +223,7 @@ const CandidateDetail = ({
   lookbackHours,
 }: {
   reviewCase: IncidentReviewCase;
-  decisions: EvidenceDecisionRecord[];
+  reviewState: EvidenceReviewStateResult;
   provider: SlaProviderResponse;
   settings: ReturnType<typeof useEvidenceDecisions>;
   contractSettings: ReturnType<typeof useContractOverrides>;
@@ -212,24 +238,40 @@ const CandidateDetail = ({
   const [acknowledged, setAcknowledged] = useState(false);
   const [acknowledgedEvidence, setAcknowledgedEvidence] = useState<string[]>([]);
   const [saveError, setSaveError] = useState<string>();
+  const [artifactFeedback, setArtifactFeedback] = useState<string>();
+  const affectedEntityIds = useMemo(
+    () => Array.from(new Set(
+      reviewCase.problems.flatMap((problem) => problem.affectedEntityIds),
+    )),
+    [reviewCase.problems],
+  );
+  const serviceIds = useMemo(
+    () => reviewCase.affectedServices.map((service) => service.id),
+    [reviewCase.affectedServices],
+  );
   const providerReports = useProviderNoticeSource(
     provider.provider.slug,
     lookbackHours,
   );
-  const currentDecisions = reviewCase.candidates.flatMap((item) => {
-    const decision = decisions.find((record) => record.decisionKey === item.key);
-    return decision && evidenceDecisionMatchesCandidate(decision, item)
-      ? [decision]
-      : [];
+  const managedObjectives = useServiceObjectives({
+    enabled: serviceIds.length > 0,
+    providerSlug: provider.provider.slug,
+    pageSize: 50,
   });
-  const currentStatuses = Array.from(new Set(
-    currentDecisions.map((decision) => decision.status),
-  ));
-  const decisionIsCurrent = currentDecisions.length === reviewCase.candidates.length &&
-    currentStatuses.length === 1;
-  const currentDecision = decisionIsCurrent ? currentDecisions[0] : undefined;
-  const partialDecision = decisions.length > 0 && !currentDecision;
-  const decision = currentDecision ?? decisions[0];
+  const relevantObjectives = useMemo(() => Array.from(new Map(
+    serviceIds.flatMap((serviceId) => {
+      const objective = objectiveForService(
+        managedObjectives.objectives,
+        serviceId,
+      );
+      return objective ? [[objective.id, objective] as const] : [];
+    }),
+  ).values()), [managedObjectives.objectives, serviceIds]);
+  const objectiveEvaluations = useObjectiveEvaluations(relevantObjectives);
+  const currentDecision = reviewState.currentDecision;
+  const partialDecision = reviewState.state === "mixed";
+  const decision = currentDecision ?? reviewState.storedDecisions[0];
+  const decisionIsCurrent = Boolean(currentDecision);
 
   useEffect(() => {
     setNote(decision?.decisionNote ?? "");
@@ -240,6 +282,7 @@ const CandidateDetail = ({
       decisionIsCurrent ? decision?.acknowledgedEvidence ?? [] : [],
     );
     setSaveError(undefined);
+    setArtifactFeedback(undefined);
   }, [
     reviewCase.key,
     decision?.acknowledgedEvidence,
@@ -248,7 +291,11 @@ const CandidateDetail = ({
     decisionIsCurrent,
   ]);
 
-  const requiredEvidence = provider.provider.claimProcess?.requiredEvidence ?? [];
+  const providerRequiredEvidence = provider.provider.claimProcess?.requiredEvidence;
+  const requiredEvidence = useMemo(
+    () => providerRequiredEvidence ?? [],
+    [providerRequiredEvidence],
+  );
   const save = async (status: EvidenceDecisionStatus) => {
     const inputError = evidenceDecisionInputError({
       status,
@@ -285,10 +332,10 @@ const CandidateDetail = ({
   };
 
   const resetDecision = async () => {
-    if (decisions.length === 0 || settings.mutating || !window.confirm(`Reset the saved decision for ${reviewCase.problems.length} Problem${reviewCase.problems.length === 1 ? "" : "s"} in this case?`)) return;
+    if (reviewState.storedDecisions.length === 0 || settings.mutating || !window.confirm(`Reset the saved decision for ${reviewCase.problems.length} Problem${reviewCase.problems.length === 1 ? "" : "s"} in this case?`)) return;
     setSaveError(undefined);
     try {
-      await settings.deleteDecisions(decisions);
+      await settings.deleteDecisions(reviewState.storedDecisions);
       setNote("");
       setAcknowledged(false);
       setAcknowledgedEvidence([]);
@@ -301,16 +348,13 @@ const CandidateDetail = ({
     }
   };
 
-  const affectedEntityIds = Array.from(new Set(
-    reviewCase.problems.flatMap((problem) => problem.affectedEntityIds),
-  ));
   const affectedServices = reviewCase.affectedServices.length > 0
     ? reviewCase.affectedServices.map((service) => service.name).join(", ")
     : `${affectedEntityIds.length} affected entity ID${affectedEntityIds.length === 1 ? "" : "s"}`;
   const providerServices = reviewCase.providerServiceNames.length > 0
     ? reviewCase.providerServiceNames.join(", ")
     : "Provider-level terms";
-  const reviewTimes = decisions.flatMap((item) => {
+  const reviewTimes = reviewState.storedDecisions.flatMap((item) => {
     const value = item.lastModifiedTime ?? item.reviewedAt;
     const parsed = value ? Date.parse(value) : Number.NaN;
     return Number.isFinite(parsed) ? [parsed] : [];
@@ -352,12 +396,6 @@ const CandidateDetail = ({
     problem: candidate.problem.id,
     case: reviewCase.key,
   });
-  const serviceIds = useMemo(
-    () => reviewCase.affectedServices.length > 0
-      ? reviewCase.affectedServices.map((service) => service.id)
-      : affectedEntityIds,
-    [affectedEntityIds, reviewCase.affectedServices],
-  );
   const telemetry = useMemo(
     () => summarizeServiceTelemetry(serviceTelemetry, serviceIds),
     [serviceIds, serviceTelemetry],
@@ -404,19 +442,170 @@ const CandidateDetail = ({
   const requiredEvidenceComplete = requiredEvidence.every((item) =>
     effectiveAcknowledgedEvidence.includes(item),
   );
-  const packageGaps = [
+  const structuralGaps = [
     !reviewCase.candidates.every((item) => item.scopeConfirmed) ? "Confirm the provider-service scope." : null,
     reviewCase.problems.some((problem) => !problem.startedAt) ? "Confirm each impact start time." : null,
     affectedEntityIds.length === 0
       ? "Identify at least one affected Dynatrace entity."
       : null,
-    !requiredEvidenceComplete
-      ? "Confirm each published evidence requirement below."
-      : null,
   ].filter((item): item is string => Boolean(item));
+  const missingRequiredEvidence = requiredEvidence.filter((item) =>
+    !effectiveAcknowledgedEvidence.includes(item),
+  );
+  const packageGaps = [
+    ...structuralGaps,
+    ...missingRequiredEvidence.map((item) => `Confirm externally: ${item}`),
+  ];
   const readyEnough = packageGaps.length === 0;
   const objectiveServices = reviewCase.affectedServices.slice(0, 3);
   const davisImpact = formatDavisImpact(reviewCase.problems);
+  const objectiveSnapshots = useMemo<EvidenceObjectiveSnapshot[]>(
+    () => reviewCase.affectedServices.map((service) => {
+      const objective = objectiveForService(
+        managedObjectives.objectives,
+        service.id,
+      );
+      const evaluation = objective
+        ? objectiveEvaluations[objective.id]
+        : undefined;
+      return {
+        serviceId: service.id,
+        serviceName: service.name,
+        objectiveId: objective?.id ?? null,
+        objectiveName: objective?.name ?? null,
+        timeframe: objective
+          ? formatObjectiveTimeframe(objective.criteria[0]?.timeframeFrom)
+          : null,
+        targetPercent: objective?.criteria[0]?.target ?? null,
+        observedPercent: typeof evaluation?.result?.value === "number"
+          ? evaluation.result.value
+          : null,
+        evaluationStatus: managedObjectives.loading
+          ? "checking"
+          : managedObjectives.error
+            ? "unavailable"
+            : objective
+              ? evaluation?.state === "loading"
+                ? "checking"
+                : objectiveState(evaluation?.result?.status)
+              : "not-configured",
+      };
+    }),
+    [
+      managedObjectives.error,
+      managedObjectives.loading,
+      managedObjectives.objectives,
+      objectiveEvaluations,
+      reviewCase.affectedServices,
+    ],
+  );
+  const objectivesIncomplete = managedObjectives.loading ||
+    Boolean(managedObjectives.error) ||
+    managedObjectives.totalCount > managedObjectives.objectives.length;
+  const providerReportState = providerReports.loading
+    ? "checking" as const
+    : providerReport
+      ? "matched" as const
+      : providerReports.error
+        ? "unavailable" as const
+        : providerReports.configuredSourceRequired
+          ? "not-configured" as const
+          : "not-matched" as const;
+  const artifact = useMemo(() => buildEvidenceReviewArtifact({
+    provider,
+    reviewCase,
+    candidate,
+    state: reviewState.state,
+    decision: currentDecision,
+    terms,
+    telemetry,
+    telemetryAvailable,
+    lookbackHours,
+    objectives: objectiveSnapshots,
+    objectivesIncomplete,
+    providerReport,
+    providerReportState,
+    exclusions: publishedExclusions,
+    requiredEvidence,
+    acknowledgedEvidence: effectiveAcknowledgedEvidence,
+    structuralGaps,
+    davisImpact,
+  }), [
+    candidate,
+    currentDecision,
+    davisImpact,
+    effectiveAcknowledgedEvidence,
+    lookbackHours,
+    objectiveSnapshots,
+    objectivesIncomplete,
+    provider,
+    providerReport,
+    providerReportState,
+    publishedExclusions,
+    requiredEvidence,
+    reviewCase,
+    reviewState.state,
+    structuralGaps,
+    telemetry,
+    telemetryAvailable,
+    terms,
+  ]);
+  const customerImpactReady = Boolean(reviewCase.startedAt) &&
+    affectedEntityIds.length > 0;
+
+  const copyFollowUpSummary = async () => {
+    setArtifactFeedback(undefined);
+    const summary = formatEvidenceFollowUpSummary(artifact);
+    try {
+      if (!navigator.clipboard?.writeText)
+        throw new Error("Clipboard access is unavailable.");
+      await navigator.clipboard.writeText(summary);
+      setArtifactFeedback("Follow-up summary copied.");
+    } catch {
+      setArtifactFeedback(
+        "The browser blocked clipboard access. Download the evidence review instead.",
+      );
+    }
+  };
+
+  const downloadArtifact = () => {
+    setArtifactFeedback(undefined);
+    try {
+      const currentArtifact = buildEvidenceReviewArtifact({
+        provider,
+        reviewCase,
+        candidate,
+        state: reviewState.state,
+        decision: currentDecision,
+        terms,
+        telemetry,
+        telemetryAvailable,
+        lookbackHours,
+        objectives: objectiveSnapshots,
+        objectivesIncomplete,
+        providerReport,
+        providerReportState,
+        exclusions: publishedExclusions,
+        requiredEvidence,
+        acknowledgedEvidence: effectiveAcknowledgedEvidence,
+        structuralGaps,
+        davisImpact,
+      });
+      const blob = new Blob(
+        [JSON.stringify(currentArtifact, null, 2)],
+        { type: "application/json" },
+      );
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = evidenceReviewArtifactFilename(currentArtifact);
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      setArtifactFeedback("Evidence review downloaded.");
+    } catch {
+      setArtifactFeedback("The evidence review could not be downloaded.");
+    }
+  };
 
   const toggleEvidence = (item: string) => {
     setAcknowledgedEvidence((current) => current.includes(item)
@@ -425,7 +614,7 @@ const CandidateDetail = ({
   };
 
   return (
-    <article className="candidate-detail">
+    <article className={`candidate-detail candidate-detail-${reviewState.state}`}>
       <div className="candidate-detail-heading">
         <div>
           <span className="candidate-id">
@@ -436,184 +625,74 @@ const CandidateDetail = ({
             ? `${providerServices} impact review`
             : candidate.problem.title}</Heading>
         </div>
-        <CandidateState
-          status={currentDecision?.status}
-          partial={partialDecision}
-        />
+        <CandidateState state={reviewState.state} />
       </div>
 
-      <dl className="candidate-facts">
-        <div>
-          <dt>Observed impact</dt>
-          <dd>{formatDateTime(reviewCase.startedAt)}</dd>
-        </div>
-        <div>
-          <dt>Affected services</dt>
-          <dd title={affectedServices}>{affectedServices}</dd>
-        </div>
-        <div>
-          <dt>Provider service</dt>
-          <dd title={providerServices}>{providerServices}</dd>
-        </div>
-        <div>
-          <dt>Davis impact</dt>
-          <dd title={davisImpact}>{davisImpact}</dd>
-        </div>
-      </dl>
-
-      <section className="candidate-match" aria-label="Why this candidate appears">
-        <div>
-          <strong>Why these records are together</strong>
-          <p>{reviewCase.groupingEvidence}</p>
-        </div>
-        <StatusPill tone={reviewCase.candidates.every((item) => item.scopeConfirmed) ? "positive" : "warning"}>
-          {reviewCase.problems.length > 1 ? "Correlated case" : formatMappingBasis(candidate)}
-        </StatusPill>
-        <nav aria-label="Candidate references">
-          <Link to={incidentPath}>Open incident</Link>
-          <Link to={coveragePath}>Review coverage</Link>
-          <Link to={`/directory?provider=${encodeURIComponent(provider.provider.slug)}`}>Review terms</Link>
-        </nav>
-      </section>
-
-      <section className="candidate-package" aria-labelledby="candidate-package-title">
-        <div className="candidate-package-heading">
+      <section className="evidence-readiness" aria-labelledby="evidence-readiness-title">
+        <div className="evidence-readiness-heading">
           <div>
-            <strong id="candidate-package-title">Claim package</strong>
-            <span>Prepared from the current Dynatrace evidence and applicable terms.</span>
+            <strong id="evidence-readiness-title">Review readiness</strong>
+            <span>What is ready, optional, and still missing.</span>
           </div>
           <StatusPill tone={readyEnough ? "positive" : "warning"}>
-            {readyEnough ? "Ready for decision" : "Needs evidence"}
+            {readyEnough
+              ? "No required gaps"
+              : `${packageGaps.length} required gap${packageGaps.length === 1 ? "" : "s"}`}
           </StatusPill>
         </div>
-        <dl className="candidate-package-facts">
-          <div><dt>Observed window</dt><dd>{formatDateTime(reviewCase.startedAt)} to {reviewCase.endedAt ? formatDateTime(reviewCase.endedAt) : "ongoing"}</dd></div>
-          <div><dt>Coverage basis</dt><dd>{formatMappingBasis(candidate)}</dd></div>
-          <div><dt>Terms source</dt><dd>{terms.source}</dd></div>
-          <div><dt>Filing window</dt><dd>{terms.filingDeadlineDays === null ? "Not published" : `${terms.filingDeadlineDays} ${terms.businessDays ? "business" : "calendar"} days`}</dd></div>
-          <div><dt>Claim method</dt><dd>{terms.claimMethod ?? "Not published"}</dd></div>
-          <div><dt>Maximum credit</dt><dd>{formatPercent(terms.maxCreditPercent)}</dd></div>
+        <dl className="evidence-readiness-grid">
+          <div className={reviewCase.candidates.every((item) => item.scopeConfirmed) ? "ready" : "attention"}>
+            <dt>Coverage</dt>
+            <dd>{reviewCase.candidates.every((item) => item.scopeConfirmed) ? "Confirmed" : "Needs action"}</dd>
+            <small>{formatMappingBasis(candidate)}</small>
+          </div>
+          <div className={customerImpactReady ? "ready" : "attention"}>
+            <dt>Customer impact</dt>
+            <dd>{customerImpactReady ? "Collected" : "Needs evidence"}</dd>
+            <small>{telemetryAvailable ? "Request telemetry included" : "Dynatrace Problem evidence only"}</small>
+          </div>
+          <div className="ready">
+            <dt>Terms</dt>
+            <dd>Available</dd>
+            <small>{terms.source}</small>
+          </div>
+          <div className="optional">
+            <dt>Provider corroboration <span>Optional</span></dt>
+            <dd>{providerReportState === "checking"
+              ? "Checking"
+              : providerReportState === "matched"
+                ? "Matched"
+                : providerReportState === "not-configured"
+                  ? "Not connected"
+                  : providerReportState === "unavailable"
+                    ? "Unavailable"
+                    : "No overlap"}</dd>
+            <small>Never overrides customer evidence</small>
+          </div>
+          <div className={requiredEvidenceComplete ? "ready" : "attention"}>
+            <dt>Required items</dt>
+            <dd>{requiredEvidence.length === 0
+              ? "None published"
+              : requiredEvidenceComplete
+                ? "Confirmed"
+                : `${missingRequiredEvidence.length} missing`}</dd>
+            <small>{requiredEvidence.length === 0
+              ? "No provider checklist"
+              : "Confirmed externally by an operator"}</small>
+          </div>
         </dl>
-        {reviewCase.problems.length > 1 ? (
-          <details className="candidate-problem-records" open>
-            <summary>Supporting Dynatrace Problems ({reviewCase.problems.length})</summary>
-            <ul>
-              {reviewCase.problems.map((problem) => (
-                <li key={problem.id}>
-                  <span><strong>{problem.title}</strong><small>{problem.id} · {problem.category}</small></span>
-                  <time>{formatDateTime(problem.startedAt)}</time>
-                </li>
-              ))}
-            </ul>
-          </details>
-        ) : null}
-        <div className="candidate-evidence-grid">
-        <section className="candidate-evidence-block" aria-label="Customer evidence">
-          <div className="candidate-evidence-heading">
-            <strong>Customer evidence</strong>
-            <span>{formatEvidenceLookback(lookbackHours)}</span>
-          </div>
-          <dl className="candidate-evidence-facts">
-            <div><dt>Requests</dt><dd>{serviceTelemetryLoading ? "Checking" : telemetryAvailable ? formatCount(telemetry.requestCount) : "No data"}</dd></div>
-            <div><dt>Failed requests</dt><dd>{serviceTelemetryLoading ? "Checking" : telemetryAvailable ? formatCount(telemetry.failureCount) : "No data"}</dd></div>
-            <div><dt>Observed availability</dt><dd>{serviceTelemetryLoading ? "Checking" : telemetryAvailable ? formatAvailability(telemetry.requestCount, telemetry.failureCount) : "No data"}</dd></div>
-          </dl>
-          {serviceTelemetryError ? <span className="candidate-evidence-warning">Request telemetry is unavailable. Use the Dynatrace Problem and attach other customer-impact evidence before filing.</span> : !serviceTelemetryLoading && !telemetryAvailable ? <span className="candidate-evidence-warning">No request telemetry was returned for the affected services. The Dynatrace Problem remains evidence, but add another impact signal before filing.</span> : null}
-        </section>
-        <section className="candidate-evidence-block" aria-label="Dynatrace objectives">
-          <div className="candidate-evidence-heading">
-            <strong>Dynatrace objectives</strong>
-            <Link to={`/performance?provider=${encodeURIComponent(provider.provider.slug)}`}>Open Performance</Link>
-          </div>
-          {objectiveServices.length > 0 ? (
-            <ul className="candidate-objective-list">
-              {objectiveServices.map((service) => (
-                <EvidenceObjectiveRow
-                  key={service.id}
-                  service={service}
-                  providerSlug={provider.provider.slug}
-                />
-              ))}
-            </ul>
-          ) : (
-            <span className="candidate-evidence-note">No affected Dynatrace service was resolved for objective lookup.</span>
-          )}
-          {reviewCase.affectedServices.length > objectiveServices.length ? (
-            <span className="candidate-evidence-note">Showing 3 of {reviewCase.affectedServices.length} affected services. Open Performance for the full objective inventory.</span>
-          ) : null}
-        </section>
-        <section className="candidate-evidence-block" aria-label="Correlated provider report">
-          <div className="candidate-evidence-heading">
-            <strong>Provider report</strong>
-            <Link to={`/evidence?${reportParams.toString()}`}>Review reports</Link>
-          </div>
-          {providerReports.loading ? (
-            <span className="candidate-evidence-note">Checking the configured provider source.</span>
-          ) : providerReport ? (
-            <div className="candidate-provider-match">
-              <span>
-                <strong>{providerReport.notice.title}</strong>
-                <small>{providerReport.basis === "exact-resource"
-                  ? `Exact runtime overlap${providerReport.matchedServiceNames.length > 0 ? `: ${providerReport.matchedServiceNames.join(", ")}` : ""}.`
-                  : "The provider service and incident window overlap."}{publicReport ? " This is a public, non-customer-specific report." : ""}</small>
-              </span>
-              <StatusPill tone={providerReport.basis === "exact-resource" ? "positive" : "neutral"}>
-                {providerReport.basis === "exact-resource" ? "Exact match" : "Supporting match"}
-              </StatusPill>
-            </div>
-          ) : (
-            <span className="candidate-evidence-note">
-              {providerReports.configuredSourceRequired
-                ? "No account-specific source is connected. This optional evidence does not invalidate customer-observed impact."
-                : providerReports.error
-                  ? "The provider source is unavailable. This optional evidence does not invalidate customer-observed impact."
-                  : "No provider report overlaps this incident. Provider silence does not invalidate customer-observed impact."}
-            </span>
-          )}
-        </section>
-        </div>
-        <details className="candidate-package-disclosure">
-          <summary>Published exclusions ({publishedExclusions.length})</summary>
-          {publishedExclusions.length > 0 ? (
-            <ul>{publishedExclusions.map((item) => <li key={item}>{item}</li>)}</ul>
-          ) : (
-            <span>No provider or service exclusions are published for this scope.</span>
-          )}
-        </details>
-        <div className="candidate-package-requirements">
-          <strong>Provider evidence checklist</strong>
-          {requiredEvidence.length > 0 ? (
-            <div className="candidate-evidence-checklist">
-              {requiredEvidence.map((item) => (
-                <label key={item}>
-                  <input
-                    type="checkbox"
-                    checked={effectiveAcknowledgedEvidence.includes(item)}
-                    onChange={() => toggleEvidence(item)}
-                    disabled={!settings.canWrite || settings.mutating || Boolean(currentDecision)}
-                  />
-                  <span>{item}</span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <span>No evidence checklist is published in the provider record.</span>
-          )}
-          <span>Check an item only after it is present in the package. Nothing is submitted from this screen.</span>
-        </div>
-        {packageGaps.length > 0 ? (
-          <ul className="candidate-package-gaps">
-            {packageGaps.map((item) => <li key={item}>{item}</li>)}
-          </ul>
-        ) : null}
-        {!reviewCase.candidates.every((item) => item.scopeConfirmed) ? (
-          <Button as={Link} to={coveragePath} size="condensed">Resolve coverage</Button>
-        ) : null}
       </section>
 
-      <section className="candidate-review-panel" aria-label="Human review decision">
+      <section
+        className="candidate-review-panel"
+        id="candidate-decision"
+        aria-label="Human review decision"
+      >
         <div className="candidate-review-heading">
-          <strong>Decision</strong>
+          <div>
+            <strong>Decision</strong>
+            <span>Record the next operational outcome. Nothing is submitted.</span>
+          </div>
           {decision ? (
             <span className="candidate-reviewed-at">
               {reviewTime ? `Updated ${formatDateTime(reviewTime)}` : "Saved"}
@@ -623,17 +702,16 @@ const CandidateDetail = ({
         {currentDecision ? (
           <div className={`candidate-completion candidate-completion-${currentDecision.status}`} role="status">
             <strong>{currentDecision.status === "validated"
-              ? "Claim package ready"
+              ? "Ready for provider follow-up"
               : currentDecision.status === "not-ready"
-                ? "Saved as not ready"
-                : "Review complete: not provider-related"}</strong>
+                ? "Needs evidence"
+                : "Excluded from provider follow-up"}</strong>
             <span>{currentDecision.status === "validated"
-              ? `Your review is complete for ${reviewCase.problems.length} Problem${reviewCase.problems.length === 1 ? "" : "s"}. Nothing has been sent. A contract owner can use this package for provider follow-up.`
+              ? `Review is complete for ${reviewCase.problems.length} Problem${reviewCase.problems.length === 1 ? "" : "s"}. A contract owner can use the evidence review for provider follow-up.`
               : currentDecision.status === "not-ready"
-                ? "The case stays in the review queue with its current checklist and note. Nothing has been sent."
-                : reviewCase.problems.length === 1
-                  ? "Nothing has been sent. The Problem remains available in Dynatrace, but is excluded from provider follow-up."
-                  : `Nothing has been sent. The ${reviewCase.problems.length} Problems remain available in Dynatrace, but are excluded from provider follow-up.`}</span>
+                ? "The case remains open with its confirmed items and note."
+                : `${reviewCase.problems.length} Problem${reviewCase.problems.length === 1 ? " remains" : "s remain"} in Dynatrace and will not appear as provider follow-up work.`}</span>
+            <small>Nothing has been sent.</small>
             {currentDecision.decisionNote ? <small>Note: {currentDecision.decisionNote}</small> : null}
             <Button size="condensed" disabled={!settings.canWrite || settings.mutating} onClick={() => void resetDecision()}>
               Reopen review
@@ -643,11 +721,11 @@ const CandidateDetail = ({
           <>
             {partialDecision ? (
               <div className="candidate-decision-stale" role="status">
-                This case has partial, mixed, or stale Problem decisions. Saving below applies one decision to all {reviewCase.problems.length} Problems in the case.
+                This case has mixed or stale Problem decisions. Saving applies one current decision to all {reviewCase.problems.length} Problems.
               </div>
             ) : null}
             <label className="candidate-review-note">
-              <span>Review note (required for Not ready and Not provider-related)</span>
+              <span>Decision note (required for Needs evidence and Excluded)</span>
               <textarea
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
@@ -657,48 +735,64 @@ const CandidateDetail = ({
                 disabled={!settings.canWrite || settings.mutating}
               />
             </label>
-            <label className="candidate-acknowledgement">
-              <input
-                type="checkbox"
-                checked={acknowledged}
-                onChange={(event) => setAcknowledged(event.target.checked)}
-                disabled={!settings.canWrite || settings.mutating || !readyEnough}
-              />
-              <span>
-                I reviewed the provider relationship, all included Problems,
-                observed impact, current terms, and provider-required evidence.
-                Nothing will be sent.
-              </span>
-            </label>
+            {readyEnough ? (
+              <label className="candidate-acknowledgement">
+                <input
+                  type="checkbox"
+                  checked={acknowledged}
+                  onChange={(event) => setAcknowledged(event.target.checked)}
+                  disabled={!settings.canWrite || settings.mutating}
+                />
+                <span>
+                  I reviewed the provider relationship, included Problems,
+                  customer impact, terms, and externally confirmed requirements.
+                </span>
+              </label>
+            ) : null}
             {saveError ? <div className="candidate-decision-error" role="alert">{saveError}</div> : null}
             {settings.error ? (
               <div className="candidate-decision-error" role="status">
-                Evidence decisions are unavailable. Existing evidence remains read-only.
+                Review decisions are unavailable. Existing evidence remains read-only.
               </div>
             ) : null}
             <div className="candidate-review-actions">
-              <Button
-                variant="emphasized"
-                color="primary"
-                size="condensed"
-                disabled={!settings.canWrite || settings.mutating || !acknowledged || !readyEnough}
-                onClick={() => void save("validated")}
-              >
-                {settings.mutating ? "Saving" : "Mark package ready"}
-              </Button>
+              {readyEnough ? (
+                <Button
+                  variant="emphasized"
+                  color="primary"
+                  size="condensed"
+                  disabled={!settings.canWrite || settings.mutating || !acknowledged}
+                  onClick={() => void save("validated")}
+                >
+                  {settings.mutating ? "Saving" : "Mark ready for follow-up"}
+                </Button>
+              ) : !reviewCase.candidates.every((item) => item.scopeConfirmed) ? (
+                <Button as={Link} to={coveragePath} variant="emphasized" color="primary" size="condensed">
+                  Resolve coverage
+                </Button>
+              ) : (
+                <Button
+                  variant="emphasized"
+                  color="primary"
+                  size="condensed"
+                  onClick={() => document.getElementById("candidate-requirements")?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+                >
+                  Review missing evidence
+                </Button>
+              )}
               <Button
                 size="condensed"
                 disabled={!settings.canWrite || settings.mutating}
                 onClick={() => void save("not-ready")}
               >
-                Save as not ready
+                Save as needs evidence
               </Button>
               <Button
                 size="condensed"
                 disabled={!settings.canWrite || settings.mutating}
                 onClick={() => void save("dismissed")}
               >
-                Not provider-related
+                Exclude from follow-up
               </Button>
               {!settings.loading && !settings.canWrite ? (
                 <span>Read-only. App Settings write access is required.</span>
@@ -706,7 +800,226 @@ const CandidateDetail = ({
             </div>
           </>
         )}
+        <div className="candidate-artifact-actions">
+          <span>Portable review artifact</span>
+          <Button size="condensed" onClick={() => void copyFollowUpSummary()}>
+            Copy follow-up summary
+          </Button>
+          <Button size="condensed" onClick={downloadArtifact}>
+            Download evidence review
+          </Button>
+          {artifactFeedback ? <small role="status" aria-live="polite">{artifactFeedback}</small> : null}
+        </div>
       </section>
+
+      <details
+        className="candidate-supporting-evidence"
+        open={reviewState.state === "needs-review" || reviewState.state === "needs-evidence" || reviewState.state === "mixed"}
+      >
+        <summary>Evidence details</summary>
+        <div className="candidate-supporting-evidence-body">
+          <dl className="candidate-facts">
+            <div>
+              <dt>Observed impact</dt>
+              <dd>{formatUtcDateTime(reviewCase.startedAt)}</dd>
+            </div>
+            <div>
+              <dt>Affected services</dt>
+              <dd title={affectedServices}>{affectedServices}</dd>
+            </div>
+            <div>
+              <dt>Provider service</dt>
+              <dd title={providerServices}>{providerServices}</dd>
+            </div>
+            <div>
+              <dt>Davis impact</dt>
+              <dd title={davisImpact}>{davisImpact}</dd>
+            </div>
+          </dl>
+
+          <section className="candidate-match" aria-label="Why this case appears">
+            <div>
+              <strong>Why these records are together</strong>
+              <p>{reviewCase.groupingEvidence}</p>
+            </div>
+            <StatusPill tone={reviewCase.candidates.every((item) => item.scopeConfirmed) ? "positive" : "warning"}>
+              {reviewCase.problems.length > 1 ? "Correlated case" : formatMappingBasis(candidate)}
+            </StatusPill>
+            <nav aria-label="Case references">
+              <Link to={incidentPath}>Open incident</Link>
+              <Link to={coveragePath}>Review coverage</Link>
+              <Link to={`/directory?provider=${encodeURIComponent(provider.provider.slug)}`}>Review terms</Link>
+            </nav>
+          </section>
+
+          <section className="candidate-package" aria-labelledby="candidate-package-title">
+            <div className="candidate-package-heading">
+              <div>
+                <strong id="candidate-package-title">Evidence review</strong>
+                <span>Customer-observed evidence and applicable terms. This is not a claim.</span>
+              </div>
+              <StatusPill tone={readyEnough ? "positive" : "warning"}>
+                {readyEnough ? "Complete" : `${packageGaps.length} missing`}
+              </StatusPill>
+            </div>
+            <dl className="candidate-package-facts">
+              <div><dt>Observed window (UTC)</dt><dd>{formatUtcDateTime(reviewCase.startedAt)} to {reviewCase.endedAt ? formatUtcDateTime(reviewCase.endedAt) : "Ongoing"}</dd></div>
+              <div><dt>Coverage basis</dt><dd>{formatMappingBasis(candidate)}</dd></div>
+              <div><dt>Terms source</dt><dd>{terms.source}</dd></div>
+              <div><dt>Filing window</dt><dd>{terms.filingDeadlineDays === null ? "Not published" : `${terms.filingDeadlineDays} ${terms.businessDays ? "business" : "calendar"} days`}</dd></div>
+              <div><dt>Claim method</dt><dd>{terms.claimMethod ?? "Not published"}</dd></div>
+              <div><dt>Maximum credit</dt><dd>{formatPercent(terms.maxCreditPercent)}</dd></div>
+            </dl>
+            <details className="candidate-problem-records">
+              <summary>Supporting Dynatrace Problems ({reviewCase.problems.length})</summary>
+              <ul>
+                {reviewCase.problems.map((problem) => (
+                  <li key={problem.id}>
+                    <span>
+                      <strong>{problem.title}</strong>
+                      <small>
+                        <Link to={createIncidentReviewPath({
+                          providerSlug: provider.provider.slug,
+                          problemId: problem.id,
+                          caseId: reviewCase.key,
+                        })}>{problem.id}</Link>
+                        {` · ${problem.category}`}
+                      </small>
+                    </span>
+                    <time>{formatUtcDateTime(problem.startedAt)}</time>
+                  </li>
+                ))}
+              </ul>
+            </details>
+            <div className="candidate-evidence-grid">
+              <section className="candidate-evidence-block" aria-label="Customer evidence">
+                <div className="candidate-evidence-heading">
+                  <strong>Customer evidence</strong>
+                  <span>{formatEvidenceLookback(lookbackHours)}</span>
+                </div>
+                <dl className="candidate-evidence-facts">
+                  <div><dt>Requests</dt><dd>{serviceTelemetryLoading ? "Checking" : telemetryAvailable ? formatCount(telemetry.requestCount) : "No data"}</dd></div>
+                  <div><dt>Failed</dt><dd>{serviceTelemetryLoading ? "Checking" : telemetryAvailable ? formatCount(telemetry.failureCount) : "No data"}</dd></div>
+                  <div><dt>Availability</dt><dd>{serviceTelemetryLoading ? "Checking" : telemetryAvailable ? formatAvailability(telemetry.requestCount, telemetry.failureCount) : "No data"}</dd></div>
+                </dl>
+                {serviceTelemetryError ? <span className="candidate-evidence-warning">Request telemetry is unavailable. Keep another customer-impact signal with the review.</span> : !serviceTelemetryLoading && !telemetryAvailable ? <span className="candidate-evidence-warning">No request telemetry was returned. The Dynatrace Problem remains customer evidence.</span> : null}
+              </section>
+              <section className="candidate-evidence-block" aria-label="Dynatrace objectives">
+                <div className="candidate-evidence-heading">
+                  <strong>Dynatrace objectives</strong>
+                  <Link to={`/performance?provider=${encodeURIComponent(provider.provider.slug)}`}>Open Performance</Link>
+                </div>
+                {objectiveServices.length > 0 ? (
+                  <ul className="candidate-objective-list">
+                    {objectiveServices.map((service) => {
+                      const objective = objectiveForService(
+                        managedObjectives.objectives,
+                        service.id,
+                      );
+                      return <EvidenceObjectiveRow
+                        key={service.id}
+                        service={service}
+                        objective={objective}
+                        evaluation={objective ? objectiveEvaluations[objective.id] : undefined}
+                        loading={managedObjectives.loading}
+                        error={managedObjectives.error}
+                      />;
+                    })}
+                  </ul>
+                ) : (
+                  <span className="candidate-evidence-note">No affected Dynatrace service was resolved for objective lookup.</span>
+                )}
+                {reviewCase.affectedServices.length > objectiveServices.length ? (
+                  <span className="candidate-evidence-note">Showing 3 of {reviewCase.affectedServices.length} affected services. The download includes every loaded objective snapshot.</span>
+                ) : null}
+                {managedObjectives.totalCount > managedObjectives.objectives.length ? (
+                  <span className="candidate-evidence-warning">The objective inventory is partial. Open Performance for the full list.</span>
+                ) : null}
+              </section>
+              <section className="candidate-evidence-block" aria-label="Optional provider corroboration">
+                <div className="candidate-evidence-heading">
+                  <strong>Provider corroboration <span>Optional</span></strong>
+                  <Link to={`/evidence?${reportParams.toString()}`}>Review corroboration</Link>
+                </div>
+                {providerReports.loading ? (
+                  <span className="candidate-evidence-note">Checking the configured provider source.</span>
+                ) : providerReport ? (
+                  <div className="candidate-provider-match">
+                    <span>
+                      <strong>{providerReport.notice.title}</strong>
+                      <small>{providerReport.basis === "exact-resource"
+                        ? `Exact runtime overlap${providerReport.matchedServiceNames.length > 0 ? `: ${providerReport.matchedServiceNames.join(", ")}` : ""}.`
+                        : "The provider service and incident window overlap."}{publicReport ? " This is a public, non-customer-specific report." : ""}</small>
+                    </span>
+                    <StatusPill tone={providerReport.basis === "exact-resource" ? "positive" : "neutral"}>
+                      {providerReport.basis === "exact-resource" ? "Exact match" : "Supporting match"}
+                    </StatusPill>
+                  </div>
+                ) : (
+                  <span className="candidate-evidence-note">
+                    {providerReports.configuredSourceRequired
+                      ? "No account-specific source is connected. This optional evidence does not invalidate customer-observed impact."
+                      : providerReports.error
+                        ? "The provider source is unavailable. This optional evidence does not invalidate customer-observed impact."
+                        : "No provider report overlaps this incident. Provider silence does not invalidate customer-observed impact."}
+                  </span>
+                )}
+              </section>
+            </div>
+            <details className="candidate-package-disclosure">
+              <summary>Published exclusions ({publishedExclusions.length})</summary>
+              {publishedExclusions.length > 0 ? (
+                <ul>{publishedExclusions.map((item) => <li key={item}>{item}</li>)}</ul>
+              ) : (
+                <span>No provider or service exclusions are published for this scope.</span>
+              )}
+            </details>
+            <div
+              className="candidate-package-requirements"
+              id="candidate-requirements"
+              tabIndex={-1}
+            >
+              <strong>Provider requirements to confirm externally</strong>
+              {requiredEvidence.length > 0 ? (
+                <div className="candidate-evidence-checklist">
+                  {requiredEvidence.map((item) => (
+                    <label key={item}>
+                      <input
+                        type="checkbox"
+                        checked={effectiveAcknowledgedEvidence.includes(item)}
+                        onChange={() => toggleEvidence(item)}
+                        disabled={!settings.canWrite || settings.mutating || Boolean(currentDecision)}
+                      />
+                      <span>{item}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <span>No evidence checklist is published in the provider record.</span>
+              )}
+              <span>Checking an item records an operator confirmation. It does not upload or store the source material.</span>
+            </div>
+            <div className="candidate-evidence-status-grid" aria-label="Evidence source status">
+              <section>
+                <strong>Collected automatically</strong>
+                <ul>{artifact.requirements.collectedAutomatically.map((item) => <li key={item}>{item}</li>)}</ul>
+              </section>
+              <section>
+                <strong>Confirmed externally</strong>
+                {artifact.requirements.confirmedExternally.length > 0
+                  ? <ul>{artifact.requirements.confirmedExternally.map((item) => <li key={item}>{item}</li>)}</ul>
+                  : <span>None confirmed</span>}
+              </section>
+              <section className={artifact.requirements.missing.length > 0 ? "attention" : "ready"}>
+                <strong>Missing</strong>
+                {artifact.requirements.missing.length > 0
+                  ? <ul>{artifact.requirements.missing.map((item) => <li key={item}>{item}</li>)}</ul>
+                  : <span>Nothing required is missing</span>}
+              </section>
+            </div>
+          </section>
+        </div>
+      </details>
     </article>
   );
 };
@@ -773,27 +1086,54 @@ const CandidateWorkspace = ({
     services,
   ]);
   const [selectedKey, setSelectedKey] = useState<string>();
-
-  const currentDecisionFor = (candidate: EvidenceCandidate) => {
-    const decision = decisionByKey.get(candidate.key);
-    return decision && evidenceDecisionMatchesCandidate(decision, candidate)
-      ? decision
-      : undefined;
-  };
-  const stateForCase = (reviewCase: IncidentReviewCase) => {
-    const current = reviewCase.candidates.flatMap((candidate) => {
-      const decision = currentDecisionFor(candidate);
-      return decision ? [decision] : [];
+  const [queueQuery, setQueueQuery] = useState("");
+  const [queueFilter, setQueueFilter] = useState<EvidenceQueueFilter>("all");
+  const [page, setPage] = useState(1);
+  const queueInitialized = useRef(false);
+  const caseStateByKey = useMemo(() => new Map(
+    reviewCases.map((reviewCase) => [
+      reviewCase.key,
+      resolveEvidenceReviewState(reviewCase, decisionByKey),
+    ]),
+  ), [decisionByKey, reviewCases]);
+  const filteredCases = useMemo(() => {
+    const query = queueQuery.trim().toLowerCase();
+    return reviewCases.filter((reviewCase) => {
+      const state = caseStateByKey.get(reviewCase.key)?.state ?? "needs-review";
+      const filterMatches = queueFilter === "all" ||
+        (queueFilter === "needs-review"
+          ? state === "needs-review" || state === "mixed"
+          : state === queueFilter);
+      if (!filterMatches) return false;
+      if (!query) return true;
+      const searchable = [
+        reviewCase.key,
+        ...reviewCase.problems.flatMap((problem) => [
+          problem.id,
+          problem.title,
+          problem.category,
+        ]),
+        ...reviewCase.affectedServices.flatMap((service) => [
+          service.id,
+          service.name,
+        ]),
+        ...reviewCase.providerServiceIds,
+        ...reviewCase.providerServiceNames,
+      ].join(" ").toLowerCase();
+      return searchable.includes(query);
     });
-    const statuses = Array.from(new Set(current.map((decision) => decision.status)));
-    const complete = current.length === reviewCase.candidates.length && statuses.length === 1;
-    const hasAnyDecision = reviewCase.candidates.some((candidate) =>
-      decisionByKey.has(candidate.key));
-    return {
-      status: complete ? statuses[0] : undefined,
-      partial: hasAnyDecision && !complete,
-    };
-  };
+  }, [caseStateByKey, queueFilter, queueQuery, reviewCases]);
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredCases.length / EVIDENCE_CASE_PAGE_SIZE),
+  );
+  const visibleCases = useMemo(
+    () => filteredCases.slice(
+      (page - 1) * EVIDENCE_CASE_PAGE_SIZE,
+      page * EVIDENCE_CASE_PAGE_SIZE,
+    ),
+    [filteredCases, page],
+  );
 
   useEffect(() => {
     if (
@@ -807,47 +1147,70 @@ const CandidateWorkspace = ({
           : undefined);
       if (requested) {
         lastRequestedSelection.current = `${requestedCaseId ?? ""}|${requestedProblemId ?? ""}`;
+        const requestedIndex = reviewCases.findIndex((reviewCase) =>
+          reviewCase.key === requested.key);
+        setQueueQuery("");
+        setQueueFilter("all");
+        setPage(Math.floor(requestedIndex / EVIDENCE_CASE_PAGE_SIZE) + 1);
         setSelectedKey(requested.key);
         return;
       }
     }
     if (
-      reviewCases.length > 0 &&
-      !reviewCases.some((reviewCase) => reviewCase.key === selectedKey)
-    ) setSelectedKey(reviewCases[0].key);
+      visibleCases.length > 0 &&
+      !visibleCases.some((reviewCase) => reviewCase.key === selectedKey)
+    ) setSelectedKey(visibleCases[0].key);
     if (reviewCases.length === 0) setSelectedKey(undefined);
-  }, [requestedCaseId, requestedProblemId, reviewCases, selectedKey]);
+  }, [
+    requestedCaseId,
+    requestedProblemId,
+    reviewCases,
+    selectedKey,
+    visibleCases,
+  ]);
+
+  useEffect(() => {
+    if (!queueInitialized.current) {
+      queueInitialized.current = true;
+      return;
+    }
+    setPage(1);
+  }, [providerSlug, queueFilter, queueQuery]);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
 
   const selected =
-    reviewCases.find((reviewCase) => reviewCase.key === selectedKey) ??
-    reviewCases[0];
-  const validated = reviewCases.filter(
-    (reviewCase) => stateForCase(reviewCase).status === "validated",
+    visibleCases.find((reviewCase) => reviewCase.key === selectedKey) ??
+    visibleCases[0];
+  const readyForFollowUp = reviewCases.filter(
+    (reviewCase) => caseStateByKey.get(reviewCase.key)?.state === "ready-for-follow-up",
   ).length;
-  const dismissed = reviewCases.filter(
-    (reviewCase) => stateForCase(reviewCase).status === "dismissed",
+  const excluded = reviewCases.filter(
+    (reviewCase) => caseStateByKey.get(reviewCase.key)?.state === "excluded",
   ).length;
-  const notReady = reviewCases.filter(
-    (reviewCase) => stateForCase(reviewCase).status === "not-ready",
+  const needsEvidence = reviewCases.filter(
+    (reviewCase) => caseStateByKey.get(reviewCase.key)?.state === "needs-evidence",
   ).length;
-  const needsReview = reviewCases.length - validated - notReady - dismissed;
+  const needsReview = reviewCases.length - readyForFollowUp - needsEvidence - excluded;
 
   if (error) {
     return (
       <div className="evidence-empty evidence-error">
         <strong>Dynatrace evidence is incomplete.</strong>
         <span>
-          The Problem query failed. Candidate generation is paused so a missing
+          The Problem query failed. Review case generation is paused so a missing
           read is not presented as an empty result.
         </span>
       </div>
     );
   }
-  if (loading) {
+  if (loading || settings.loading || contractSettings.loading) {
     return (
       <div className="evidence-empty" role="status">
         <strong>Building the evidence queue</strong>
-        <span>Comparing Problems with the current provider coverage.</span>
+        <span>Comparing Problems, coverage, terms, and saved review decisions.</span>
       </div>
     );
   }
@@ -855,17 +1218,33 @@ const CandidateWorkspace = ({
     return (
       <div className="evidence-empty">
         <strong>Provider terms are unavailable.</strong>
-        <span>Restore the directory record before reviewing candidates.</span>
+        <span>Restore the directory record before reviewing cases.</span>
         <Button as={Link} to={`/directory?provider=${encodeURIComponent(providerSlug)}`} size="condensed">Review terms</Button>
+      </div>
+    );
+  }
+  if (settings.error || settings.incomplete || !settings.canRead) {
+    return (
+      <div className="evidence-empty evidence-error">
+        <strong>Saved review status is unavailable.</strong>
+        <span>
+          The evidence is unchanged, but the app cannot safely show or update
+          case decisions until the complete review history is available.
+        </span>
+        {settings.error ? (
+          <Button size="condensed" onClick={() => void settings.refetch()}>
+            Try again
+          </Button>
+        ) : null}
       </div>
     );
   }
   if (reviewCases.length === 0) {
     return (
       <div className="evidence-empty">
-        <strong>Review complete for this window.</strong>
+        <strong>No review cases in this window.</strong>
         <span>
-          No provider-review candidate in the last {formatEvidenceLookback(lookbackHours)} overlaps
+          No provider-review case in the last {formatEvidenceLookback(lookbackHours)} overlaps
            an observed or confirmed provider scope, provider tag, or Smartscape suggestion for
           {` ${provider.provider.name}`}.
         </span>
@@ -879,11 +1258,11 @@ const CandidateWorkspace = ({
 
   return (
     <div className="evidence-candidates-view">
-      <dl className="evidence-candidate-summary" aria-label="Evidence candidate status">
+      <dl className="evidence-candidate-summary" aria-label="Evidence review case status">
         <div><dt>Needs review</dt><dd>{needsReview}</dd></div>
-        <div><dt>Not ready</dt><dd>{notReady}</dd></div>
-        <div><dt>Package ready</dt><dd>{validated}</dd></div>
-        <div><dt>Not provider-related</dt><dd>{dismissed}</dd></div>
+        <div><dt>Needs evidence</dt><dd>{needsEvidence}</dd></div>
+        <div><dt>Ready for follow-up</dt><dd>{readyForFollowUp}</dd></div>
+        <div><dt>Excluded</dt><dd>{excluded}</dd></div>
       </dl>
       <div className="evidence-candidate-layout">
         <aside className="candidate-queue" aria-label="Provider impact review cases">
@@ -891,9 +1270,45 @@ const CandidateWorkspace = ({
             <strong>Review cases</strong>
             <span>{reviewCases.length} · {candidates.length} Problems</span>
           </div>
+          <div className="candidate-queue-tools">
+            <label>
+              <span className="visually-hidden">Search review cases</span>
+              <input
+                type="search"
+                value={queueQuery}
+                onChange={(event) => setQueueQuery(event.target.value)}
+                placeholder="Find a case, Problem, or service"
+              />
+            </label>
+            <div className="candidate-queue-filters" role="group" aria-label="Filter review cases">
+              {EVIDENCE_QUEUE_FILTERS.map((filter) => {
+                const count = filter.value === "all"
+                  ? reviewCases.length
+                  : filter.value === "needs-review"
+                    ? needsReview
+                    : filter.value === "needs-evidence"
+                      ? needsEvidence
+                      : filter.value === "ready-for-follow-up"
+                        ? readyForFollowUp
+                        : excluded;
+                return (
+                  <button
+                    type="button"
+                    key={filter.value}
+                    className={queueFilter === filter.value ? "active" : ""}
+                    aria-pressed={queueFilter === filter.value}
+                    onClick={() => setQueueFilter(filter.value)}
+                  >
+                    {filter.label} <span>{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div className="candidate-queue-list">
-            {reviewCases.slice(0, 30).map((reviewCase) => {
-              const state = stateForCase(reviewCase);
+            {visibleCases.map((reviewCase) => {
+              const state = caseStateByKey.get(reviewCase.key) ??
+                resolveEvidenceReviewState(reviewCase, decisionByKey);
               const candidate = reviewCase.candidates[0];
               const title = reviewCase.problems.length > 1
                 ? `${reviewCase.providerServiceNames.join(", ") || provider?.provider.name || providerSlug} impact review`
@@ -910,22 +1325,45 @@ const CandidateWorkspace = ({
                     <strong>{title}</strong>
                     <small>{reviewCase.problems.length} Problem{reviewCase.problems.length === 1 ? "" : "s"} · {reviewCase.affectedServices.length} service{reviewCase.affectedServices.length === 1 ? "" : "s"}</small>
                   </span>
-                  <CandidateState
-                    status={state.status}
-                    partial={state.partial}
-                  />
+                  <CandidateState state={state.state} />
                 </button>
               );
             })}
+            {filteredCases.length === 0 ? (
+              <div className="candidate-queue-empty">
+                <strong>No matching review cases</strong>
+                <span>Clear the search or choose another status.</span>
+              </div>
+            ) : null}
+          </div>
+          <div className="candidate-queue-footer" aria-label="Review case pages">
+            <span>{filteredCases.length > 0
+              ? `Showing ${(page - 1) * EVIDENCE_CASE_PAGE_SIZE + 1}–${Math.min(page * EVIDENCE_CASE_PAGE_SIZE, filteredCases.length)} of ${filteredCases.length}`
+              : "Showing 0 of 0"}</span>
+            <div>
+              <Button
+                size="condensed"
+                disabled={page <= 1}
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+              >
+                Previous
+              </Button>
+              <span>Page {page} of {pageCount}</span>
+              <Button
+                size="condensed"
+                disabled={page >= pageCount}
+                onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </aside>
         {selected ? (
           <CandidateDetail
             reviewCase={selected}
-            decisions={selected.candidates.flatMap((candidate) => {
-              const decision = decisionByKey.get(candidate.key);
-              return decision ? [decision] : [];
-            })}
+            reviewState={caseStateByKey.get(selected.key) ??
+              resolveEvidenceReviewState(selected, decisionByKey)}
             provider={provider}
             settings={settings}
             contractSettings={contractSettings}
@@ -964,7 +1402,7 @@ export const EvidenceWorkspace = ({
       <div>
         <Heading level={2}>Evidence</Heading>
         <Paragraph>
-          Assemble the provider follow-up package, then record the SRE decision.
+          Review customer impact, record the SRE decision, and prepare a portable follow-up.
         </Paragraph>
       </div>
     </div>
@@ -974,14 +1412,14 @@ export const EvidenceWorkspace = ({
         to={candidatePath}
         aria-current={view === "candidates" ? "page" : undefined}
       >
-        Review candidates
+        Review cases
       </Link>
       <Link
         className={view === "provider-reports" ? "evidence-view-tab active" : "evidence-view-tab"}
         to={`/evidence?${reportParams.toString()}`}
         aria-current={view === "provider-reports" ? "page" : undefined}
       >
-        Provider reports
+        Provider corroboration
       </Link>
     </nav>
     {view === "provider-reports" ? (
@@ -997,7 +1435,7 @@ export const EvidenceWorkspace = ({
     <div className="evidence-boundary">
       <strong>Review boundary</strong>
       <span>
-        Package readiness records an SRE decision only. Nothing is submitted.
+        Review readiness records an SRE decision only. Nothing is submitted.
         The provider determines fault, eligibility, and any service credit.
       </span>
     </div>

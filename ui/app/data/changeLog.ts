@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.66",
+    version: "0.0.67",
     label: "Current release",
+    summary: "Turned Evidence into a complete, portable SRE handoff.",
+    details: [
+      "Evidence now opens on a searchable, filterable Review cases queue with complete counts and 20 cases per page.",
+      "Incidents and Evidence share current review states, including loading, unavailable, stale, partial, and mixed decisions.",
+      "The selected review leads with readiness and separates automatically collected facts, external confirmation, and missing items.",
+      "Provider corroboration remains optional and cannot erase Dynatrace-observed customer impact.",
+      "SREs can copy a concise follow-up summary or download a versioned JSON review without submitting or changing anything.",
+    ],
+  },
+  {
+    version: "0.0.66",
+    label: "Previous release",
     summary: "Aligned service coverage and impact review with live Smartscape topology.",
     details: [
       "Service inventory now uses Smartscape service nodes after a live equivalence check preserved exact service IDs, names, and tags.",
