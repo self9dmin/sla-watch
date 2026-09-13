@@ -9,9 +9,20 @@ import {
   createIncidentServiceMetricsQuery,
   createIncidentServicesQuery,
   createIncidentSmartscapeQuery,
+  createProblemsQuery,
 } from "../ui/app/data/queries";
 
 describe("bounded inventory queries", () => {
+  it("uses stable Smartscape Problem fields with compatibility fallbacks", () => {
+    const query = createProblemsQuery(168);
+
+    expect(query).toContain("smartscape.affected_entities");
+    expect(query).toContain("root_cause.smartscape_entity");
+    expect(query).toContain("affected_entity_ids");
+    expect(query).toContain("root_cause_entity_id");
+    expect(query).toContain("from:-168h");
+  });
+
   it("keeps the global inventory bounded and focused on coverage anchors", () => {
     expect(SERVICES_QUERY).toContain(`limit ${SERVICE_RESULT_LIMIT}`);
     expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).toContain(`limit ${SMARTSCAPE_RESULT_LIMIT}`);

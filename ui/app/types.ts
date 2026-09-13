@@ -77,6 +77,9 @@ export type EvidenceDecisionValue = {
   problemStatus: string;
   problemStartedAt?: string | null;
   problemEndedAt?: string | null;
+  rootCauseEntityId?: string | null;
+  rootCauseEntityName?: string | null;
+  rootCauseEntityType?: string | null;
   affectedEntityIds: string[];
   affectedEntityNames: string[];
   providerServiceIds: string[];
@@ -274,9 +277,17 @@ export type ProblemRecord = {
   status: string;
   category: string;
   affectedEntityIds: string[];
+  affectedEntities: SmartscapeEntityReference[];
   hasRootCause: boolean;
+  rootCause?: SmartscapeEntityReference;
   startedAt?: string;
   endedAt?: string;
+};
+
+export type SmartscapeEntityReference = {
+  id: string;
+  name: string;
+  type: string;
 };
 
 export type SlaCreditTier = { below: number; credit: number };

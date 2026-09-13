@@ -27,6 +27,7 @@ const problem = (status: string): ProblemRecord => ({
   status,
   category: "PERFORMANCE",
   affectedEntityIds: ["SERVICE-1"],
+  affectedEntities: [],
   hasRootCause: true,
 });
 

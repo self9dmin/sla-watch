@@ -15,6 +15,12 @@ import {
   normalizeEvidenceDecision,
 } from "../data/evidenceCandidates";
 
+export type EvidenceDecisionSaveResult = {
+  savedDecisionKeys: string[];
+  failures: Array<{ decisionKey: string; message: string }>;
+  refreshError?: string;
+};
+
 export const useEvidenceDecisions = () => {
   const query = useSettingsObjectsV2({
     schemaId: EVIDENCE_DECISIONS_SCHEMA_ID,
@@ -66,23 +72,68 @@ export const useEvidenceDecisions = () => {
     (item) => item.permission === "app-settings:objects:write",
   )?.granted === "true";
   const mutating = create.isLoading || update.isLoading || remove.isLoading;
+  const totalCount = query.data?.totalCount ?? decisions.length;
+  const incomplete = Boolean(
+    query.data?.error ||
+    query.data?.nextPageKey ||
+    totalCount > decisions.length
+  );
+
+  const saveDecisions = async (
+    values: EvidenceDecisionValue[],
+  ): Promise<EvidenceDecisionSaveResult> => {
+    const uniqueValues = Array.from(
+      new Map(values.map((value) => [value.decisionKey, value])).values(),
+    );
+    const currentByKey = new Map(
+      decisions.map((decision) => [decision.decisionKey, decision]),
+    );
+    const savedDecisionKeys: string[] = [];
+    const failures: EvidenceDecisionSaveResult["failures"] = [];
+
+    for (const value of uniqueValues) {
+      const current = currentByKey.get(value.decisionKey);
+      try {
+        if (current) {
+          await update.execute({
+            objectId: current.objectId,
+            optimisticLockingVersion: current.version,
+            body: { value },
+          });
+        } else {
+          await create.execute({
+            body: { schemaId: EVIDENCE_DECISIONS_SCHEMA_ID, value },
+          });
+        }
+        savedDecisionKeys.push(value.decisionKey);
+      } catch (error) {
+        failures.push({
+          decisionKey: value.decisionKey,
+          message: error instanceof Error
+            ? error.message
+            : "The evidence decision could not be saved.",
+        });
+      }
+    }
+
+    let refreshError: string | undefined;
+    if (uniqueValues.length > 0) {
+      try {
+        await query.refetch();
+      } catch (error) {
+        refreshError = error instanceof Error
+          ? error.message
+          : "The evidence decisions could not be refreshed.";
+      }
+    }
+    return { savedDecisionKeys, failures, refreshError };
+  };
 
   const saveDecision = async (value: EvidenceDecisionValue): Promise<void> => {
-    const current = decisions.find(
-      (decision) => decision.decisionKey === value.decisionKey,
-    );
-    if (current) {
-      await update.execute({
-        objectId: current.objectId,
-        optimisticLockingVersion: current.version,
-        body: { value },
-      });
-    } else {
-      await create.execute({
-        body: { schemaId: EVIDENCE_DECISIONS_SCHEMA_ID, value },
-      });
-    }
-    await query.refetch();
+    const result = await saveDecisions([value]);
+    const failure = result.failures[0];
+    if (failure) throw new Error(failure.message);
+    if (result.refreshError) throw new Error(result.refreshError);
   };
 
   const deleteDecision = async (
@@ -101,8 +152,11 @@ export const useEvidenceDecisions = () => {
     mutating,
     canRead,
     canWrite,
+    totalCount,
+    incomplete,
     error: query.error ?? permissions.error,
     saveDecision,
+    saveDecisions,
     deleteDecision,
     refetch: query.refetch,
   };

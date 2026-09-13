@@ -14,8 +14,20 @@ import type {
 } from "../types";
 import {
   buildEvidenceCandidates,
+  evidenceDecisionMatchesCandidate,
+  evidenceDecisionValue,
   type EvidenceCandidate,
 } from "../data/evidenceCandidates";
+import {
+  assessProblemRootCause,
+  bulkDismissalEligibility,
+  createBulkDismissalNote,
+  createRootCauseReviewGroups,
+  formatSmartscapeEntityType,
+  type IncidentBulkReviewItem,
+  type RootCauseAssessment,
+  type RootCauseReviewGroup,
+} from "../data/incidentTriage";
 import {
   EVIDENCE_LOOKBACK_OPTIONS,
   formatEvidenceLookback,
@@ -27,6 +39,7 @@ import {
   createIncidentReviewPath,
 } from "../data/reviewRoutes";
 import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
+import { useEvidenceDecisions } from "../hooks/useEvidenceDecisions";
 
 type Tone = "neutral" | "warning" | "positive";
 
@@ -38,6 +51,7 @@ type IncidentReviewProps = {
   topology: SmartscapeScopeEdge[];
   topologyLoading: boolean;
   topologyError?: Error;
+  providerContextIncomplete: boolean;
   lookbackHours: EvidenceLookbackHours;
   onLookbackChange: (value: EvidenceLookbackHours) => void;
   loading: boolean;
@@ -45,6 +59,7 @@ type IncidentReviewProps = {
 };
 
 const PAGE_SIZE = 8;
+const MAX_BULK_REVIEW = 50;
 
 const StatusPill = ({
   tone,
@@ -103,6 +118,9 @@ const IncidentDetail = ({
   providerSlug,
   providerName,
   matchingLoading,
+  rootCauseAssessment,
+  rootCauseGroup,
+  onSelectRootCauseGroup,
 }: {
   problem: ProblemRecord;
   candidate?: EvidenceCandidate;
@@ -111,6 +129,9 @@ const IncidentDetail = ({
   providerSlug: string;
   providerName: string;
   matchingLoading: boolean;
+  rootCauseAssessment: RootCauseAssessment;
+  rootCauseGroup?: RootCauseReviewGroup;
+  onSelectRootCauseGroup: (group: RootCauseReviewGroup) => void;
 }) => {
   const active = problem.status.toUpperCase() === "ACTIVE";
   const affectedServices = candidate?.affectedServices.length
@@ -121,6 +142,11 @@ const IncidentDetail = ({
   const providerServices = candidate?.providerServiceNames.length
     ? candidate.providerServiceNames.join(", ")
     : "Not matched";
+  const rootCause = problem.rootCause;
+  const rootCauseLabel = rootCause?.name ?? "Not returned";
+  const rootCauseType = rootCause
+    ? formatSmartscapeEntityType(rootCause.type)
+    : "No root-cause entity";
   const hasAffectedServiceScope = serviceNames.length > 0;
   const nextTone: Tone = matchingLoading
     ? "neutral"
@@ -164,7 +190,7 @@ const IncidentDetail = ({
           <Heading level={3}>{problem.title}</Heading>
         </div>
         <StatusPill tone={active ? "warning" : "neutral"}>
-          {active ? "Active" : "Closed"}
+          {formatStatus(problem.status)}
         </StatusPill>
       </div>
 
@@ -179,13 +205,28 @@ const IncidentDetail = ({
         </div>
         <div>
           <dt>Root cause</dt>
-          <dd>{problem.hasRootCause ? "Entity identified" : "Not returned"}</dd>
+          <dd title={rootCauseLabel}>{rootCauseLabel}</dd>
         </div>
         <div>
-          <dt>Problem state</dt>
-          <dd>{formatStatus(problem.status)}</dd>
+          <dt>Provider relationship</dt>
+          <dd title={rootCauseAssessment.detail}>{rootCauseAssessment.label}</dd>
         </div>
       </dl>
+
+      <section className="incident-root-cause-context" aria-label="Dynatrace root-cause context">
+        <div>
+          <strong>{rootCause ? rootCauseType : rootCauseAssessment.label}</strong>
+          <span>{rootCauseAssessment.detail}</span>
+        </div>
+        {rootCauseGroup ? (
+          <Button
+            size="condensed"
+            onClick={() => onSelectRootCauseGroup(rootCauseGroup)}
+          >
+            Review {rootCauseGroup.problemIds.length} together
+          </Button>
+        ) : null}
+      </section>
 
       <section className={`incident-next-step incident-next-step-${nextTone}`}>
         <StatusPill tone={nextTone}>{nextLabel}</StatusPill>
@@ -230,6 +271,7 @@ export const IncidentReview = ({
   topology,
   topologyLoading,
   topologyError,
+  providerContextIncomplete,
   lookbackHours,
   onLookbackChange,
   loading,
@@ -239,8 +281,32 @@ export const IncidentReview = ({
   const requestedProblemId = new URLSearchParams(location.search).get("problem");
   const [selectedId, setSelectedId] = useState<string | null>(requestedProblemId);
   const [page, setPage] = useState(1);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedProblemIds, setSelectedProblemIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [confirmingBulkReview, setConfirmingBulkReview] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkFeedback, setBulkFeedback] = useState<{
+    tone: "positive" | "warning";
+    message: string;
+  }>();
   const lastRequestedProblem = useRef<string | null>(null);
   const scopeSettings = useProviderScopeAssignments();
+  const evidenceSettings = useEvidenceDecisions();
+  const providerSlug = provider?.provider.slug ?? "provider";
+  const providerName = provider?.provider.name ?? "the selected provider";
+  const matchingLoading = topologyLoading || scopeSettings.loading;
+  const matchingError = topologyError ?? scopeSettings.error;
+  const relationshipContextComplete = !matchingLoading &&
+    !matchingError &&
+    !providerContextIncomplete &&
+    !scopeSettings.incomplete;
+  const bulkReviewContextComplete = relationshipContextComplete &&
+    !evidenceSettings.loading &&
+    !evidenceSettings.error &&
+    !evidenceSettings.incomplete &&
+    evidenceSettings.canRead;
   const serviceNamesById = useMemo(
     () => new Map(services.map((service) => [service.id, service.name])),
     [services],
@@ -268,9 +334,83 @@ export const IncidentReview = ({
     () => candidateByProblem(candidates),
     [candidates],
   );
+  const decisionByKey = useMemo(
+    () => new Map(
+      evidenceSettings.decisions
+        .filter((decision) => decision.providerSlug === providerSlug)
+        .map((decision) => [decision.decisionKey, decision]),
+    ),
+    [evidenceSettings.decisions, providerSlug],
+  );
+  const triageItems = useMemo<IncidentBulkReviewItem[]>(
+    () => problems.map((problem) => {
+      const candidate = candidatesByProblem.get(problem.id);
+      const storedDecision = candidate ? decisionByKey.get(candidate.key) : undefined;
+      const decision = candidate && storedDecision &&
+        evidenceDecisionMatchesCandidate(storedDecision, candidate)
+        ? storedDecision
+        : undefined;
+      return {
+        problem,
+        candidate,
+        decision,
+        assessment: assessProblemRootCause({
+          problem,
+          providerSlug,
+          providerName,
+          services,
+          topology,
+          assignments: scopeSettings.assignments,
+          providerLabelKey,
+          contextComplete: relationshipContextComplete,
+        }),
+        contextComplete: bulkReviewContextComplete,
+      };
+    }),
+    [
+      candidatesByProblem,
+      decisionByKey,
+      problems,
+      providerLabelKey,
+      providerName,
+      providerSlug,
+      bulkReviewContextComplete,
+      relationshipContextComplete,
+      scopeSettings.assignments,
+      services,
+      topology,
+    ],
+  );
+  const triageItemByProblem = useMemo(
+    () => new Map(triageItems.map((item) => [item.problem.id, item])),
+    [triageItems],
+  );
+  const eligibilityByProblem = useMemo(
+    () => new Map(
+      triageItems.map((item) => [item.problem.id, bulkDismissalEligibility(item)]),
+    ),
+    [triageItems],
+  );
+  const reviewGroups = useMemo(
+    () => createRootCauseReviewGroups(triageItems),
+    [triageItems],
+  );
+  const reviewGroupByProblem = useMemo(() => {
+    const groups = new Map<string, RootCauseReviewGroup>();
+    reviewGroups.forEach((group) =>
+      group.problemIds.forEach((problemId) => groups.set(problemId, group)),
+    );
+    return groups;
+  }, [reviewGroups]);
   const candidateProblemIds = useMemo(
-    () => new Set(candidatesByProblem.keys()),
-    [candidatesByProblem],
+    () => new Set(
+      triageItems
+        .filter((item) => item.candidate &&
+          item.decision?.status !== "validated" &&
+          item.decision?.status !== "dismissed")
+        .map((item) => item.problem.id),
+    ),
+    [triageItems],
   );
   const orderedProblems = useMemo(
     () => prioritizeProblems(problems, candidateProblemIds),
@@ -292,6 +432,15 @@ export const IncidentReview = ({
   const selectedCandidate = selectedProblem
     ? candidatesByProblem.get(selectedProblem.id)
     : undefined;
+  const selectedTriageItem = selectedProblem
+    ? triageItemByProblem.get(selectedProblem.id)
+    : undefined;
+  const selectedRootCauseAssessment = selectedTriageItem?.assessment ?? {
+    relation: "unavailable" as const,
+    label: "Root cause unavailable",
+    detail: "Dynatrace did not return a root-cause Smartscape entity for this Problem.",
+    linkedProviderSlugs: [],
+  };
   const selectedServiceNames = selectedProblem
     ? selectedProblem.affectedEntityIds
         .map((id) => serviceNamesById.get(id))
@@ -308,8 +457,19 @@ export const IncidentReview = ({
       .flatMap((problem) => problem.affectedEntityIds)
       .filter((id) => serviceNamesById.has(id)),
   ).size;
-  const matchingLoading = topologyLoading || scopeSettings.loading;
-  const matchingError = topologyError ?? scopeSettings.error;
+  const eligibleBulkCount = Array.from(eligibilityByProblem.values())
+    .filter((eligibility) => eligibility.eligible).length;
+  const unresolvedCandidateCount = triageItems.filter(
+    (item) => item.candidate &&
+      item.decision?.status !== "validated" &&
+      item.decision?.status !== "dismissed",
+  ).length;
+  const selectedBulkItems = triageItems.filter(
+    (item): item is IncidentBulkReviewItem & { candidate: EvidenceCandidate } =>
+      selectedProblemIds.has(item.problem.id) &&
+      Boolean(item.candidate) &&
+      eligibilityByProblem.get(item.problem.id)?.eligible === true,
+  ).slice(0, MAX_BULK_REVIEW);
 
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
@@ -338,6 +498,105 @@ export const IncidentReview = ({
       setSelectedId(visibleProblems[0]?.id ?? orderedProblems[0].id);
   }, [orderedProblems, requestedProblemId, selectedId, visibleProblems]);
 
+  useEffect(() => {
+    setSelectedProblemIds((current) => {
+      const remaining = Array.from(current).filter(
+        (problemId) => eligibilityByProblem.get(problemId)?.eligible,
+      );
+      if (remaining.length === current.size) return current;
+      return new Set(remaining);
+    });
+  }, [eligibilityByProblem]);
+
+  useEffect(() => {
+    setSelectionMode(false);
+    setSelectedProblemIds(new Set());
+    setConfirmingBulkReview(false);
+    setBulkFeedback(undefined);
+  }, [lookbackHours, providerSlug]);
+
+  const closeBulkReview = () => {
+    setSelectionMode(false);
+    setConfirmingBulkReview(false);
+    setSelectedProblemIds(new Set());
+  };
+
+  const selectRootCauseGroup = (group: RootCauseReviewGroup) => {
+    setSelectionMode(true);
+    setConfirmingBulkReview(false);
+    setBulkFeedback(undefined);
+    setSelectedProblemIds(new Set(group.problemIds.slice(0, MAX_BULK_REVIEW)));
+  };
+
+  const setProblemSelected = (problemId: string, checked: boolean) => {
+    setBulkFeedback(undefined);
+    setConfirmingBulkReview(false);
+    setSelectedProblemIds((current) => {
+      const next = new Set(current);
+      if (checked && next.size < MAX_BULK_REVIEW) next.add(problemId);
+      else if (!checked) next.delete(problemId);
+      return next;
+    });
+  };
+
+  const saveBulkDismissals = async () => {
+    if (
+      selectedBulkItems.length === 0 ||
+      bulkSaving ||
+      !evidenceSettings.canWrite
+    ) return;
+    setBulkSaving(true);
+    setBulkFeedback(undefined);
+    try {
+      const result = await evidenceSettings.saveDecisions(
+        selectedBulkItems.map((item) => evidenceDecisionValue(
+          item.candidate,
+          providerSlug,
+          "dismissed",
+          createBulkDismissalNote({
+            problem: item.problem,
+            assessment: item.assessment,
+            providerName,
+          }),
+        )),
+      );
+      const failedKeys = new Set(
+        result.failures.map((failure) => failure.decisionKey),
+      );
+      const failedProblemIds = selectedBulkItems
+        .filter((item) => failedKeys.has(item.candidate.key))
+        .map((item) => item.problem.id);
+      setSelectedProblemIds(new Set(failedProblemIds));
+      setConfirmingBulkReview(false);
+      if (result.failures.length > 0 || result.refreshError) {
+        const saved = result.savedDecisionKeys.length;
+        const failed = result.failures.length;
+        setBulkFeedback({
+          tone: "warning",
+          message: result.refreshError && failed === 0
+            ? `${saved} decision${saved === 1 ? " was" : "s were"} saved, but the queue could not refresh. Reload before continuing.`
+            : `${saved} decision${saved === 1 ? "" : "s"} saved. ${failed} failed and remain selected for retry.`,
+        });
+      } else {
+        const saved = result.savedDecisionKeys.length;
+        setBulkFeedback({
+          tone: "positive",
+          message: `${saved} Problem${saved === 1 ? " was" : "s were"} marked not provider-related. Evidence now reflects each decision.`,
+        });
+        setSelectionMode(false);
+      }
+    } catch (saveError) {
+      setBulkFeedback({
+        tone: "warning",
+        message: saveError instanceof Error
+          ? saveError.message
+          : "The selected decisions could not be saved.",
+      });
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
   return (
     <Surface className="panel-card incidents-panel">
       <div className="incidents-heading">
@@ -363,10 +622,12 @@ export const IncidentReview = ({
           tone={activeProblems > 0 ? "warning" : "neutral"}
         />
         <IncidentFact
-          label="Evidence candidates"
-          value={matchingLoading ? "Checking" : candidates.length.toLocaleString()}
-          detail={`${provider?.provider.name ?? "provider"} coverage overlap`}
-          tone={candidates.length > 0 ? "positive" : "neutral"}
+          label="Needs evidence review"
+          value={matchingLoading || evidenceSettings.loading
+            ? "Checking"
+            : unresolvedCandidateCount.toLocaleString()}
+          detail={`${candidates.length.toLocaleString()} provider-relevant total`}
+          tone={unresolvedCandidateCount > 0 ? "warning" : "positive"}
         />
         <IncidentFact
           label="Affected services"
@@ -408,6 +669,32 @@ export const IncidentReview = ({
           <div className="scope-map-toolbar-actions">
             <Button
               size="condensed"
+              disabled={
+                matchingLoading ||
+                evidenceSettings.loading ||
+                !evidenceSettings.canWrite ||
+                eligibleBulkCount === 0 ||
+                bulkSaving
+              }
+              title={!evidenceSettings.canWrite
+                ? "App Settings write access is required for review decisions."
+                : !bulkReviewContextComplete
+                  ? "Provider relationships or existing review decisions are incomplete. Review Problems individually."
+                : eligibleBulkCount === 0
+                  ? "No closed unresolved candidate has a reviewable root cause."
+                  : undefined}
+              onClick={() => {
+                if (selectionMode) closeBulkReview();
+                else {
+                  setSelectionMode(true);
+                  setBulkFeedback(undefined);
+                }
+              }}
+            >
+              {selectionMode ? "Done selecting" : `Select multiple (${eligibleBulkCount})`}
+            </Button>
+            <Button
+              size="condensed"
               onClick={() => openApp("dynatrace.davis.problems")}
             >
               <Button.Prefix>
@@ -426,6 +713,62 @@ export const IncidentReview = ({
           </span>
         </div>
       </div>
+
+      {selectionMode ? (
+        <section className="incident-bulk-review" aria-label="Bulk incident review">
+          <div>
+            <strong>{confirmingBulkReview
+              ? `Mark ${selectedBulkItems.length} not provider-related?`
+              : `${selectedBulkItems.length} selected`}</strong>
+            <span>{confirmingBulkReview
+              ? "Each Problem receives its own audited decision. Dynatrace root cause is a triage aid, not proof, and nothing is submitted."
+              : `Select up to ${MAX_BULK_REVIEW} closed candidates. Active, provider-linked, incomplete, and previously reviewed Problems stay individual.`}</span>
+          </div>
+          <div className="incident-bulk-actions">
+            {confirmingBulkReview ? (
+              <Button
+                size="condensed"
+                disabled={bulkSaving}
+                onClick={() => setConfirmingBulkReview(false)}
+              >
+                Back
+              </Button>
+            ) : (
+              <Button
+                size="condensed"
+                disabled={selectedBulkItems.length === 0 || bulkSaving}
+                onClick={() => setSelectedProblemIds(new Set())}
+              >
+                Clear
+              </Button>
+            )}
+            <Button
+              size="condensed"
+              variant="emphasized"
+              disabled={selectedBulkItems.length === 0 || bulkSaving}
+              onClick={() => {
+                if (confirmingBulkReview) void saveBulkDismissals();
+                else setConfirmingBulkReview(true);
+              }}
+            >
+              {bulkSaving
+                ? "Saving decisions"
+                : confirmingBulkReview
+                  ? `Confirm ${selectedBulkItems.length} decisions`
+                  : "Mark not provider-related"}
+            </Button>
+          </div>
+        </section>
+      ) : null}
+
+      {bulkFeedback ? (
+        <div
+          className={`incident-bulk-feedback incident-bulk-feedback-${bulkFeedback.tone}`}
+          role={bulkFeedback.tone === "warning" ? "alert" : "status"}
+        >
+          {bulkFeedback.message}
+        </div>
+      ) : null}
 
       {error ? (
         <div className="error-box incidents-error">
@@ -454,28 +797,79 @@ export const IncidentReview = ({
               {visibleProblems.map((problem) => {
                 const candidate = candidatesByProblem.get(problem.id);
                 const active = problem.status.toUpperCase() === "ACTIVE";
+                const triageItem = triageItemByProblem.get(problem.id);
+                const decision = triageItem?.decision;
+                const assessment = triageItem?.assessment;
+                const eligibility = eligibilityByProblem.get(problem.id) ?? {
+                  eligible: false,
+                  reason: "This Problem is not available for bulk review.",
+                };
+                const checked = selectedProblemIds.has(problem.id);
+                const group = reviewGroupByProblem.get(problem.id);
+                const decisionLabel = decision?.status === "validated"
+                  ? "Package ready"
+                  : decision?.status === "not-ready"
+                    ? "Not ready"
+                    : decision?.status === "dismissed"
+                      ? "Not provider-related"
+                      : active
+                        ? "Active"
+                        : candidate
+                          ? "Candidate"
+                          : formatStatus(problem.status);
+                const decisionTone: Tone = active || decision?.status === "not-ready"
+                  ? "warning"
+                  : decision?.status === "validated"
+                    ? "positive"
+                  : candidate && !decision
+                    ? "positive"
+                    : "neutral";
                 return (
-                  <button
-                    type="button"
-                    className={`incident-tile${selectedProblem?.id === problem.id ? " active" : ""}${candidate ? " candidate" : ""}`}
+                  <div
+                    className={`incident-tile-wrapper${checked ? " checked" : ""}`}
                     key={problem.id}
-                    onClick={() => setSelectedId(problem.id)}
-                    aria-pressed={selectedProblem?.id === problem.id}
                   >
-                    <span className="incident-tile-heading">
-                      <strong>{problem.title}</strong>
-                      <StatusPill tone={active ? "warning" : candidate ? "positive" : "neutral"}>
-                        {active ? "Active" : candidate ? "Candidate" : "Closed"}
-                      </StatusPill>
-                    </span>
-                    <span className="incident-tile-meta">
-                      {problem.id} · {formatStatus(problem.category)}
-                      {candidate ? " · Provider match" : ""}
-                    </span>
-                    <span className="incident-tile-time">
-                      {formatDateTime(problem.startedAt)}
-                    </span>
-                  </button>
+                    {selectionMode ? (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${problem.id} for bulk review`}
+                        checked={checked}
+                        disabled={
+                          confirmingBulkReview ||
+                          bulkSaving ||
+                          !eligibility.eligible ||
+                          (!checked && selectedBulkItems.length >= MAX_BULK_REVIEW)
+                        }
+                        title={eligibility.reason}
+                        onChange={(event) =>
+                          setProblemSelected(problem.id, event.target.checked)}
+                      />
+                    ) : null}
+                    <button
+                      type="button"
+                      className={`incident-tile${selectedProblem?.id === problem.id ? " active" : ""}${candidate ? " candidate" : ""}${selectionMode ? " selecting" : ""}`}
+                      onClick={() => setSelectedId(problem.id)}
+                      aria-pressed={selectedProblem?.id === problem.id}
+                    >
+                      <span className="incident-tile-heading">
+                        <strong>{problem.title}</strong>
+                        <StatusPill tone={decisionTone}>{decisionLabel}</StatusPill>
+                      </span>
+                      <span className="incident-tile-meta">
+                        {problem.id} · {formatStatus(problem.category)}
+                        {candidate ? " · Provider match" : ""}
+                      </span>
+                      <span className="incident-tile-root" title={assessment?.detail}>
+                        {problem.rootCause
+                          ? `${problem.rootCause.name} · ${assessment?.label ?? "Relation unavailable"}`
+                          : assessment?.label ?? "Root cause unavailable"}
+                        {group ? ` · ${group.problemIds.length} share root cause` : ""}
+                      </span>
+                      <span className="incident-tile-time">
+                        {formatDateTime(problem.startedAt)}
+                      </span>
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -510,6 +904,11 @@ export const IncidentReview = ({
               providerSlug={provider?.provider.slug ?? "provider"}
               providerName={provider?.provider.name ?? "the selected provider"}
               matchingLoading={matchingLoading}
+              rootCauseAssessment={selectedRootCauseAssessment}
+              rootCauseGroup={selectedProblem && evidenceSettings.canWrite
+                ? reviewGroupByProblem.get(selectedProblem.id)
+                : undefined}
+              onSelectRootCauseGroup={selectRootCauseGroup}
             />
           ) : null}
         </div>

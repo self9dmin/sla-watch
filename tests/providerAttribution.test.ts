@@ -64,6 +64,7 @@ describe("provider attribution candidates", () => {
         status: "CLOSED",
         category: "ERROR",
         affectedEntityIds: ["SERVICE-2", "SERVICE-2"],
+        affectedEntities: [],
         hasRootCause: false,
       },
       {
@@ -72,6 +73,7 @@ describe("provider attribution candidates", () => {
         status: "CLOSED",
         category: "SLOWDOWN",
         affectedEntityIds: ["SERVICE-2"],
+        affectedEntities: [],
         hasRootCause: false,
       },
     ];

@@ -23,6 +23,7 @@ import {
 } from "../data/providerAttribution";
 import { buildProviderCoverageModel } from "../data/providerCoverage";
 import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
+import { parseProblemRecords } from "../data/problems";
 import { parseServiceTelemetry } from "../data/serviceTelemetry";
 import {
   detectedProviderSlugs,
@@ -64,8 +65,6 @@ const asRecord = (value: unknown): Record<string, unknown> =>
     : {};
 const textValue = (value: unknown, fallback: string): string =>
   typeof value === "string" && value.trim().length > 0 ? value : fallback;
-const optionalText = (value: unknown): string | undefined =>
-  typeof value === "string" && value.trim().length > 0 ? value : undefined;
 const stringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) return typeof value === "string" ? [value] : [];
   return value.flatMap((item) => {
@@ -276,26 +275,10 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     [serviceData],
   );
 
-  const problems = useMemo<ProblemRecord[]>(() => {
-    const records = Array.isArray(problemData?.records)
-      ? problemData.records
-      : [];
-    return records.map((record: unknown, index: number) => {
-      const row = asRecord(record);
-      return {
-        id: textValue(row.display_id, `problem-${index + 1}`),
-        title: textValue(row.title, "Untitled problem"),
-        status: textValue(row.status, "UNKNOWN").toUpperCase(),
-        category: textValue(row.category, "UNKNOWN"),
-        affectedEntityIds: stringArray(row.affected_entity_ids),
-        hasRootCause:
-          typeof row.root_cause_entity_id === "string" &&
-          row.root_cause_entity_id.length > 0,
-        startedAt: optionalText(row.start_time),
-        endedAt: optionalText(row.end_time),
-      };
-    });
-  }, [problemData?.records]);
+  const problems = useMemo<ProblemRecord[]>(
+    () => parseProblemRecords(problemData),
+    [problemData],
+  );
 
   const allAffectedServiceIds = useMemo(
     () => Array.from(new Set(
@@ -774,6 +757,9 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             topology={providerEvidence}
             topologyLoading={topologyQuery.isLoading || incidentTopologyQuery.isLoading}
             topologyError={topologyQuery.error ?? incidentTopologyQuery.error ?? undefined}
+            providerContextIncomplete={
+              incidentTopologyIncomplete || scopeSettings.incomplete
+            }
             lookbackHours={lookbackHours}
             onLookbackChange={(value) =>
               void updatePreferences({ lookbackHours: value })

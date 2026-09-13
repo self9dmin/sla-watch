@@ -104,6 +104,9 @@ export const normalizeEvidenceDecision = (
     problemStatus,
     problemStartedAt: requiredText(row.problemStartedAt),
     problemEndedAt: requiredText(row.problemEndedAt),
+    rootCauseEntityId: requiredText(row.rootCauseEntityId),
+    rootCauseEntityName: requiredText(row.rootCauseEntityName),
+    rootCauseEntityType: requiredText(row.rootCauseEntityType),
     affectedEntityIds: stringList(row.affectedEntityIds, 100),
     affectedEntityNames: stringList(row.affectedEntityNames, 100),
     providerServiceIds: stringList(row.providerServiceIds, 50),
@@ -128,9 +131,13 @@ export const evidenceDecisionMatchesCandidate = (
   decision.decisionKey === candidate.key &&
   createEvidenceDecisionKey(decision.providerSlug, decision.problemId) ===
     candidate.key &&
+  decision.problemStatus.toUpperCase() === candidate.problem.status.toUpperCase() &&
   decision.mappingBasis === candidate.mappingBasis &&
   sameValues(decision.affectedEntityIds, candidate.problem.affectedEntityIds) &&
-  sameValues(decision.providerServiceIds, candidate.providerServiceIds);
+  sameValues(decision.providerServiceIds, candidate.providerServiceIds) &&
+  (!decision.rootCauseEntityId ||
+    decision.rootCauseEntityId.trim().toLowerCase() ===
+      candidate.problem.rootCause?.id.trim().toLowerCase());
 
 export const evidenceDecisionInputError = ({
   status,
@@ -295,6 +302,9 @@ export const evidenceDecisionValue = (
   problemStatus: candidate.problem.status,
   problemStartedAt: candidate.problem.startedAt ?? null,
   problemEndedAt: candidate.problem.endedAt ?? null,
+  rootCauseEntityId: candidate.problem.rootCause?.id ?? null,
+  rootCauseEntityName: candidate.problem.rootCause?.name ?? null,
+  rootCauseEntityType: candidate.problem.rootCause?.type ?? null,
   affectedEntityIds: stringList(candidate.problem.affectedEntityIds, 100),
   affectedEntityNames: stringList(
     candidate.affectedServices.map((service) => service.name),
