@@ -541,10 +541,7 @@ export const IncidentReview = ({
   }, [page, pageCount]);
 
   useEffect(() => {
-    if (
-      (requestedCaseId || requestedProblemId) &&
-      `${requestedCaseId ?? ""}|${requestedProblemId ?? ""}` !== lastRequestedSelection.current
-    ) {
+    if (requestedCaseId || requestedProblemId) {
       const requested = orderedCases.find((reviewCase) =>
         reviewCase.key === requestedCaseId) ??
         (requestedProblemId
@@ -554,11 +551,23 @@ export const IncidentReview = ({
         ? orderedCases.findIndex((reviewCase) => reviewCase.key === requested.key)
         : -1;
       if (requestedIndex >= 0) {
-        lastRequestedSelection.current = `${requestedCaseId ?? ""}|${requestedProblemId ?? ""}`;
-        setSelectedId(requested?.key ?? null);
-        setPage(Math.floor(requestedIndex / PAGE_SIZE) + 1);
-        return;
+        const requestedPage = Math.floor(requestedIndex / PAGE_SIZE) + 1;
+        const selectionSignature = [
+          requestedCaseId ?? "",
+          requestedProblemId ?? "",
+          requested?.key ?? "",
+          requestedPage,
+          orderedCases.length,
+        ].join("|");
+        if (selectionSignature !== lastRequestedSelection.current) {
+          lastRequestedSelection.current = selectionSignature;
+          setSelectedId(requested?.key ?? null);
+          setPage(requestedPage);
+          return;
+        }
       }
+    } else {
+      lastRequestedSelection.current = null;
     }
     if (orderedCases.length === 0) {
       setSelectedId(null);
