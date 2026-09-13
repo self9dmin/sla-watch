@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { openApp } from "@dynatrace-sdk/navigation";
+import { getAppLink } from "@dynatrace-sdk/navigation";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { HostsIcon, ServicesIcon, SmartscapeIcon } from "@dynatrace/strato-icons";
 import type {
@@ -38,6 +38,7 @@ import {
   serviceEntityIdForEdge,
 } from "../data/providerScopeAssignments";
 import { safeWorkspaceReturnPath } from "../data/reviewRoutes";
+import { buildSmartscapeOverviewHref } from "../data/smartscapeNavigation";
 import { providerDisplayName } from "../data/providers";
 import type { ProviderHostContextSummary } from "../data/topology";
 import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAssignments";
@@ -431,20 +432,24 @@ export const CoverageWorkspace = ({
       : null,
   ].filter((fact): fact is { label: string; value: number } => fact !== null);
   const topologyTypeCounts = providerInventory?.nodeTypeCounts ?? [];
-  const smartscapeView = providerSlug === "aws"
-    ? "view/dynatrace.smartscape.aws-overview"
-    : providerSlug === "azure"
-      ? "view/dynatrace.smartscape.azure-overview"
-      : providerSlug === "gcp"
-        ? "view/dynatrace.smartscape.gcp-overview"
-        : "view/dynatrace.smartscape.smartscape-on-grail";
+  const smartscapeHref = buildSmartscapeOverviewHref(
+    getAppLink("dynatrace.smartscape"),
+    providerSlug,
+  );
 
   return (
     <section className="scope-map-view setup-scope-map" aria-labelledby="service-coverage-title">
       <div className="scope-map-toolbar">
         <div className="scope-map-title"><SmartscapeIcon /><div><strong id="service-coverage-title">Provider coverage</strong><span>Start with what Dynatrace found, then review only the service relationships that matter.</span></div></div>
         <div className="scope-map-toolbar-actions">
-          <Button size="condensed" onClick={() => openApp("dynatrace.smartscape", smartscapeView)}><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
+          <Button
+            as="a"
+            href={smartscapeHref}
+            target="_blank"
+            rel="noreferrer"
+            size="condensed"
+            aria-label={`Open ${providerName} overview in Smartscape`}
+          ><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
         </div>
       </div>
       <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed mappings, and matching source tags identify the provider service. Incidents and Evidence then resolve the applicable terms automatically. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>

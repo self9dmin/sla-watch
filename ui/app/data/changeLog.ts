@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.64",
+    version: "0.0.65",
     label: "Current release",
+    summary: "Completed the topology-first Coverage handoff.",
+    details: [
+      "Open Smartscape now uses the selected provider's exact AppShell overview route instead of passing a URL as an unsupported page token.",
+      "AWS, Azure, and Google Cloud open their matching overview; providers without a dedicated overview open Smartscape on Grail.",
+      "The destination is derived from Dynatrace's current-environment app link and opens in a new Dynatrace AppShell tab.",
+    ],
+  },
+  {
+    version: "0.0.64",
+    label: "Previous release",
     summary: "Made Coverage follow the evidence Dynatrace actually found.",
     details: [
       "Coverage now opens on Detected topology when a provider is present but Dynatrace returned no verified service relationship.",
