@@ -23,6 +23,10 @@ import {
   type ProviderCoverageModel,
 } from "../data/providerCoverage";
 import {
+  providerInfrastructureCandidateDetail,
+  type ProviderInfrastructureCandidate,
+} from "../data/providerInfrastructure";
+import {
   createProviderScopeAssignmentKey,
   createServiceScopeAssignment,
   isServiceScopeAssignment,
@@ -30,6 +34,7 @@ import {
   serviceEntityIdForEdge,
 } from "../data/providerScopeAssignments";
 import { safeWorkspaceReturnPath } from "../data/reviewRoutes";
+import { providerDisplayName } from "../data/providers";
 import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAssignments";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { SetupAdvisor } from "./SetupAdvisor";
@@ -49,6 +54,7 @@ type CoverageWorkspaceProps = {
   recommendationsLoading: boolean;
   limitedContext: boolean;
   inventory: CoverageInventoryStatus;
+  infrastructureCandidate?: ProviderInfrastructureCandidate;
 };
 
 const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode }) => (
@@ -69,6 +75,7 @@ export const CoverageWorkspace = ({
   recommendationsLoading,
   limitedContext,
   inventory,
+  infrastructureCandidate,
 }: CoverageWorkspaceProps) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -80,8 +87,8 @@ export const CoverageWorkspace = ({
   const [page, setPage] = useState(0);
   const lastFocusedService = useRef<string | null>(null);
   const contractSettings = useContractOverrides();
-  const providerSlug = provider?.provider.slug ?? "";
-  const providerName = provider?.provider.name ?? providerSlug;
+  const providerSlug = provider?.provider.slug ?? infrastructureCandidate?.providerSlug ?? "";
+  const providerName = provider?.provider.name ?? providerDisplayName(providerSlug);
   const routeParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const focusedServiceId = routeParams.get("service");
   const focusedProviderServiceId = routeParams.get("providerService");
@@ -377,6 +384,16 @@ export const CoverageWorkspace = ({
         </div>
       </div>
       <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed mappings, and matching source tags identify the provider service. Incidents and Evidence then resolve the applicable terms automatically. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>
+      {infrastructureCandidate ? (
+        <div className="coverage-infrastructure-candidate" role="status">
+          <HostsIcon />
+          <div>
+            <strong>{providerName} infrastructure candidate</strong>
+            <span>{providerInfrastructureCandidateDetail(infrastructureCandidate)}</span>
+          </div>
+          <StatusPill tone="warning">Provider-level only</StatusPill>
+        </div>
+      ) : null}
       {focusedProblemId ? (
         <div className="coverage-review-context" role="status">
           <div>

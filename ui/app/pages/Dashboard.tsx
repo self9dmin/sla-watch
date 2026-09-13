@@ -27,12 +27,14 @@ import {
   providerInventoryDetail,
   providerInventorySlugs,
 } from "../data/providerInventory";
+import { buildProviderInfrastructureCandidate } from "../data/providerInfrastructure";
 import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
 import { parseProblemRecords } from "../data/problems";
 import { parseServiceTelemetry } from "../data/serviceTelemetry";
 import {
   detectedProviderSlugs,
   mergeSmartscapeScopeEdges,
+  parseProviderHostContexts,
   parseServiceCloudContexts,
   parseSmartscapeScopeEdges,
 } from "../data/topology";
@@ -41,6 +43,7 @@ import {
   INCIDENT_SMARTSCAPE_RESULT_LIMIT,
   SERVICE_INVENTORY_COUNT_QUERY,
   SERVICE_RESULT_LIMIT,
+  SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY,
   SMARTSCAPE_PROVIDER_INVENTORY_QUERY,
   SMARTSCAPE_COVERAGE_COUNT_QUERY,
   SMARTSCAPE_RESULT_LIMIT,
@@ -282,6 +285,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   } = useDql({ query: metricsQuery });
   const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
   const providerInventoryQuery = useDql({ query: SMARTSCAPE_PROVIDER_INVENTORY_QUERY });
+  const providerHostContextQuery = useDql({ query: SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY });
   const topologyCountQuery = useDql({ query: SMARTSCAPE_COVERAGE_COUNT_QUERY });
   const globalEntityServices = useMemo<ServiceRecord[]>(
     () => parseServiceRecords(serviceData),
@@ -382,6 +386,14 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     () => providerInventorySlugs(providerInventory),
     [providerInventory],
   );
+  const providerHostContexts = useMemo(
+    () => parseProviderHostContexts(providerHostContextQuery.data),
+    [providerHostContextQuery.data],
+  );
+  const hostDetectedProviders = useMemo(
+    () => providerHostContexts.map((summary) => summary.providerSlug),
+    [providerHostContexts],
+  );
   const tagDetectedProviders = useMemo(
     () => detectedProviderTagSlugs(services.map((service) => service.tags), providerLabelKey),
     [providerLabelKey, services],
@@ -400,7 +412,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   );
   const applicableProviderSlugs = useMemo(
     () => resolveEnvironmentProviderSlugs({
-      detected: [...inventoryDetectedProviders, ...topologyDetectedProviders],
+      detected: [...inventoryDetectedProviders, ...hostDetectedProviders, ...topologyDetectedProviders],
       tagged: tagDetectedProviders,
       assigned: assignedProviders,
       connected: connectedProviders,
@@ -408,6 +420,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     [
       assignedProviders,
       connectedProviders,
+      hostDetectedProviders,
       inventoryDetectedProviders,
       tagDetectedProviders,
       topologyDetectedProviders,
@@ -445,6 +458,9 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const selectedProviderInventory = providerInventory.find(
     (summary) => summary.providerSlug === providerSlug,
   );
+  const selectedProviderHostContext = providerHostContexts.find(
+    (summary) => summary.providerSlug === providerSlug,
+  );
   const providerLabels = useMemo(
     () =>
       Array.from(
@@ -473,6 +489,13 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const suggestedServiceCount = coverageModel.reviewRows.length;
   const unattributedServiceCount = coverageModel.unattributedRows.length;
   const taggedProviderServices = coverageModel.taggedServiceCount;
+  const providerInfrastructureCandidate = matchedProviderServices === 0
+    ? buildProviderInfrastructureCandidate({
+        providerSlug: selectedProviderSlug,
+        inventory: selectedProviderInventory,
+        hostContext: selectedProviderHostContext,
+      })
+    : undefined;
 
   const serviceTotal = firstCount(serviceCountQuery.data, "service_count");
   const relationshipTotal = firstCount(topologyCountQuery.data, "relationship_count");
@@ -532,6 +555,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     telemetryLoading ||
     inventoryLoading ||
     directoryLoading ||
+    providerHostContextQuery.isLoading ||
     topologyQuery.isLoading ||
     scopeSettings.loading
       ? "Checking coverage"
@@ -545,9 +569,11 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             ? "Review needed"
             : matchedProviderServices > 0
               ? "Coverage ready"
+              : providerInfrastructureCandidate
+                ? "Infrastructure candidate"
               : "No services attributed";
   const coverageTone: Tone =
-    telemetryLoading || inventoryLoading || directoryLoading || topologyQuery.isLoading || scopeSettings.loading
+    telemetryLoading || inventoryLoading || directoryLoading || providerHostContextQuery.isLoading || topologyQuery.isLoading || scopeSettings.loading
       ? "neutral"
       : telemetryError || !directoryData || inventoryStatus.incomplete || inventoryStatus.unverified
         ? "warning"
@@ -643,7 +669,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 label="Providers"
                 value={`${applicableProviderSlugs.length}`}
                 detail={
-                  providerInventoryQuery.isLoading || topologyQuery.isLoading || metricsLoading || scopeSettings.loading || providerConnections.loading
+                  providerInventoryQuery.isLoading || providerHostContextQuery.isLoading || topologyQuery.isLoading || metricsLoading || scopeSettings.loading || providerConnections.loading
                     ? "checking this environment"
                     : providerInventoryQuery.error
                       ? applicableProviderSlugs.length > 0
@@ -660,7 +686,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                           : `${providerDisplayName(providerSlug)} unavailable`
                 }
                 tone={
-                  providerInventoryQuery.isLoading || topologyQuery.isLoading || metricsLoading || scopeSettings.loading || providerConnections.loading
+                  providerInventoryQuery.isLoading || providerHostContextQuery.isLoading || topologyQuery.isLoading || metricsLoading || scopeSettings.loading || providerConnections.loading
                     ? "neutral"
                     : providerInventoryQuery.error
                       ? "warning"
@@ -683,6 +709,8 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 detail={
                   suggestedServiceCount > 0
                     ? `${suggestedServiceCount} need review · ${unattributedServiceCount} not attributed`
+                    : providerInfrastructureCandidate
+                      ? `1 provider-level candidate · ${unattributedServiceCount} services not linked`
                     : unattributedServiceCount > 0
                       ? `${matchedProviderServices} covered · ${unattributedServiceCount} not attributed`
                       : matchedProviderServices > 0
@@ -752,6 +780,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                   (services.length === 0 && telemetrySignalsPresent),
               )}
               inventory={inventoryStatus}
+              infrastructureCandidate={providerInfrastructureCandidate}
             />
           </Surface>
         ) : section === "performance" ? (

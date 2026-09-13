@@ -26,6 +26,10 @@ describe("provider Smartscape inventory", () => {
       node_type: "AZURE_MICROSOFT_RESOURCES_LOCATIONS_AVAILABILITYZONES",
       node_count: 121,
     },
+    {
+      node_type: "AZURE_MICROSOFT_COMPUTE_VIRTUALMACHINES",
+      node_count: 1,
+    },
   ] });
 
   it("detects provider presence independently of service relationships", () => {
@@ -39,10 +43,17 @@ describe("provider Smartscape inventory", () => {
       accountScopeCount: 1,
       regionCount: 0,
       availabilityZoneCount: 6,
+      computeResourceCount: 9,
       nodeTypes: ["AWS_ACCOUNT", "AWS_AVAILABILITY_ZONE", "AWS_EC2_INSTANCE"],
     });
-    expect(providerInventoryDetail(inventory[0])).toBe("1 account · 6 zone records · 3 resource types");
-    expect(providerInventoryDetail(inventory[1])).toBe("1 subscription · 121 zone records · 2 resource types");
+    expect(inventory[1]).toMatchObject({
+      providerSlug: "azure",
+      computeResourceCount: 1,
+      availabilityZoneCount: 121,
+    });
+    expect(providerInventoryDetail(inventory[0])).toBe("1 account · 9 EC2 instances · 3 Smartscape types");
+    expect(providerInventoryDetail(inventory[1])).toBe("1 subscription · 1 VM · 3 Smartscape types");
+    expect(providerInventoryDetail(inventory[1])).not.toContain("zone records");
   });
 
   it("ignores unrelated and empty records", () => {

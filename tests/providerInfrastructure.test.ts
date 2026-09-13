@@ -1,0 +1,69 @@
+import {
+  buildProviderInfrastructureCandidate,
+  providerInfrastructureCandidateDetail,
+} from "../ui/app/data/providerInfrastructure";
+
+describe("provider infrastructure candidates", () => {
+  it("creates one conservative provider-level candidate from separate Azure signals", () => {
+    const candidate = buildProviderInfrastructureCandidate({
+      providerSlug: "azure",
+      inventory: {
+        providerSlug: "azure",
+        nodeCount: 123,
+        nodeTypes: [
+          "AZURE_MICROSOFT_COMPUTE_VIRTUALMACHINES",
+          "AZURE_MICROSOFT_RESOURCES_LOCATIONS_AVAILABILITYZONES",
+          "AZURE_MICROSOFT_RESOURCES_SUBSCRIPTIONS",
+        ],
+        accountScopeCount: 1,
+        regionCount: 0,
+        availabilityZoneCount: 121,
+        computeResourceCount: 1,
+      },
+      hostContext: {
+        providerSlug: "azure",
+        hostCount: 1,
+        accountIds: ["a-different-subscription"],
+        regions: ["eastus"],
+        evidence: ["Smartscape Azure runtime attributes"],
+      },
+    });
+
+    expect(candidate).toEqual({
+      providerSlug: "azure",
+      hostCount: 1,
+      computeResourceCount: 1,
+    });
+    expect(providerInfrastructureCandidateDetail(candidate!)).toBe(
+      "Dynatrace detected 1 monitored host with Azure metadata and 1 Azure VM in provider-native topology. These signals are grouped once at the provider level and are not assumed to represent the same resource. No service is assigned until Dynatrace returns a service relationship, a matching source tag exists, or an operator confirms one.",
+    );
+  });
+
+  it("does not create a candidate from location metadata alone", () => {
+    expect(buildProviderInfrastructureCandidate({
+      providerSlug: "azure",
+      inventory: {
+        providerSlug: "azure",
+        nodeCount: 121,
+        nodeTypes: ["AZURE_MICROSOFT_RESOURCES_LOCATIONS_AVAILABILITYZONES"],
+        accountScopeCount: 0,
+        regionCount: 0,
+        availabilityZoneCount: 121,
+        computeResourceCount: 0,
+      },
+    })).toBeUndefined();
+  });
+
+  it("ignores infrastructure summaries from another provider", () => {
+    expect(buildProviderInfrastructureCandidate({
+      providerSlug: "azure",
+      hostContext: {
+        providerSlug: "aws",
+        hostCount: 4,
+        accountIds: ["123456789012"],
+        regions: ["us-east-1"],
+        evidence: ["Smartscape AWS runtime attributes"],
+      },
+    })).toBeUndefined();
+  });
+});

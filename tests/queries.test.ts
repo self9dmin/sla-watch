@@ -2,9 +2,11 @@ import {
   INCIDENT_SERVICE_FILTER_LIMIT,
   INCIDENT_SMARTSCAPE_RESULT_LIMIT,
   PROVIDER_INVENTORY_RESULT_LIMIT,
+  PROVIDER_HOST_CONTEXT_RESULT_LIMIT,
   SERVICE_RESULT_LIMIT,
   SERVICES_QUERY,
   SMARTSCAPE_COVERAGE_COUNT_QUERY,
+  SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY,
   SMARTSCAPE_PROVIDER_INVENTORY_QUERY,
   SMARTSCAPE_RESULT_LIMIT,
   SMARTSCAPE_SERVICE_RUNTIME_QUERY,
@@ -44,6 +46,17 @@ describe("bounded inventory queries", () => {
     expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).not.toContain("aws.account.id");
     expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).not.toContain("azure.subscription");
     expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain(`limit ${PROVIDER_INVENTORY_RESULT_LIMIT}`);
+  });
+
+  it("summarizes cloud-aware hosts before applying a bounded result limit", () => {
+    expect(SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY).toContain("smartscapeNodes HOST");
+    expect(SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY).toContain('getNodeField(id, "azure.subscription")');
+    expect(SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY).toContain("or isNotNull(azure_location)");
+    expect(SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY).toContain("summarize host_count = count()");
+    expect(SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY).toContain(`limit ${PROVIDER_HOST_CONTEXT_RESULT_LIMIT}`);
+    expect(SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY.indexOf("summarize host_count")).toBeLessThan(
+      SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY.indexOf(`limit ${PROVIDER_HOST_CONTEXT_RESULT_LIMIT}`),
+    );
   });
 
   it("sanitizes, deduplicates, and caps incident-scoped service IDs", () => {

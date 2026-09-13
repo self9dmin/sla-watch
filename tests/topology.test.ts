@@ -1,6 +1,7 @@
 import {
   detectedProviderSlugs,
   mergeSmartscapeScopeEdges,
+  parseProviderHostContexts,
   parseServiceCloudContexts,
   parseSmartscapeScopeEdges,
   topologyAnchorRank,
@@ -114,6 +115,44 @@ describe("Smartscape scope parsing", () => {
       service_node_id: "SERVICE-node-5",
       service_name: "Unscoped",
       request_count: 12,
+    }] })).toEqual([]);
+  });
+
+  it("groups repeated host context into one provider-level summary", () => {
+    const contexts = parseProviderHostContexts({ records: [
+      {
+        target_type: "HOST",
+        azure_subscription: "subscription-a",
+        azure_location: "eastus",
+        host_count: 1,
+      },
+      {
+        target_type: "HOST",
+        azure_subscription: "subscription-a",
+        azure_location: "eastus",
+        host_count: 1,
+      },
+      {
+        target_type: "HOST",
+        azure_subscription: "subscription-b",
+        azure_location: "eastus2",
+        host_count: 2,
+      },
+    ] });
+
+    expect(contexts).toEqual([{
+      providerSlug: "azure",
+      hostCount: 3,
+      accountIds: ["subscription-a", "subscription-b"],
+      regions: ["eastus", "eastus2"],
+      evidence: ["Smartscape Azure runtime attributes"],
+    }]);
+  });
+
+  it("ignores host records without cloud-provider evidence", () => {
+    expect(parseProviderHostContexts({ records: [{
+      target_type: "HOST",
+      host_count: 5,
     }] })).toEqual([]);
   });
 
