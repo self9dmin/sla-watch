@@ -114,6 +114,7 @@ The app does not alter or copy the public provider record. A tenant override is 
 
 ## Related documents
 
+- [`dynatrace-sources.md`](dynatrace-sources.md)
 - [`flows.md`](flows.md)
 - [`permissions.md`](permissions.md)
 - [`variables.md`](variables.md)

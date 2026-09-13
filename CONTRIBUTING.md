@@ -2,11 +2,13 @@
 
 ## Before opening a change
 
-1. Read `AGENTS.md` and the architecture, permissions, and tests documents.
+1. Read `AGENTS.md`, [`documentation/dynatrace-sources.md`](documentation/dynatrace-sources.md), and the architecture, permissions, and tests documents.
 2. Keep the app read-mostly. Any new write to Dynatrace data needs an explicit product and permission review.
 3. Prefer Strato components and design tokens. Do not add a new dependency for a small helper that can be implemented locally.
 4. Keep external calls inside AppEngine functions and validate all external input and output.
 5. Do not commit tenant credentials, tokens, Playwright auth state, screenshots containing customer data, or local deployment artifacts.
+6. Source Dynatrace behavior from the installed SDK version, current official documentation and skills, and a read-only target-environment probe. Do not generalize one provider's Smartscape node or edge model to another provider.
+7. Treat provider presence, a verified service relationship, customer impact, provider fault, and credit eligibility as separate states.
 
 ## Required checks
 
@@ -21,6 +23,8 @@ For a release candidate, use `npm run verify:release` as the single gate. It inc
 Authenticated browser checks can be run separately with `DT_APP_E2E_URL`, `DT_APP_E2E_AUTH_STATE`, and `npm run test:e2e`. The repository's E2E workflow is manual-only because tenant credentials and browser state must never be embedded in pull requests.
 
 If a change affects DQL, permissions, app state, external calls, or a user-visible claim, update the relevant documentation and tests in the same change.
+
+For DQL changes, load the official `dt-dql-essentials` skill plus the applicable domain skill. Load `dt-migration` for any classic `dt.entity.*` construct. Validate unfamiliar Smartscape node and edge types against the target environment because an incorrect type can return an empty result without an error.
 
 ## Review expectations
 
