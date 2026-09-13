@@ -1,6 +1,20 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.54`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.55`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.55 verified scenarios
+
+The `0.0.55` artifact from source commit `7e12e43` was deployed to the designated Dynatrace target environment on 2026-09-13 and exercised through the connected Chrome profile. The production smoke was read-only. It did not change provider configuration, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.55` manifest, six AppEngine functions, canonical Signal Review SVG, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `7e12e43` |
+| Release gate | Type checks, lint, 27 test suites with 155 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 82.62% statement coverage; zero production dependency vulnerabilities |
+| Local visual acceptance | The selected Signal Review mark rendered clearly at the actual 20-pixel AppHeader size in both light and dark themes. The embedded asset completed at its natural 150 by 150 dimensions, the original dark theme was restored, and no browser warnings or errors were captured | Connected Chrome local-development smoke |
+| Production identity | The installed production shell displayed the Signal Review mark with the `SLA Review` title. The exact selected SVG loaded completely at 20 by 20 CSS pixels | Connected Chrome production DOM and visual smoke |
+| Coverage continuity | Coverage finished Ready for AWS with eight loaded services, three covered, five not attributed, zero active incidents, seven Problems observed over seven days, and a 30-day filing reference. All, Covered, and Needs review counts remained consistent | Installed production Coverage smoke |
+| Release history | Change log showed `0.0.55 Current release`, “Introduced the Signal Review app mark,” and all three release details | Installed production change-log smoke |
+| Bounded runtime | The production page had matching client and scroll dimensions of 1694 by 803 CSS pixels, with no page overflow and no captured browser warnings or errors | Connected Chrome dimension and browser-log smoke |
 
 ## 0.0.54 verified scenarios
 
