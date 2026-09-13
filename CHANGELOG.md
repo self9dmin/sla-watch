@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.54
+
+- Adds exact Dynatrace Smartscape root-cause entity context to Incidents and labels whether loaded Coverage or provider-native topology connects that entity to the selected provider.
+- Adds an explicit multi-select review for up to 50 eligible closed Problems, with a second confirmation before each Problem is saved as its own Not provider-related decision.
+- Keeps active, provider-linked, incomplete, missing-root-cause, unconfirmed-scope, and previously reviewed Problems out of bulk dismissal.
+- Groups eligible Problems that share the exact same root-cause entity so an SRE can review the repeated pattern together without recreating the native Problems graph.
+- Snapshots the root-cause entity in each decision and returns changed Problem states or root causes to review, while preserving compatibility with earlier decisions.
+- Handles partial batch failures without hiding successful decisions or losing the failed selection.
+
 ## 0.0.53
 
 - Completes the Evidence package with exact incident-scoped request and failure telemetry, affected-service objective posture, applicable exclusions, and optional provider-report correlation.

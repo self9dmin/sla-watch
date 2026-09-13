@@ -11,6 +11,7 @@ const problem = (
   status,
   category: "ERROR",
   affectedEntityIds: [],
+  affectedEntities: [],
   hasRootCause: false,
   startedAt,
 });

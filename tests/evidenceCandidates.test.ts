@@ -58,6 +58,7 @@ const problem: ProblemRecord = {
   status: "CLOSED",
   category: "ERROR",
   affectedEntityIds: [service.id],
+  affectedEntities: [],
   hasRootCause: false,
   startedAt: "2026-09-09T10:00:00.000Z",
   endedAt: "2026-09-09T10:07:00.000Z",
@@ -292,6 +293,37 @@ describe("evidence candidates", () => {
       { ...value, providerServiceIds: ["s3"] },
       candidate,
     )).toBe(false);
+    expect(evidenceDecisionMatchesCandidate(
+      { ...value, problemStatus: "ACTIVE" },
+      candidate,
+    )).toBe(false);
+
+    const rootedCandidate = {
+      ...candidate,
+      problem: {
+        ...candidate.problem,
+        hasRootCause: true,
+        rootCause: { id: "SERVICE-ROOT", name: "Payments", type: "service" },
+      },
+    };
+    const rootedValue = evidenceDecisionValue(
+      rootedCandidate,
+      "aws",
+      "dismissed",
+      "Reviewed.",
+    );
+    expect(evidenceDecisionMatchesCandidate(rootedValue, rootedCandidate)).toBe(true);
+    expect(evidenceDecisionMatchesCandidate(rootedValue, {
+      ...rootedCandidate,
+      problem: {
+        ...rootedCandidate.problem,
+        rootCause: { id: "SERVICE-CHANGED", name: "Catalog", type: "service" },
+      },
+    })).toBe(false);
+    expect(evidenceDecisionMatchesCandidate(
+      { ...rootedValue, rootCauseEntityId: null },
+      rootedCandidate,
+    )).toBe(true);
   });
 
   it("keeps the two decision rules explicit", () => {

@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.53",
+    version: "0.0.54",
     label: "Current release",
+    summary: "Added guarded root-cause-assisted incident triage.",
+    details: [
+      "Incidents now shows the exact Smartscape root-cause entity and whether loaded provider evidence connects it to the selected provider.",
+      "An SRE can select up to 50 eligible closed Problems and explicitly confirm a Not provider-related decision for each one.",
+      "Active, provider-linked, incomplete, missing-root-cause, unconfirmed-scope, and already reviewed Problems remain individual decisions.",
+      "Problems sharing one exact root-cause entity can be selected together, while full causal investigation stays in the native Problems app.",
+      "Each saved decision retains its root-cause snapshot, becomes stale if the Problem state or root cause changes, and reports partial batch failures precisely.",
+    ],
+  },
+  {
+    version: "0.0.53",
+    label: "Previous release",
     summary: "Completed the customer-evidence package and its three stopping states.",
     details: [
       "Evidence now brings together the Dynatrace Problem, exact affected-service request telemetry, native objective posture, applicable terms, exclusions, and required evidence.",

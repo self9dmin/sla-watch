@@ -104,7 +104,12 @@ export const createProblemsQuery = (lookbackHours: number): string => `
 fetch dt.davis.problems, from:-${lookbackHours}h, to:now()
 | filter not(dt.davis.is_duplicate)
 | sort event.start desc
-| fields display_id, title = event.name, status = event.status, category = event.category, start_time = event.start, end_time = event.end, affected_entity_ids, root_cause_entity_id
+| fields display_id, title = event.name, status = event.status, category = event.category, start_time = event.start, end_time = event.end,
+    affected_entities = smartscape.affected_entities,
+    root_cause = root_cause.smartscape_entity,
+    affected_entity_ids,
+    root_cause_entity_id,
+    root_cause_entity_name
 | limit 100
 `;
 

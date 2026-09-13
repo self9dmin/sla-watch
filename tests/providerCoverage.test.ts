@@ -75,6 +75,7 @@ const problems: ProblemRecord[] = [{
   status: "CLOSED",
   category: "ERROR",
   affectedEntityIds: ["SERVICE-2"],
+  affectedEntities: [],
   hasRootCause: false,
 }];
 

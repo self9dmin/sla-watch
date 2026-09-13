@@ -184,7 +184,11 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByLabel("Incident status").locator(".overview-fact"),
     ).toHaveCount(4);
+    await expect(app.getByText("Needs evidence review", { exact: true })).toBeVisible();
     await expect(app.getByText("Dynatrace Problems", { exact: true })).toBeVisible();
+    await expect(
+      app.getByRole("button", { name: /Select multiple \(\d+\)/ }),
+    ).toBeVisible();
     const openProblems = app.getByRole("button", { name: "Open Problems" });
     await expect(openProblems).toBeVisible();
     await expect(openProblems.locator("svg")).toHaveCount(1);
@@ -196,6 +200,9 @@ test.describe("SLA Review deployed smoke", () => {
       expect(visibleProblemCount).toBeGreaterThan(0);
       expect(visibleProblemCount).toBeLessThanOrEqual(8);
       await expect(app.getByLabel("Problem pages")).toBeVisible();
+      await expect(
+        problemsRegion.locator(".incident-tile-root").first(),
+      ).toBeVisible();
     }
     await expect(app.getByRole("combobox", { name: "Provider service" })).toHaveCount(0);
     await expect(app.getByRole("combobox", { name: "Dynatrace scope" })).toHaveCount(0);
