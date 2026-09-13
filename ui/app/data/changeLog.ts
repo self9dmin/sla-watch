@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.61",
+    version: "0.0.62",
     label: "Current release",
+    summary: "Surfaced cloud infrastructure without guessing service coverage.",
+    details: [
+      "Bounded Smartscape host context now contributes provider, account, location, and compute-resource evidence for AWS, Azure, GCP, and OCI.",
+      "Coverage shows one provider-level infrastructure candidate only when the selected provider is present but no loaded service has a verified link.",
+      "Repeated host and provider-native signals are grouped for review without assuming that separate records describe the same resource.",
+      "Services remain unattributed until exact topology, a matching source tag, or an operator confirmation establishes the relationship.",
+    ],
+  },
+  {
+    version: "0.0.61",
+    label: "Previous release",
     summary: "Separated provider presence from service attribution.",
     details: [
       "Smartscape cloud inventory now detects AWS, Azure, GCP, and OCI even when no monitored service has a direct runtime relationship.",
