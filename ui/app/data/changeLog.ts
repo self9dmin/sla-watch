@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.54",
+    version: "0.0.55",
     label: "Current release",
+    summary: "Introduced the Signal Review app mark.",
+    details: [
+      "The new icon shows multiple evidence signals converging into one guarded review outcome.",
+      "Its geometry and palette fit the Strato shell while remaining distinct from native Dynatrace product icons.",
+      "The mark stays legible from the full app tile down to the compact header treatment.",
+    ],
+  },
+  {
+    version: "0.0.54",
+    label: "Previous release",
     summary: "Added guarded root-cause-assisted incident triage.",
     details: [
       "Incidents now shows the exact Smartscape root-cause entity and whether loaded provider evidence connects it to the selected provider.",
