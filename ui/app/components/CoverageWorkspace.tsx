@@ -110,6 +110,7 @@ export const CoverageWorkspace = ({
   const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
   const [evidenceView, setEvidenceView] = useState<CoverageEvidenceView>("services");
   const [searchText, setSearchText] = useState("");
+  const [topologySearchText, setTopologySearchText] = useState("");
   const [page, setPage] = useState(0);
   const lastFocusedService = useRef<string | null>(null);
   const contractSettings = useContractOverrides();
@@ -138,6 +139,10 @@ export const CoverageWorkspace = ({
   useEffect(() => {
     setEvidenceView(focusedServiceId || !preferTopology ? "services" : "topology");
   }, [focusedServiceId, preferTopology, providerSlug]);
+
+  useEffect(() => {
+    setTopologySearchText("");
+  }, [providerSlug]);
 
   const filteredRows = useMemo(() => {
     const rows = coverageFilter === "review"
@@ -433,6 +438,14 @@ export const CoverageWorkspace = ({
       : null,
   ].filter((fact): fact is { label: string; value: number } => fact !== null);
   const topologyTypeCounts = providerInventory?.nodeTypeCounts ?? [];
+  const normalizedTopologySearch = topologySearchText.trim().toLowerCase();
+  const visibleTopologyTypeCounts = normalizedTopologySearch
+    ? topologyTypeCounts.filter(({ nodeType, nodeCount }) =>
+        `${providerInventoryNodeTypeLabel(nodeType, nodeCount)} ${nodeType}`
+          .toLowerCase()
+          .includes(normalizedTopologySearch),
+      )
+    : topologyTypeCounts;
   const smartscapeHref = buildSmartscapeOverviewHref(
     getAppLink("dynatrace.smartscape"),
     providerSlug,
@@ -519,18 +532,40 @@ export const CoverageWorkspace = ({
                 <strong>Smartscape node types</strong>
                 <span>Counts are topology records from the bounded seven-day scan. They are not assumed to be unique cloud resources.</span>
               </div>
-              <span>{topologyTypeCounts.length.toLocaleString()} types returned</span>
+              <span aria-live="polite">
+                {normalizedTopologySearch
+                  ? `${visibleTopologyTypeCounts.length.toLocaleString()} of ${topologyTypeCounts.length.toLocaleString()} types`
+                  : `${topologyTypeCounts.length.toLocaleString()} types returned`}
+              </span>
             </div>
             {topologyTypeCounts.length > 0 ? (
-              <div className="coverage-topology-type-list" role="list" aria-label={`${providerName} Smartscape node types`}>
-                {topologyTypeCounts.map(({ nodeType, nodeCount }) => (
-                  <div key={nodeType} role="listitem" className="coverage-topology-type">
-                    <strong>{nodeCount.toLocaleString()}</strong>
-                    <span>{providerInventoryNodeTypeLabel(nodeType, nodeCount)}</span>
-                    <small>{nodeType}</small>
+              <>
+                <label className="coverage-topology-search">
+                  <span className="visually-hidden">Find Smartscape node types</span>
+                  <input
+                    type="search"
+                    value={topologySearchText}
+                    onChange={(event) => setTopologySearchText(event.target.value)}
+                    placeholder="Find a resource or Smartscape type"
+                    aria-label="Find Smartscape node types"
+                  />
+                </label>
+                {visibleTopologyTypeCounts.length > 0 ? (
+                  <div className="coverage-topology-type-list" role="list" aria-label={`${providerName} Smartscape node types`}>
+                    {visibleTopologyTypeCounts.map(({ nodeType, nodeCount }) => (
+                      <div key={nodeType} role="listitem" className="coverage-topology-type">
+                        <strong>{nodeCount.toLocaleString()}</strong>
+                        <span>{providerInventoryNodeTypeLabel(nodeType, nodeCount)}</span>
+                        <small>{nodeType}</small>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className="coverage-topology-empty" role="status">
+                    <span>No Smartscape node types match “{topologySearchText.trim()}”.</span>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="coverage-topology-empty">
                 <HostsIcon />
