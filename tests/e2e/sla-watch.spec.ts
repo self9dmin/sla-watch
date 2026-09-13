@@ -71,7 +71,9 @@ test.describe("SLA Review deployed smoke", () => {
       app.getByRole("combobox", { name: "Active provider" }),
     ).toHaveCount(0);
     const providerViews = app.getByRole("group", { name: "Provider views" });
-    await expect(providerViews.getByRole("button")).toHaveCount(4);
+    await expect(providerViews.getByRole("button")).toHaveCount(1);
+    await expect(providerViews.getByRole("button", { name: /AWS, selected provider/i })).toBeVisible();
+    await expect(providerViews.locator("button:disabled")).toHaveCount(0);
     await expect(providerViews.locator('button[aria-pressed="true"]')).toHaveCount(1);
     await expect(providerViews.locator('button[aria-pressed="true"] img')).toHaveCount(1);
     await expect(

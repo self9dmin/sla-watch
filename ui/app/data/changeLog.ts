@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.59",
+    version: "0.0.60",
     label: "Current release",
+    summary: "Made provider context follow the environment.",
+    details: [
+      "The provider rail now shows only providers evidenced by Dynatrace, confirmed in Coverage, or backed by an enabled incident connection.",
+      "New provider slugs appear automatically instead of being limited to four hard-coded hyperscaler slots.",
+      "AWS, Azure, GCP, and OCI keep bundled brand marks; other detected providers receive a readable local monogram without loading remote SVG content.",
+    ],
+  },
+  {
+    version: "0.0.59",
+    label: "Previous release",
     summary: "Kept grouped-case links on the correct review.",
     details: [
       "A direct or reloaded Incidents link now follows the requested Problem as provider matching and case grouping finish loading.",

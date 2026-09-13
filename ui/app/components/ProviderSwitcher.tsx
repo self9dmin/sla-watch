@@ -1,57 +1,47 @@
 import React from "react";
-import { providerDisplayName } from "../data/providers";
+import { providerPresentation } from "../data/providerPresentation";
 
 type ProviderSwitcherProps = {
   activeProviderSlug: string;
-  enabledProviderSlugs: readonly string[];
+  providerSlugs: readonly string[];
   onSelect: (providerSlug: string) => void;
 };
 
-const HYPERSCALERS = [
-  { slug: "aws", label: "AWS", logo: "assets/provider-aws.svg" },
-  { slug: "azure", label: "Azure", logo: "assets/provider-azure.svg" },
-  { slug: "gcp", label: "GCP", logo: "assets/provider-gcp.svg" },
-  { slug: "oci", label: "OCI", logo: "assets/provider-oci.svg" },
-] as const;
-
 export const ProviderSwitcher = ({
   activeProviderSlug,
-  enabledProviderSlugs,
+  providerSlugs,
   onSelect,
 }: ProviderSwitcherProps) => {
-  const enabledProviders = new Set(enabledProviderSlugs);
+  const providers = providerSlugs.map(providerPresentation);
+  if (providers.length === 0) return null;
 
   return (
     <div className="provider-switcher" data-tour="provider-switcher">
       <div className="provider-switcher-list" role="group" aria-label="Provider views">
-        {HYPERSCALERS.map((provider) => {
+        {providers.map((provider) => {
           const active = activeProviderSlug === provider.slug;
-          const enabled = enabledProviders.has(provider.slug);
-          const state = active
-            ? "selected, detected in this environment"
-            : enabled
-              ? "detected in this environment"
-              : "not detected in this environment";
+          const state = active ? "selected provider" : "available provider";
 
           return (
             <span
               className="provider-switcher-item"
               key={provider.slug}
-              title={`${providerDisplayName(provider.slug)}: ${state}`}
+              title={`${provider.label}: ${state}`}
             >
               <button
                 type="button"
                 className={`provider-choice${active ? " active" : ""}`}
-                disabled={!enabled}
                 aria-label={`${provider.label}, ${state}`}
                 aria-pressed={active}
                 onClick={() => onSelect(provider.slug)}
+                data-provider-slug={provider.slug}
               >
-                <span className={`provider-mark provider-mark-${provider.slug}`} aria-hidden="true">
-                  <img src={provider.logo} alt="" />
+                <span className={`provider-mark provider-mark-${provider.slug}${provider.logo ? "" : " provider-mark-monogram"}`} aria-hidden="true">
+                  {provider.logo
+                    ? <img src={provider.logo} alt="" />
+                    : <span>{provider.monogram}</span>}
                 </span>
                 <span className="provider-choice-label">{provider.label}</span>
-                {enabled ? <span className="provider-evidence-dot" aria-hidden="true" /> : null}
               </button>
             </span>
           );
