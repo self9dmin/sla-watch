@@ -1,6 +1,18 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.58`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.59`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.59 verified scenarios
+
+The `0.0.59` artifact from source commit `a78dfed` was deployed to the designated Dynatrace target environment on 2026-09-13 and exercised through the connected Chrome profile. The production smoke was read-only. It did not change provider configuration, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.59` manifest, six AppEngine functions, grouped-case route synchronization patch, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `a78dfed` |
+| Release gate | Type checks, lint, 28 test suites with 164 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24 | Local release commands; 83.29% statement coverage; zero production dependency vulnerabilities |
+| Cold grouped-case route | A direct cold load for `P-260915` recomputed the selected review case after provider matching finished, opened page 1 of 5, and selected the three-Problem AWS impact review instead of a transient singleton on a stale page | Installed production direct-route smoke using `problem=P-260915` and `case=case:*:p-260915` |
+| Source preservation | The selected case displayed `P-260915`, `P-260916`, and `P-260917` in the default-open Included Problems section, retained one affected service, and retained the 6:51 PM through 7:27 PM observed window | Installed production Incidents detail smoke |
+| Release history | Change log showed `0.0.59 Current release` | Installed production change-log smoke |
 
 ## 0.0.58 verified scenarios
 
