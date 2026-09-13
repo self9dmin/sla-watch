@@ -1,5 +1,6 @@
 export const SERVICE_RESULT_LIMIT = 200;
 export const SMARTSCAPE_RESULT_LIMIT = 500;
+export const PROVIDER_INVENTORY_RESULT_LIMIT = 1000;
 export const INCIDENT_SMARTSCAPE_RESULT_LIMIT = 2000;
 export const INCIDENT_SERVICE_FILTER_LIMIT = 200;
 
@@ -13,6 +14,14 @@ fetch dt.entity.service
 export const SERVICE_INVENTORY_COUNT_QUERY = `
 smartscapeNodes SERVICE
 | summarize service_count = count()
+`;
+
+export const SMARTSCAPE_PROVIDER_INVENTORY_QUERY = `
+smartscapeNodes {"AWS_*", "AZURE_*", "GCP_*", "OCI_*", "ORACLE_*"}, from:-7d, to:now()
+| fields node_type = type
+| summarize node_count = count(), by:{node_type}
+| sort node_count desc
+| limit ${PROVIDER_INVENTORY_RESULT_LIMIT}
 `;
 
 const PREFERRED_COVERAGE_ANCHORS = `target_type == "HOST"

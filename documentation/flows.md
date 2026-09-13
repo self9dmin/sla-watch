@@ -16,7 +16,7 @@ Sequence:
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
 5. The app reads active tenant custom terms, confirmed provider-service scope mappings, and prior human evidence decisions from App Settings. It preserves the public directory record as the fallback baseline.
 6. Coverage classifies the current provider boundary as loading, access-incomplete, inventory-incomplete, contract-unavailable, action-required, boundary-ready, or review-available. It never reports complete coverage from a truncated or unverified inventory.
-7. The operating shell presents Coverage, Performance, Incidents, Evidence, and Directory. Coverage is the landing workspace and places provider, service, incident, and filing facts above one normalized service worklist. All opens first; Covered and Needs review focus the same model without changing its counts. Provider-native matches are automatic, ambiguous provider evidence is queued for review, and services without provider evidence remain visible as unattributed. Performance evaluates a bounded page of app-managed customer objectives for the active provider. Incidents prioritizes a bounded page of active and provider-relevant Problems, shows one focused triage summary, and hands full investigation to the native Problems app. Evidence assembles the current Problem, provider scope, terms, and required evidence into a human-reviewed package while keeping provider reports separate. Directory exposes the complete normalized public provider record and tenant overrides.
+7. The operating shell presents Coverage, Performance, Incidents, Evidence, and Directory. Coverage is the landing workspace and places provider, service, incident, and filing facts above one normalized service worklist. All opens first; Covered and Needs review focus the same model without changing its counts. Bounded global Smartscape inventory places providers in the rail, while only exact provider-native service topology, source tags, or saved mappings attribute a service. Ambiguous service-level evidence is queued for review, and services without a provider link remain visible as unattributed. Performance evaluates a bounded page of app-managed customer objectives for the active provider. Incidents prioritizes a bounded page of active and provider-relevant Problems, shows one focused triage summary, and hands full investigation to the native Problems app. Evidence assembles the current Problem, provider scope, terms, and required evidence into a human-reviewed package while keeping provider reports separate. Directory exposes the complete normalized public provider record and tenant overrides.
 8. Loading the workspace does not change a Dynatrace entity, tag, metric, Problem, SLO, custom terms record, evidence decision, or external ticket.
 
 Deny or degraded behavior: a missing read scope is shown as access incomplete, not as no telemetry. A failed directory request is shown as unavailable, not as a provider breach.
@@ -25,7 +25,7 @@ Deny or degraded behavior: a missing read scope is shown as access incomplete, n
 
 Actor: user with `state:app-states:write`.
 
-1. Settings lets the user choose among providers automatically placed in scope, then edit the tag key or evidence lookback. Providers enter scope from Dynatrace evidence, confirmed Coverage mappings, or enabled incident connections.
+1. Settings lets the user choose among providers automatically placed in scope, then edit the tag key or evidence lookback. Providers enter scope from bounded Smartscape cloud inventory, service-level Dynatrace evidence, confirmed Coverage mappings, or enabled incident connections. Provider presence alone does not attribute a service.
 2. Inputs are normalized before persistence. The focused provider is a valid lowercase slug and the operating surface constrains it to the runtime provider collection.
 3. The context optimistically updates the UI and writes the workspace state with an expiry just inside the platform's 90-day limit.
 4. If the shared write is denied, the same normalized value is kept in local storage and a status message explains the fallback.
@@ -172,13 +172,13 @@ Deny or degraded behavior: a failed Problem, topology, directory, telemetry, obj
 
 Actor: signed-in user with `app-settings:objects:write` for the app's `provider-scope-assignments` schema.
 
-1. The user opens Coverage with All already selected and chooses a service without provider evidence.
+1. The user opens Coverage with All already selected and chooses a service without a service-level provider link.
 2. The row identifies service inventory or a matching source tag as the available evidence. Existing provider tags are displayed only as source evidence.
 3. The user selects one exact service and chooses provider-level terms or one provider service. Service names are context only and never create an automatic assignment.
 4. A confirmation screen names the service, provider, and terms boundary. Saving writes an app-owned assignment to App Settings and does not modify Dynatrace entity metadata.
 5. The saved mapping is reused by Incidents and Evidence. The operator can update its provider-service selection or remove it to restore the no-provider-evidence state.
 
-Deny or degraded behavior: no selection or confirmation means no write. Services with usable active-provider Smartscape relationships use their runtime-backed row instead of being duplicated. Services with no provider evidence are not treated as default review work. A read-only user can inspect current coverage but cannot save, update, or remove it. Existing source tags are never changed.
+Deny or degraded behavior: no selection or confirmation means no write. Services with usable active-provider Smartscape relationships use their runtime-backed row instead of being duplicated. Services without a service-level provider link are not treated as default review work, even when global inventory proves that the provider exists elsewhere in the environment. A read-only user can inspect current coverage but cannot save, update, or remove it. Existing source tags are never changed.
 
 ## Review the change log or get support
 

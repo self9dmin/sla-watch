@@ -296,7 +296,7 @@ export const CoverageWorkspace = ({
         <span className="scope-connector"><span aria-hidden="true" /><small>found in</small></span>
         <span className="scope-node coverage-source-node"><ServicesIcon /><span><small>Coverage source</small><strong>{row.sourceTag ? `${providerTagKey}:${providerSlug}` : row.conflicting ? "Different provider tag" : "Service inventory"}</strong></span></span>
         <span className="scope-connector"><span aria-hidden="true" /><small>No runtime</small></span>
-        <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.conflicting ? "Different provider tag" : "No provider evidence"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.conflicting ? row.values.join(", ") : "Not attributed"}</strong></span></span>
+        <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.conflicting ? "Different provider tag" : "No service-level link"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.conflicting ? row.values.join(", ") : "Not attributed"}</strong></span></span>
       </button>
     );
   };
@@ -358,7 +358,7 @@ export const CoverageWorkspace = ({
             ? `This differs from the Smartscape recommendation of ${selectedCandidate.providerServiceName}. Verify the scope before confirming.`
             : selectedRow?.kind === "scope"
               ? "Smartscape identified the provider boundary but not a specific provider service."
-              : "No Smartscape runtime relationship was returned. Confirm only if this service depends on the selected provider.");
+              : `Dynatrace sees provider inventory in the environment, but no Smartscape runtime relationship or source tag links this service to ${providerName}. Confirm only if the service depends on it.`);
 
   const showSaveAction = Boolean(
     selectedRow &&
@@ -371,7 +371,7 @@ export const CoverageWorkspace = ({
   return (
     <section className="scope-map-view setup-scope-map" aria-labelledby="service-coverage-title">
       <div className="scope-map-toolbar">
-        <div className="scope-map-title"><ServicesIcon /><div><strong id="service-coverage-title">Service coverage</strong><span>See every loaded service. Only ambiguous provider evidence needs a decision.</span></div></div>
+        <div className="scope-map-title"><ServicesIcon /><div><strong id="service-coverage-title">Service coverage</strong><span>See every loaded service. Provider presence alone does not assign a service.</span></div></div>
         <div className="scope-map-toolbar-actions">
           <Button size="condensed" onClick={() => openApp("dynatrace.smartscape", "view/dynatrace.smartscape.smartscape-on-grail")}><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
         </div>
@@ -433,12 +433,12 @@ export const CoverageWorkspace = ({
                 <>
                   {renderGroup("Needs review", visibleReviewRows)}
                   {renderGroup("Covered", visibleCoveredRows)}
-                  {renderGroup("No provider evidence", visibleUnscopedRows)}
+                  {renderGroup("No service-level provider link", visibleUnscopedRows)}
                 </>
               ) : (
                 <div className="coverage-list-empty">
                   <strong>{coverageFilter === "review" ? "No evidence-backed exceptions in the loaded inventory" : "No matching services"}</strong>
-                  <span>{inventory.incomplete ? "This is not a complete-coverage result because the inventory is bounded." : coverageFilter === "review" ? "Choose All to inspect covered services and services without provider evidence." : "Change the view or search to review another service."}</span>
+                  <span>{inventory.incomplete ? "This is not a complete-coverage result because the inventory is bounded." : coverageFilter === "review" ? "Choose All to inspect covered services and services without a provider link." : "Change the view or search to review another service."}</span>
                   {coverageFilter === "review" && coveredRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("covered")}>Inspect covered services</Button> : coverageFilter === "review" && coverageRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("all")}>View all loaded services</Button> : null}
                 </div>
               )}
@@ -492,7 +492,7 @@ export const CoverageWorkspace = ({
               <div className="scope-mapping-state">
                 <StatusPill tone="positive">No exceptions</StatusPill>
                 <strong>No provider match needs review</strong>
-                <span>Choose Covered to inspect automatic matches, or All to map a service without provider evidence.</span>
+                <span>Choose Covered to inspect automatic matches, or All to map a service without a service-level provider link.</span>
               </div>
             )}
             <div className="coverage-detail-checks">

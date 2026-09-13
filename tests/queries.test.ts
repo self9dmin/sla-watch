@@ -1,9 +1,11 @@
 import {
   INCIDENT_SERVICE_FILTER_LIMIT,
   INCIDENT_SMARTSCAPE_RESULT_LIMIT,
+  PROVIDER_INVENTORY_RESULT_LIMIT,
   SERVICE_RESULT_LIMIT,
   SERVICES_QUERY,
   SMARTSCAPE_COVERAGE_COUNT_QUERY,
+  SMARTSCAPE_PROVIDER_INVENTORY_QUERY,
   SMARTSCAPE_RESULT_LIMIT,
   SMARTSCAPE_SERVICE_RUNTIME_QUERY,
   createIncidentServiceMetricsQuery,
@@ -32,6 +34,16 @@ describe("bounded inventory queries", () => {
     expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).not.toContain('target_type == "PROCESS"');
     expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).not.toContain('target_type == "CONTAINER"');
     expect(SMARTSCAPE_COVERAGE_COUNT_QUERY).toContain("countDistinctExact(source_id)");
+  });
+
+  it("summarizes recent provider-owned Smartscape inventory without loading raw cloud nodes", () => {
+    expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain('smartscapeNodes {"AWS_*", "AZURE_*", "GCP_*", "OCI_*", "ORACLE_*"}');
+    expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain("from:-7d");
+    expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain("fields node_type = type");
+    expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain("summarize node_count = count()");
+    expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).not.toContain("aws.account.id");
+    expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).not.toContain("azure.subscription");
+    expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain(`limit ${PROVIDER_INVENTORY_RESULT_LIMIT}`);
   });
 
   it("sanitizes, deduplicates, and caps incident-scoped service IDs", () => {

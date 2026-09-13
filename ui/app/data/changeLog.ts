@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.60",
+    version: "0.0.61",
     label: "Current release",
+    summary: "Separated provider presence from service attribution.",
+    details: [
+      "Smartscape cloud inventory now detects AWS, Azure, GCP, and OCI even when no monitored service has a direct runtime relationship.",
+      "The provider rail and Coverage summary expose bounded account, subscription, zone-record, and resource-type context without retrieving cloud identifiers.",
+      "Unlinked services now say No service-level provider link instead of incorrectly implying that Dynatrace found no provider evidence.",
+      "A provider's global presence never auto-assigns every service; exact topology, a source tag, or an operator-confirmed mapping still establishes service coverage.",
+    ],
+  },
+  {
+    version: "0.0.60",
+    label: "Previous release",
     summary: "Made provider context follow the environment.",
     details: [
       "The provider rail now shows only providers evidenced by Dynatrace, confirmed in Coverage, or backed by an enabled incident connection.",
