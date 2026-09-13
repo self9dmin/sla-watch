@@ -667,8 +667,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               <div>
                 <Heading level={2}>Coverage</Heading>
                 <Paragraph>
-                  Confirm which provider service applies to each Dynatrace
-                  service and runtime.
+                  Review what Dynatrace detected and which provider services are linked.
                 </Paragraph>
               </div>
               <StatusPill tone={coverageTone}>{coverageStatus}</StatusPill>
@@ -769,7 +768,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               services={services}
               providerTagKey={providerLabelKey}
               coverageModel={coverageModel}
-              loading={servicesLoading || incidentServicesQuery.isLoading || topologyQuery.isLoading || incidentTopologyQuery.isLoading || directoryLoading}
+              loading={servicesLoading || incidentServicesQuery.isLoading || topologyQuery.isLoading || incidentTopologyQuery.isLoading || providerInventoryQuery.isLoading || providerHostContextQuery.isLoading || directoryLoading}
               error={topologyQuery.error ?? directoryError ?? undefined}
               scopeSettings={scopeSettings}
               recommendations={setupRecommendations}
@@ -780,6 +779,8 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               )}
               inventory={inventoryStatus}
               infrastructureCandidate={providerInfrastructureCandidate}
+              providerInventory={selectedProviderInventory}
+              providerHostContext={selectedProviderHostContext}
             />
           </Surface>
         ) : section === "performance" ? (

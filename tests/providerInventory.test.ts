@@ -1,6 +1,7 @@
 import {
   parseProviderInventory,
   providerInventoryDetail,
+  providerInventoryNodeTypeLabel,
   providerInventorySlugs,
 } from "../ui/app/data/providerInventory";
 
@@ -45,6 +46,11 @@ describe("provider Smartscape inventory", () => {
       availabilityZoneCount: 6,
       computeResourceCount: 9,
       nodeTypes: ["AWS_ACCOUNT", "AWS_AVAILABILITY_ZONE", "AWS_EC2_INSTANCE"],
+      nodeTypeCounts: [
+        { nodeType: "AWS_EC2_INSTANCE", nodeCount: 9 },
+        { nodeType: "AWS_AVAILABILITY_ZONE", nodeCount: 6 },
+        { nodeType: "AWS_ACCOUNT", nodeCount: 1 },
+      ],
     });
     expect(inventory[1]).toMatchObject({
       providerSlug: "azure",
@@ -54,6 +60,11 @@ describe("provider Smartscape inventory", () => {
     expect(providerInventoryDetail(inventory[0])).toBe("1 account · 9 EC2 instances · 3 Smartscape types");
     expect(providerInventoryDetail(inventory[1])).toBe("1 subscription · 1 VM · 3 Smartscape types");
     expect(providerInventoryDetail(inventory[1])).not.toContain("zone records");
+    expect(providerInventoryNodeTypeLabel("AZURE_MICROSOFT_COMPUTE_VIRTUALMACHINES", 1)).toBe("Virtual machine");
+    expect(providerInventoryNodeTypeLabel("AWS_EC2_SUBNET", 2)).toBe("EC2 subnets");
+    expect(providerInventoryNodeTypeLabel("AZURE_MICROSOFT_STORAGE_STORAGEACCOUNTS", 3)).toBe("Storage accounts");
+    expect(providerInventoryNodeTypeLabel("AZURE_MICROSOFT_NETWORK_NETWORKINTERFACES_IPCONFIGURATIONS", 1)).toBe("Network interface IP configuration");
+    expect(providerInventoryNodeTypeLabel("AZURE_MICROSOFT_RESOURCES_TENANTS", 2)).toBe("Azure tenants");
   });
 
   it("ignores unrelated and empty records", () => {

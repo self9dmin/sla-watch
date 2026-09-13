@@ -429,11 +429,42 @@ a { color: var(--sla-accent); }
 .coverage-review-context > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
 .coverage-review-context strong { color: var(--sla-text); font-size: 10px; }
 .coverage-review-context span { color: var(--sla-muted); font-size: 9px; line-height: 1.4; }
-.coverage-infrastructure-candidate { display: grid; flex: 0 0 auto; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; margin: 0 0 9px; border: 1px solid color-mix(in srgb, var(--sla-warning) 30%, var(--sla-border)); border-radius: 7px; padding: 8px 10px; background: color-mix(in srgb, var(--sla-warning-bg) 34%, var(--sla-surface)); }
-.coverage-infrastructure-candidate > svg { width: 20px; height: 20px; color: var(--sla-warning); }
-.coverage-infrastructure-candidate > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
-.coverage-infrastructure-candidate strong { color: var(--sla-text); font-size: 10px; }
-.coverage-infrastructure-candidate span:not(.status-pill) { color: var(--sla-muted); font-size: 9px; line-height: 1.4; }
+.coverage-evidence-tabs { display: inline-grid; flex: 0 0 auto; align-self: flex-start; grid-template-columns: repeat(2, auto); margin: 0 0 9px; overflow: hidden; border: 1px solid var(--sla-border); border-radius: 7px; background: var(--sla-surface); }
+.coverage-evidence-tabs button { display: flex; min-height: 32px; align-items: center; gap: 8px; border: 0; border-left: 1px solid var(--sla-border); padding: 5px 12px; color: var(--sla-muted); background: transparent; cursor: pointer; font: inherit; font-size: 10px; font-weight: 650; }
+.coverage-evidence-tabs button:first-child { border-left: 0; }
+.coverage-evidence-tabs button:hover { color: var(--sla-text); background: var(--sla-surface-subtle); }
+.coverage-evidence-tabs button.active { color: var(--sla-text); background: var(--sla-accent-soft); box-shadow: inset 0 -2px 0 var(--sla-accent); }
+.coverage-evidence-tabs button strong { display: inline-grid; min-width: 19px; height: 19px; place-items: center; border-radius: 999px; padding: 0 5px; color: var(--sla-accent-strong); background: color-mix(in srgb, var(--sla-accent-soft) 74%, var(--sla-surface)); font-size: 9px; }
+.coverage-topology-view { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--sla-border); border-radius: 8px; background: var(--sla-surface-subtle); }
+.coverage-topology-heading { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-bottom: 1px solid var(--sla-border); background: var(--sla-surface); }
+.coverage-topology-heading > div:first-child { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.coverage-topology-heading > div:first-child > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.coverage-topology-heading strong { color: var(--sla-text); font-size: 11px; }
+.coverage-topology-heading span:not(.status-pill) { color: var(--sla-muted); font-size: 9px; line-height: 1.4; }
+.coverage-topology-icon { display: inline-grid; flex: 0 0 32px; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: var(--sla-accent-strong); background: var(--sla-accent-soft); }
+.coverage-topology-icon svg { width: 20px; height: 20px; }
+.coverage-topology-facts { display: grid; flex: 0 0 auto; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--sla-border); background: var(--sla-surface); }
+.coverage-topology-facts > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; border-left: 1px solid var(--sla-border); padding: 10px 12px; }
+.coverage-topology-facts > div:first-child { border-left: 0; }
+.coverage-topology-facts strong { color: var(--sla-accent-strong); font-size: 17px; line-height: 1; }
+.coverage-topology-facts span { color: var(--sla-muted); font-size: 9px; }
+.coverage-topology-types { display: flex; flex: 1; min-height: 0; flex-direction: column; padding: 11px 12px; }
+.coverage-topology-types-heading { display: flex; flex: 0 0 auto; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.coverage-topology-types-heading > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.coverage-topology-types-heading strong { color: var(--sla-text); font-size: 10px; }
+.coverage-topology-types-heading span { color: var(--sla-muted); font-size: 8px; line-height: 1.35; }
+.coverage-topology-types-heading > span { flex: 0 0 auto; padding-top: 2px; }
+.coverage-topology-type-list { display: grid; flex: 1; min-height: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; gap: 7px; overflow-y: auto; scrollbar-color: var(--sla-border) transparent; scrollbar-width: thin; }
+.coverage-topology-type { display: grid; min-width: 0; grid-template-columns: auto minmax(0, 1fr); column-gap: 9px; align-items: center; border: 1px solid var(--sla-border); border-radius: 7px; padding: 8px 9px; background: var(--sla-surface); }
+.coverage-topology-type > strong { grid-row: 1 / span 2; color: var(--sla-text); font-size: 15px; }
+.coverage-topology-type > span { overflow: hidden; color: var(--sla-text); font-size: 9px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.coverage-topology-type > small { overflow: hidden; color: var(--sla-muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.coverage-topology-empty { display: flex; flex: 1; min-height: 100px; align-items: center; justify-content: center; gap: 8px; color: var(--sla-muted); font-size: 9px; }
+.coverage-topology-empty svg { width: 20px; height: 20px; }
+.coverage-topology-boundary { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--sla-border); padding: 9px 12px; background: var(--sla-surface); }
+.coverage-topology-boundary > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.coverage-topology-boundary strong { color: var(--sla-text); font-size: 10px; }
+.coverage-topology-boundary span { color: var(--sla-muted); font-size: 8px; line-height: 1.4; }
 .scope-map-list { flex: 1; min-height: 0; overflow-y: auto; padding: 7px; background: var(--sla-surface-subtle); scrollbar-color: var(--sla-border) transparent; scrollbar-width: thin; }
 .coverage-list-footer { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 8px; min-height: 38px; padding: 5px 7px; border-top: 1px solid var(--sla-border); color: var(--sla-muted); background: var(--sla-surface); font-size: 9px; }
 .coverage-list-footer > div { display: flex; gap: 5px; }
@@ -999,6 +1030,7 @@ a { color: var(--sla-accent); }
   .performance-layout { grid-template-columns: 1fr; overflow-y: auto; }
   .performance-browser { min-height: 300px; border-right: 0; border-bottom: 1px solid var(--sla-border); }
   .performance-detail { overflow: visible; }
+  .coverage-topology-type-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 680px) {
   .sla-main, .sla-main-watch { height: auto; min-height: calc(100vh - 49px); overflow: visible; padding: 16px 14px 40px; }
@@ -1012,8 +1044,11 @@ a { color: var(--sla-accent); }
   .coverage-filter-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .coverage-filter-tabs button { justify-content: center; }
   .coverage-list-footer, .coverage-inventory-warning, .coverage-review-context { align-items: flex-start; flex-direction: column; }
-  .coverage-infrastructure-candidate { grid-template-columns: auto minmax(0, 1fr); align-items: flex-start; }
-  .coverage-infrastructure-candidate .status-pill { grid-column: 2; }
+  .coverage-topology-heading, .coverage-topology-boundary { align-items: flex-start; flex-direction: column; }
+  .coverage-topology-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coverage-topology-facts > div:nth-child(3) { border-top: 1px solid var(--sla-border); border-left: 0; }
+  .coverage-topology-facts > div:nth-child(4) { border-top: 1px solid var(--sla-border); }
+  .coverage-topology-type-list { grid-template-columns: 1fr; }
   .overview-status-panel { padding: 0 !important; }
   .overview-status-main { padding: 15px; }
   .overview-facts, .setup-panel .evidence-ladder, .settings-form-grid, .incident-detail-facts, .evidence-candidate-summary, .candidate-facts, .candidate-package-facts, .candidate-evidence-grid, .candidate-evidence-checklist { grid-template-columns: 1fr; }

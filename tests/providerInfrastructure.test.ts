@@ -15,6 +15,11 @@ describe("provider infrastructure candidates", () => {
           "AZURE_MICROSOFT_RESOURCES_LOCATIONS_AVAILABILITYZONES",
           "AZURE_MICROSOFT_RESOURCES_SUBSCRIPTIONS",
         ],
+        nodeTypeCounts: [
+          { nodeType: "AZURE_MICROSOFT_RESOURCES_LOCATIONS_AVAILABILITYZONES", nodeCount: 121 },
+          { nodeType: "AZURE_MICROSOFT_COMPUTE_VIRTUALMACHINES", nodeCount: 1 },
+          { nodeType: "AZURE_MICROSOFT_RESOURCES_SUBSCRIPTIONS", nodeCount: 1 },
+        ],
         accountScopeCount: 1,
         regionCount: 0,
         availabilityZoneCount: 121,
@@ -46,6 +51,9 @@ describe("provider infrastructure candidates", () => {
         providerSlug: "azure",
         nodeCount: 121,
         nodeTypes: ["AZURE_MICROSOFT_RESOURCES_LOCATIONS_AVAILABILITYZONES"],
+        nodeTypeCounts: [
+          { nodeType: "AZURE_MICROSOFT_RESOURCES_LOCATIONS_AVAILABILITYZONES", nodeCount: 121 },
+        ],
         accountScopeCount: 0,
         regionCount: 0,
         availabilityZoneCount: 121,
