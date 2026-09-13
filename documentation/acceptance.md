@@ -1,6 +1,20 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.60`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.61`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.61 verified scenarios
+
+The `0.0.61` artifact from source commit `ba2e647` was deployed to the designated Dynatrace target environment on 2026-09-13 and exercised through the connected Chrome profile. The production smoke was read-only. It did not change provider configuration, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.61` manifest, six AppEngine functions, global provider-inventory query, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `ba2e647` |
+| Release gate | Type checks, lint, 30 test suites with 170 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24 | Local release commands; 83.55% statement coverage; zero production dependency vulnerabilities |
+| Global provider discovery | The production rail displayed both AWS and Azure even though only AWS had direct service-linked coverage. AWS showed one account, six zone records, and 69 resource types. Azure showed one subscription, 121 zone records, and 12 resource types | Installed production Coverage accessibility-tree smoke after the bounded Smartscape query settled |
+| Service attribution boundary | Coverage reported three of eight loaded services covered and five not attributed. Unlinked rows appeared under `NO SERVICE-LEVEL PROVIDER LINK`, and the detail explained that environment inventory does not establish a service relationship | Installed production Coverage DOM and accessibility-tree smoke |
+| Exact topology reuse | The two services with provider-native service cloud context remained automatically attributed to Amazon EC2, while isolated services such as `my.sla` remained unattributed | Installed production Coverage worklist smoke and prior Smartscape isolation check |
+| Data minimization | The global provider query summarized counts by Smartscape node type and did not request account, subscription, project, or tenancy identifiers | Source review and `tests/queries.test.ts` |
+| Release history | Change log showed `0.0.61 Current release` and `Separated provider presence from service attribution.` | Installed production change-log smoke |
 
 ## 0.0.60 verified scenarios
 
