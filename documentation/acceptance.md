@@ -1,6 +1,20 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.56`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.57`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.57 verified scenarios
+
+The `0.0.57` artifact from source commit `a6bdd19` was deployed to the designated Dynatrace target environment on 2026-09-13 and exercised through the connected Chrome profile. The production smoke was read-only. It did not change provider configuration, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.57` manifest, six AppEngine functions, four bundled provider SVGs, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `a6bdd19` |
+| Release gate | Type checks, lint, 27 test suites with 156 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24 | `npm run verify:release`; 82.79% statement coverage; zero production dependency vulnerabilities |
+| Provider context | AWS, Azure, GCP, and OCI remained visible in one compact provider rail. AWS was selected and clearly illuminated; Azure, GCP, and OCI were labeled unavailable because the environment did not evidence them | Installed production Coverage accessibility-tree and dark-theme visual smoke |
+| Navigation placement | The provider rail aligned with the workflow navigation without an extra provider label, Directory appeared directly after Evidence, and the former Review terms header action was absent | Installed production Coverage and Directory smoke |
+| Directory continuity | Directory loaded the AWS public record with 62 services, 99.99% availability, a 30-day filing window, credit tiers, submission process, evidence requirements, exclusions, support metadata, and provenance | Installed production Directory smoke against the deployed `slaDirectory` function |
+| Theme treatment | The enlarged provider marks retained their text labels and selected-state contrast while the dark theme rendered their logo surfaces without white tiles | Connected Chrome dark-theme visual smoke |
+| Release history | Change log showed `0.0.57 Current release` and all five provider-context changes | Installed production change-log smoke |
 
 ## 0.0.56 verified scenarios
 
