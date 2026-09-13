@@ -62,7 +62,7 @@ Open app
        -> Evidence
             -> Review candidates
             -> Provider reports
-       -> Review terms / Directory
+       -> Directory
        -> Settings
             -> Review defaults
             -> Provider connections
@@ -112,7 +112,7 @@ curious   ->   uncertain    ->   reassured    ->   focused     ->   cautious    
 | Incidents and Evidence | Complementary only with distinct decisions | Incidents determines provider relevance. Evidence determines review readiness. Do not ask the SRE to validate the same relationship twice. |
 | Evidence candidates and Provider reports | Complementary | Dynatrace-observed impact and provider admission are separate evidence. A missing or contradictory provider report must not block a customer-impact review. |
 | Inline applied terms and Directory | Complementary | Show the resolved terms and requirements in Evidence. Use Directory for full provenance and editing, not as a mandatory detour. |
-| Active provider in the shell and Review defaults | One shared state | Keep both access points, but resolve them through one provider-selection function. A constrained runtime provider must not diverge from a stale stored preference. |
+| Provider rail in the shell and Review defaults | One shared state | Keep both access points, but resolve them through one provider-selection function. A constrained runtime provider must not diverge from a stale stored preference. |
 | Incident lookback and Review defaults | One shared state with unclear ownership | Keep the quick control in Incidents, but label it as a shared workspace evidence window and reflect the saved change everywhere. |
 | `Configure source` and `Add AWS connection` in Provider reports | Redundant | Keep one primary empty-state action. |
 | Two `Add custom terms` buttons in an empty Directory tab | Redundant | Show one primary action when no custom terms exist. Restore the header action after a list exists. |
@@ -297,7 +297,7 @@ Use this SRE scenario:
 3. Open Performance. Record what is measured, whether action is required, and whether values agree with any objective preview shown in Coverage.
 4. Open Incidents. Select one provider-relevant Problem if available and one Problem that needs Coverage. For every primary action, record the destination URL, the screen that opens, and whether provider, Problem ID, affected service, filter, selection, and return path are preserved.
 5. Open Evidence. Review both Review candidates and Provider reports. Determine what the SRE is deciding, what information is inherited, what must be entered again, and what exact screen state communicates completion. Do not save a decision.
-6. Open Review terms. Inspect published terms, service coverage, claim requirements, support information, sources, and Custom terms. Confirm whether the active provider remains consistent. Do not add terms.
+6. Open Directory. Inspect published terms, service coverage, claim requirements, support information, sources, and Custom terms. Confirm whether the active provider remains consistent. Do not add terms.
 7. Open Settings read-only. Inspect Review defaults, Provider connections, Custom terms, Appearance, and Walkthrough. Confirm which settings are optional, which are shared, and whether any control duplicates an operating-view control.
 8. Run the full product walkthrough and compare every step with the actual current page behavior.
 

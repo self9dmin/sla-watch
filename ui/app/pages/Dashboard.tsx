@@ -1,7 +1,6 @@
 import React, { useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppFunction, useDql } from "@dynatrace-sdk/react-hooks";
-import { Button } from "@dynatrace/strato-components/buttons";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import {
   Heading,
@@ -12,6 +11,7 @@ import { IncidentReview } from "../components/IncidentReview";
 import { CoverageWorkspace } from "../components/CoverageWorkspace";
 import { PerformanceWorkspace } from "../components/PerformanceWorkspace";
 import { ProviderDirectoryWorkspace } from "../components/ProviderDirectoryWorkspace";
+import { ProviderSwitcher } from "../components/ProviderSwitcher";
 import { useSlaPreferences } from "../context/SlaPreferencesContext";
 import { useProviderConnections } from "../hooks/useProviderConnections";
 import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
@@ -171,6 +171,12 @@ const WATCH_LINKS: ReadonlyArray<{
     label: "Evidence",
     to: "/evidence",
     tour: "evidence",
+  },
+  {
+    section: "directory",
+    label: "Directory",
+    to: "/directory",
+    tour: "directory",
   },
 ];
 
@@ -564,6 +570,18 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     ],
   );
 
+  const selectProvider = (nextProviderSlug: string) => {
+    if (!enabledProviderSlugs.includes(nextProviderSlug)) return;
+    void updatePreferences({ providerSlug: nextProviderSlug });
+    if (routeProviderSlug) {
+      const nextParams = new URLSearchParams(location.search);
+      nextParams.set("provider", nextProviderSlug);
+      void navigate(`${location.pathname}?${nextParams.toString()}`, {
+        replace: true,
+      });
+    }
+  };
+
   return (
     <div className="dashboard-shell">
       <section className="hero-row">
@@ -574,49 +592,18 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             this environment.
           </Paragraph>
         </div>
-        <div className="hero-actions">
-          <label className="hero-provider">
-            <span>Active provider</span>
-            <select
-              value={providerSlug}
-              onChange={(event) => {
-                const nextProviderSlug = event.target.value;
-                void updatePreferences({ providerSlug: nextProviderSlug });
-                if (routeProviderSlug) {
-                  const nextParams = new URLSearchParams(location.search);
-                  nextParams.set("provider", nextProviderSlug);
-                  void navigate(
-                    `${location.pathname}?${nextParams.toString()}`,
-                    { replace: true },
-                  );
-                }
-              }}
-              aria-label="Active provider"
-              title="Providers detected from this environment"
-            >
-              {enabledProviderSlugs.map((slug) => (
-                <option key={slug} value={slug}>
-                  {providerDisplayName(slug)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <nav className="hero-action-buttons" aria-label="Workspace tools">
-            <Button
-              className={`hero-tool-button${section === "directory" ? " active" : ""}`}
-              as={Link}
-              to={`/directory?provider=${encodeURIComponent(providerSlug)}`}
-              size="condensed"
-              data-tour="directory"
-              aria-current={section === "directory" ? "page" : undefined}
-            >
-              Review terms
-            </Button>
-          </nav>
-        </div>
       </section>
 
-      <WatchNavigation section={section} providerSlug={providerSlug} />
+      <div className="watch-toolbar">
+        <WatchNavigation section={section} providerSlug={providerSlug} />
+        <div className="watch-provider-switcher">
+          <ProviderSwitcher
+            activeProviderSlug={providerSlug}
+            enabledProviderSlugs={enabledProviderSlugs}
+            onSelect={selectProvider}
+          />
+        </div>
+      </div>
 
       <div className={`watch-view watch-view-${section}`}>
         {section === "coverage" ? (

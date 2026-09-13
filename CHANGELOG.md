@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.57
+
+- Replaces the active-provider dropdown with a compact logo rail for AWS, Microsoft Azure, Google Cloud, and OCI.
+- Keeps all four core hyperscalers visible while enabling only providers supported by current environment evidence, confirmed Coverage, or an enabled connection.
+- Gives the selected provider one clear active treatment and labels every available or unavailable state for assistive technology.
+- Aligns the rail with the workflow navigation, enlarges the provider marks, and removes the white logo tile in dark mode.
+- Bundles the SLA.directory SVG assets locally because the v1 vendor API does not expose a logo or icon field.
+- Removes the separate Review terms action and promotes Directory to the main workflow after Evidence.
+
 ## 0.0.54
 
 - Adds exact Dynatrace Smartscape root-cause entity context to Incidents and labels whether loaded Coverage or provider-native topology connects that entity to the selected provider.
