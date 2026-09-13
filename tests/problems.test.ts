@@ -1,4 +1,8 @@
-import { parseProblemRecords } from "../ui/app/data/problems";
+import {
+  formatDavisImpact,
+  parseProblemRecords,
+  summarizeDavisImpact,
+} from "../ui/app/data/problems";
 
 describe("Dynatrace Problem parsing", () => {
   it("uses stable Smartscape root-cause and affected-entity records", () => {
@@ -15,6 +19,10 @@ describe("Dynatrace Problem parsing", () => {
           { id: "HOST-1", type: "host", name: "worker-1" },
         ],
         root_cause: { id: "SERVICE-ROOT", type: "service", name: "Payments" },
+        affected_service_ids: ["SERVICE-NATIVE"],
+        smartscape_source_id: "SERVICE-SOURCE",
+        affected_users_count: 42,
+        impact_level: "SERVICES",
         affected_entity_ids: ["service-1", "SERVICE-LEGACY"],
       }],
     });
@@ -22,14 +30,22 @@ describe("Dynatrace Problem parsing", () => {
     expect(problem).toMatchObject({
       id: "P-1",
       status: "CLOSED",
-      affectedEntityIds: ["SERVICE-1", "HOST-1", "SERVICE-LEGACY"],
+      affectedEntityIds: ["SERVICE-1", "HOST-1", "SERVICE-NATIVE", "SERVICE-SOURCE", "SERVICE-LEGACY"],
       affectedEntities: [
         { id: "SERVICE-1", type: "service", name: "Checkout" },
         { id: "HOST-1", type: "host", name: "worker-1" },
       ],
       hasRootCause: true,
       rootCause: { id: "SERVICE-ROOT", type: "service", name: "Payments" },
+      sourceEntityId: "SERVICE-SOURCE",
+      affectedUsersCount: 42,
+      impactLevel: "SERVICES",
     });
+    expect(summarizeDavisImpact([problem])).toEqual({
+      impactLevels: ["SERVICES"],
+      maximumAffectedUsers: 42,
+    });
+    expect(formatDavisImpact([problem])).toBe("Services · 42 affected users");
   });
 
   it("retains the deprecated fields only as a compatibility fallback", () => {
@@ -57,5 +73,30 @@ describe("Dynatrace Problem parsing", () => {
     expect(problem.hasRootCause).toBe(false);
     expect(problem.rootCause).toBeUndefined();
     expect(problem.affectedEntityIds).toEqual([]);
+  });
+
+  it("does not treat a non-service Davis source as an affected service", () => {
+    const [problem] = parseProblemRecords({ records: [{
+      smartscape_source_id: "HOST-1",
+      affected_users_count: "not-a-number",
+    }] });
+
+    expect(problem.sourceEntityId).toBe("HOST-1");
+    expect(problem.affectedEntityIds).toEqual([]);
+    expect(problem.affectedUsersCount).toBeUndefined();
+    expect(formatDavisImpact([problem])).toBe("Not returned");
+  });
+
+  it("summarizes grouped Problem impact conservatively", () => {
+    const problems = parseProblemRecords({ records: [
+      { impact_level: "APPLICATION", affected_users_count: 5 },
+      { impact_level: "SERVICES", affected_users_count: 18 },
+    ] });
+
+    expect(summarizeDavisImpact(problems)).toEqual({
+      impactLevels: ["APPLICATION", "SERVICES"],
+      maximumAffectedUsers: 18,
+    });
+    expect(formatDavisImpact(problems)).toBe("2 impact levels · up to 18 affected users");
   });
 });

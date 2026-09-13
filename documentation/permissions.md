@@ -6,12 +6,11 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 
 | Scope | Operation | Deny behavior |
 | --- | --- | --- |
-| `storage:entities:read` | Read `dt.entity.service` inventory | Show entity access as incomplete; do not claim that no services exist |
 | `storage:events:read` | Read Davis Problems | Show the Problem check as unavailable; do not claim there are no Problems |
 | `storage:metrics:read` | Read service request time series | Show metrics as unavailable; do not claim that traffic is absent |
 | `storage:logs:read` | Count recent log records | Show log count as unavailable |
 | `storage:spans:read` | Count recent spans | Show span count as unavailable |
-| `storage:smartscape:read` | Read service-to-runtime and location relationships used for evidence-boundary selection | Hide unavailable topology choices; never infer them from entity names |
+| `storage:smartscape:read` | Read service inventory plus provider, runtime, dependency, and location relationships used for coverage selection | Show Smartscape access as incomplete; never infer services or topology from names |
 | `slo:slos:read` | Find and evaluate objectives previously created by SLA Review | Keep the service preview available, identify Performance as unavailable, and disable creation to prevent duplicates |
 | `slo:slos:write` | Create one explicitly confirmed customer objective for a covered Dynatrace service | Keep the preview read-only and explain that objective write access is required |
 | `environment-api:credentials:read` | Read the administrator-selected AppEngine Token credential inside the provider AppEngine function | Keep customer-scoped provider notices unavailable; a supported public status source can remain available |
@@ -26,7 +25,7 @@ Dynatrace evaluates an app call using both the scope declared in `app.config.jso
 
 | Resource | Read | Write | User-visible effect |
 | --- | --- | --- | --- |
-| Dynatrace service entities | Current-user scope | None | Inventory may be incomplete if denied; names are never substituted for exact entity IDs |
+| Dynatrace service nodes | Current-user Smartscape scope | None | Inventory may be incomplete if denied; names are never substituted for exact node or classic IDs |
 | Problems, logs, spans, metrics | Current-user scope | None | Evidence posture becomes unknown when a read fails |
 | Smartscape relationships | Current-user scope | None | Host, runtime, and location assignments are unavailable when denied; names are not substituted |
 | `sla.directory` contract | AppEngine external request allowlist | None | Provider contract becomes unavailable when the function cannot run |

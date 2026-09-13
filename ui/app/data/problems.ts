@@ -13,6 +13,12 @@ const optionalText = (value: unknown): string | undefined =>
     ? value.trim()
     : undefined;
 
+const optionalNonNegativeNumber = (value: unknown): number | undefined => {
+  if (value === null || value === undefined || value === "") return undefined;
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : undefined;
+};
+
 const stringList = (value: unknown): string[] => {
   const values = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
   return Array.from(new Set(
@@ -66,8 +72,12 @@ export const parseProblemRecords = (
   return records.map((record, index) => {
     const row = asRecord(record);
     const affectedEntities = parseSmartscapeEntityReferences(row.affected_entities);
+    const sourceEntityId = optionalText(row.smartscape_source_id);
+    const nativeServiceIds = stringList(row.affected_service_ids);
     const affectedEntityIds = uniqueEntityIds([
       ...affectedEntities.map((entity) => entity.id),
+      ...nativeServiceIds,
+      ...(sourceEntityId?.toUpperCase().startsWith("SERVICE-") ? [sourceEntityId] : []),
       ...stringList(row.affected_entity_ids),
     ]);
     const stableRootCause = parseSmartscapeEntityReference(row.root_cause);
@@ -87,10 +97,47 @@ export const parseProblemRecords = (
       category: optionalText(row.category) ?? "UNKNOWN",
       affectedEntityIds,
       affectedEntities,
+      sourceEntityId,
+      affectedUsersCount: optionalNonNegativeNumber(row.affected_users_count),
+      impactLevel: optionalText(row.impact_level),
       hasRootCause: Boolean(rootCause),
       rootCause,
       startedAt: optionalText(row.start_time),
       endedAt: optionalText(row.end_time),
     };
   });
+};
+
+export const summarizeDavisImpact = (
+  problems: ProblemRecord[],
+): { impactLevels: string[]; maximumAffectedUsers?: number } => {
+  const impactLevels = Array.from(new Set(
+    problems.flatMap((problem) => problem.impactLevel ? [problem.impactLevel] : []),
+  )).sort((left, right) => left.localeCompare(right));
+  const affectedUserCounts = problems.flatMap((problem) =>
+    problem.affectedUsersCount === undefined ? [] : [problem.affectedUsersCount]);
+  return {
+    impactLevels,
+    maximumAffectedUsers: affectedUserCounts.length > 0
+      ? Math.max(...affectedUserCounts)
+      : undefined,
+  };
+};
+
+const formatImpactLevel = (value: string): string => value
+  .replace(/[._-]+/g, " ")
+  .toLowerCase()
+  .replace(/\b\w/g, (character) => character.toUpperCase());
+
+export const formatDavisImpact = (problems: ProblemRecord[]): string => {
+  const summary = summarizeDavisImpact(problems);
+  const level = summary.impactLevels.length === 1
+    ? formatImpactLevel(summary.impactLevels[0])
+    : summary.impactLevels.length > 1
+      ? `${summary.impactLevels.length} impact levels`
+      : undefined;
+  const users = summary.maximumAffectedUsers === undefined
+    ? undefined
+    : `${problems.length > 1 ? "up to " : ""}${summary.maximumAffectedUsers.toLocaleString()} affected users`;
+  return [level, users].filter(Boolean).join(" · ") || "Not returned";
 };

@@ -1,5 +1,6 @@
 import {
   detectedProviderSlugs,
+  formatSmartscapeRelationship,
   mergeSmartscapeScopeEdges,
   parseProviderHostContexts,
   parseServiceCloudContexts,
@@ -172,5 +173,21 @@ describe("Smartscape scope parsing", () => {
     expect(topologyAnchorRank({ ...base, targetType: "K8S_CLUSTER" })).toBeLessThan(
       topologyAnchorRank({ ...base, targetType: "CONTAINER" }),
     );
+  });
+
+  it("preserves direct provider dependency relationships", () => {
+    const [edge] = parseSmartscapeScopeEdges({ records: [{
+      service_node_id: "service-node-rds",
+      service_classic_id: "SERVICE-RDS",
+      service_name: "Checkout",
+      target_node_id: "aws-rds-node",
+      target_name: "orders-db",
+      target_type: "AWS_RDS_DBINSTANCE",
+      relationship: "calls",
+    }] });
+
+    expect(edge.relationship).toBe("calls");
+    expect(formatSmartscapeRelationship(edge.relationship)).toBe("calls");
+    expect(formatSmartscapeRelationship("is_managed_by")).toBe("is managed by");
   });
 });

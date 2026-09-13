@@ -41,6 +41,7 @@ import { safeWorkspaceReturnPath } from "../data/reviewRoutes";
 import { buildSmartscapeOverviewHref } from "../data/smartscapeNavigation";
 import { providerDisplayName } from "../data/providers";
 import type { ProviderHostContextSummary } from "../data/topology";
+import { formatSmartscapeRelationship } from "../data/topology";
 import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAssignments";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { SetupAdvisor } from "./SetupAdvisor";
@@ -327,7 +328,7 @@ export const CoverageWorkspace = ({
       return (
         <button type="button" role="option" aria-selected={selectedRowKey === row.key} className={`scope-map-row${selectedRowKey === row.key ? " selected" : ""}`} key={row.key} onClick={() => setSelectedRowKey(row.key)}>
           <span className="scope-node"><ServicesIcon /><span><small>Service</small><strong>{row.edge.serviceName}</strong></span></span>
-          <span className="scope-connector"><span aria-hidden="true" /><small>{row.edge.relationship === "belongs_to" ? "belongs to" : "runs on"}</small></span>
+          <span className="scope-connector"><span aria-hidden="true" /><small>{formatSmartscapeRelationship(row.edge.relationship)}</small></span>
           <span className="scope-node"><HostsIcon /><span><small>{row.edge.targetType.replaceAll("_", " ")}</small><strong>{row.edge.targetName}</strong></span></span>
           <span className="scope-connector"><span aria-hidden="true" /><small>{row.evidenceCount > 1 ? `${row.evidenceCount} signals` : "Smartscape"}</small></span>
           <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.observed ? "Observed" : row.ambiguous ? "Ambiguous" : row.problemCount > 0 ? `${row.problemCount} recent Problems` : row.candidate ? "Recommended" : "Needs review"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.observed ? row.candidate?.providerServiceName : row.ambiguous ? "Review service match" : row.candidate?.providerServiceName ?? "Select provider service"}</strong></span></span>

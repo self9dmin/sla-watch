@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.65",
+    version: "0.0.66",
     label: "Current release",
+    summary: "Aligned service coverage and impact review with live Smartscape topology.",
+    details: [
+      "Service inventory now uses Smartscape service nodes after a live equivalence check preserved exact service IDs, names, and tags.",
+      "Coverage discovers bounded direct provider-resource relationships and preserves relationship meaning, including services that call AWS resources.",
+      "Incidents and Evidence can prioritize stable Davis impact level and affected-user context when the tenant returns it.",
+      "The unused classic entity-read scope was removed, and provider presence still never assigns an unrelated service.",
+    ],
+  },
+  {
+    version: "0.0.65",
+    label: "Previous release",
     summary: "Completed the topology-first Coverage handoff.",
     details: [
       "Open Smartscape now uses the selected provider's exact AppShell overview route instead of passing a URL as an unsupported page token.",

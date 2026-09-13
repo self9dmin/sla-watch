@@ -6,8 +6,8 @@ export const INCIDENT_SMARTSCAPE_RESULT_LIMIT = 2000;
 export const INCIDENT_SERVICE_FILTER_LIMIT = 200;
 
 export const SERVICES_QUERY = `
-fetch dt.entity.service
-| fields id, name = entity.name, type = entity.type, tags
+smartscapeNodes SERVICE
+| fields id = coalesce(getNodeField(id, "id_classic"), id), name, type, tags
 | sort name asc
 | limit ${SERVICE_RESULT_LIMIT}
 `;
@@ -53,14 +53,16 @@ smartscapeNodes HOST, from:-7d, to:now()
 | limit ${PROVIDER_HOST_CONTEXT_RESULT_LIMIT}
 `;
 
-const PREFERRED_COVERAGE_ANCHORS = `target_type == "HOST"
-    or target_type == "K8S_CLUSTER"
-    or startsWith(target_type, "AWS_")
+const PROVIDER_OWNED_TARGET = `startsWith(target_type, "AWS_")
     or startsWith(target_type, "AZURE_")
     or startsWith(target_type, "GCP_")
     or startsWith(target_type, "GOOGLE_")
     or startsWith(target_type, "OCI_")
     or startsWith(target_type, "ORACLE_")`;
+
+const VERIFIED_SERVICE_SCOPE_EDGE = `(${PROVIDER_OWNED_TARGET})
+    or ((type == "runs_on" or type == "belongs_to")
+      and (target_type == "HOST" or target_type == "K8S_CLUSTER"))`;
 
 const smartscapeFields = `| fields relationship = type,
     service_node_id = source_id,
@@ -89,17 +91,17 @@ const smartscapeFields = `| fields relationship = type,
     k8s_cluster = getNodeField(target_id, "k8s.cluster.name")`;
 
 export const SMARTSCAPE_SERVICE_RUNTIME_QUERY = `
-smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
+smartscapeEdges "*", from:-7d, to:now()
 | filter source_type == "SERVICE"
-| filter ${PREFERRED_COVERAGE_ANCHORS}
+| filter ${VERIFIED_SERVICE_SCOPE_EDGE}
 ${smartscapeFields}
 | limit ${SMARTSCAPE_RESULT_LIMIT}
 `;
 
 export const SMARTSCAPE_COVERAGE_COUNT_QUERY = `
-smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
+smartscapeEdges "*", from:-7d, to:now()
 | filter source_type == "SERVICE"
-| filter ${PREFERRED_COVERAGE_ANCHORS}
+| filter ${VERIFIED_SERVICE_SCOPE_EDGE}
 | summarize relationship_count = count(), service_count = countDistinctExact(source_id)
 `;
 
@@ -115,10 +117,11 @@ export const createIncidentSmartscapeQuery = (serviceIds: string[]): string => {
     ? `in(service_classic_id_filter, array(${ids.map((id) => `"${id}"`).join(", ")}))`
     : `service_classic_id_filter == "__NO_SERVICE__"`;
   return `
-smartscapeEdges {runs_on, belongs_to}, from:-72h, to:now()
+smartscapeEdges "*", from:-7d, to:now()
 | filter source_type == "SERVICE"
 | fieldsAdd service_classic_id_filter = getNodeField(source_id, "id_classic")
 | filter ${filter}
+| filter ${VERIFIED_SERVICE_SCOPE_EDGE}
 ${smartscapeFields}
 | limit ${INCIDENT_SMARTSCAPE_RESULT_LIMIT}
 `;
@@ -127,12 +130,13 @@ ${smartscapeFields}
 export const createIncidentServicesQuery = (serviceIds: string[]): string => {
   const ids = safeServiceIds(serviceIds);
   const filter = ids.length > 0
-    ? `in(id, array(${ids.map((id) => `"${id}"`).join(", ")}))`
-    : `id == "__NO_SERVICE__"`;
+    ? `in(service_classic_id_filter, array(${ids.map((id) => `"${id}"`).join(", ")}))`
+    : `service_classic_id_filter == "__NO_SERVICE__"`;
   return `
-fetch dt.entity.service
+smartscapeNodes SERVICE
+| fieldsAdd service_classic_id_filter = coalesce(getNodeField(id, "id_classic"), id)
 | filter ${filter}
-| fields id, name = entity.name, type = entity.type, tags
+| fields id = service_classic_id_filter, name, type, tags
 | sort name asc
 | limit ${INCIDENT_SERVICE_FILTER_LIMIT}
 `;
@@ -144,6 +148,10 @@ fetch dt.davis.problems, from:-${lookbackHours}h, to:now()
 | sort event.start desc
 | fields display_id, title = event.name, status = event.status, category = event.category, start_time = event.start, end_time = event.end,
     affected_entities = smartscape.affected_entities,
+    affected_service_ids = dt.smartscape.service,
+    smartscape_source_id = dt.smartscape_source.id,
+    affected_users_count = dt.davis.affected_users_count,
+    impact_level = dt.davis.impact_level,
     root_cause = root_cause.smartscape_entity,
     affected_entity_ids,
     root_cause_entity_id,

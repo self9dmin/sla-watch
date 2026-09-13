@@ -27,6 +27,7 @@ const problem = ({
   startedAt = "2026-09-12T10:00:00.000Z",
   endedAt = "2026-09-12T10:05:00.000Z",
   rootCauseId,
+  affectedUsersCount,
 }: {
   id: string;
   service?: ServiceRecord;
@@ -34,6 +35,7 @@ const problem = ({
   startedAt?: string;
   endedAt?: string;
   rootCauseId?: string;
+  affectedUsersCount?: number;
 }): { record: ProblemRecord; candidate: EvidenceCandidate } => {
   const record: ProblemRecord = {
     id,
@@ -46,6 +48,7 @@ const problem = ({
     rootCause: rootCauseId
       ? { id: rootCauseId, name: rootCauseId, type: "service" }
       : undefined,
+    affectedUsersCount,
     startedAt,
     endedAt,
   };
@@ -120,6 +123,26 @@ describe("incident review cases", () => {
     });
 
     expect(build([first, second])).toHaveLength(2);
+  });
+
+  it("prioritizes higher Davis user impact when review state is otherwise equal", () => {
+    const recent = problem({
+      id: "P-RECENT",
+      service: checkout,
+      providerServiceId: "ec2",
+      startedAt: "2026-09-12T11:00:00.000Z",
+      affectedUsersCount: 3,
+    });
+    const higherImpact = problem({
+      id: "P-HIGH",
+      service: catalog,
+      providerServiceId: "lambda",
+      startedAt: "2026-09-12T10:00:00.000Z",
+      affectedUsersCount: 120,
+    });
+
+    expect(build([recent, higherImpact]).map((reviewCase) => reviewCase.problems[0].id))
+      .toEqual(["P-HIGH", "P-RECENT"]);
   });
 
   it("keeps unrelated or distant Problems in separate review cases", () => {

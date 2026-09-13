@@ -232,7 +232,7 @@ export type SmartscapeScopeEdge = {
   targetClassicId?: string;
   targetName: string;
   targetType: string;
-  relationship: "runs_on" | "belongs_to";
+  relationship: string;
   location?: string;
   region?: string;
   availabilityZone?: string;
@@ -278,6 +278,9 @@ export type ProblemRecord = {
   category: string;
   affectedEntityIds: string[];
   affectedEntities: SmartscapeEntityReference[];
+  sourceEntityId?: string;
+  affectedUsersCount?: number;
+  impactLevel?: string;
   hasRootCause: boolean;
   rootCause?: SmartscapeEntityReference;
   startedAt?: string;

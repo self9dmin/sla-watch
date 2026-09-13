@@ -6,6 +6,9 @@ This document separates executable coverage from manual or proposed coverage. Pa
 
 | Use case | Rule | Expected behavior, including negative case | Evidence | Status |
 | --- | --- | --- | --- | --- |
+| Smartscape service inventory | Pure service reads must preserve canonical identity during classic migration | Smartscape object tags and legacy tag arrays normalize consistently; malformed rows are dropped instead of receiving invented IDs | `tests/serviceInventory.test.ts`, `tests/queries.test.ts`, read-only target-tenant equivalence probe | Implemented and live-query verified |
+| Provider-aware topology | Provider discovery must not assume AWS edge names or rewrite dependency meaning | A bounded wildcard edge query accepts direct provider-owned targets, limits generic host or cluster anchors to structural edges, preserves `calls`, and never treats provider presence as a service link | `tests/queries.test.ts`, `tests/topology.test.ts`, read-only AWS and Azure topology probes | Implemented and live-query verified |
+| Davis impact context | Stable Davis fields may prioritize review but must remain optional | Native affected-service and source IDs are merged without duplicating legacy IDs; impact level and affected-user count are summarized when present and say Not returned when absent | `tests/problems.test.ts`, `tests/incidentReviewCases.test.ts` | Implemented; query syntax live-verified, value fixture permission unavailable |
 | Provider setup advice | Missing source tags must not become provider proof | A service inventory with no matching source tag produces a high-priority coverage recommendation and no outage claim | `tests/recommendations.test.ts` | Existing unit test |
 | Provider setup advice | A wrong source tag must be distinguished from a missing tag | Existing tags that do not match the selected provider produce a matching-rule recommendation | `tests/recommendations.test.ts` | Existing unit test |
 | Provider tag parsing | Accepted read-only tag forms must normalize conservatively | Provider, vendor, cloud-provider, context, and plain-value forms normalize; unrelated contextless tags are ignored | `tests/providerTags.test.ts` | Existing unit test |
@@ -82,7 +85,7 @@ This document separates executable coverage from manual or proposed coverage. Pa
 
 1. No live IAM negative tests are committed because they require tenant identities and permission fixtures.
 2. The Playwright suite is committed, but no authenticated CI run is recorded because test credentials must be supplied through CI secrets, never checked into the repository.
-3. DQL query validity and the semantic scope of tenant-wide log/span counts still require a representative tenant test case.
+3. Tenant-wide log/span count semantics still require a representative incident fixture. The 0.0.66 service inventory, provider topology, and stable Davis query shapes were checked against the target tenant.
 4. Provider-service-to-Dynatrace-entity joins may come from a fixed provider-native Smartscape signature or an exact operator assignment. Neither path, nor an Evidence decision, can claim provider fault or end-to-end credit eligibility.
 5. The compatible create, reload, reopen, and cleanup path was exercised in `0.0.42`; the new Not ready state and evidence-checklist persistence still need governed live mutation acceptance with a disposable qualifying Problem.
 6. No automated accessibility scan is wired into CI.

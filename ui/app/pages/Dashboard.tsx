@@ -31,6 +31,7 @@ import { buildProviderInfrastructureCandidate } from "../data/providerInfrastruc
 import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
 import { parseProblemRecords } from "../data/problems";
 import { parseServiceTelemetry } from "../data/serviceTelemetry";
+import { parseServiceRecords } from "../data/serviceInventory";
 import {
   detectedProviderSlugs,
   mergeSmartscapeScopeEdges,
@@ -72,34 +73,6 @@ const asRecord = (value: unknown): Record<string, unknown> =>
   typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
     : {};
-const textValue = (value: unknown, fallback: string): string =>
-  typeof value === "string" && value.trim().length > 0 ? value : fallback;
-const stringArray = (value: unknown): string[] => {
-  if (!Array.isArray(value)) return typeof value === "string" ? [value] : [];
-  return value.flatMap((item) => {
-    if (typeof item === "string") return [item];
-    const record = asRecord(item);
-    const key = textValue(record.key ?? record.name, "");
-    const tagValue = textValue(record.value, "");
-    return key && tagValue ? [`${key}:${tagValue}`] : [];
-  });
-};
-
-const parseServiceRecords = (
-  data: { records?: unknown[] } | undefined,
-): ServiceRecord[] => {
-  const records = Array.isArray(data?.records) ? data.records : [];
-  return records.map((record: unknown, index: number) => {
-    const row = asRecord(record);
-    return {
-      id: textValue(row.id, `service-${index + 1}`),
-      name: textValue(row.name, "Unnamed service"),
-      type: textValue(row.type, "SERVICE"),
-      tags: stringArray(row.tags),
-    };
-  });
-};
-
 const firstCount = (
   data: { records?: unknown[] } | undefined,
   field: string,
