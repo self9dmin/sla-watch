@@ -8,8 +8,8 @@ SLA Review is a Dynatrace AppEngine app for evidence-first provider attribution.
 - Reads Davis Problems, logs, spans, and service-request telemetry for a selectable 24-hour to 90-day window.
 - Retrieves provider and service contract data from the versioned `sla.directory` JSON API through an AppEngine function.
 - Presents the active provider's published terms, credit policy, claim process, exclusions, service catalog, support plans, support-response boundary, source metadata, and tenant overrides in one read-only Directory workspace.
-- Treats AWS, Microsoft Azure, Google Cloud, and Oracle Cloud Infrastructure as four peer cloud providers. The compact provider rail shows only providers evidenced by Dynatrace, confirmed Coverage mappings, or enabled incident connections, adds newly applicable provider slugs automatically, and gives the focused provider one explicit selected state.
-- Monitors more than one relevant provider at a time. Smartscape runtime metadata, cloud dimensions, source-owned provider tags, saved scope mappings, and enabled incident connections place providers in scope automatically.
+- Treats AWS, Microsoft Azure, Google Cloud, and Oracle Cloud Infrastructure as four peer cloud providers. The compact provider rail shows providers found in bounded Smartscape cloud inventory, exact service topology, confirmed Coverage mappings, source-owned tags, or enabled incident connections, and gives the focused provider one explicit selected state.
+- Monitors more than one relevant provider at a time. Global Smartscape inventory establishes that a provider exists in the environment. It does not assign every service to that provider. Exact service-to-runtime topology, source-owned provider tags, or saved scope mappings establish service-level coverage.
 - Lets administrators add multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies for customer-scoped provider evidence. Credentials remain in Dynatrace Credential Vault.
 - Reads credential-free public status for Google Cloud and OCI, plus optional OpenAI, Anthropic, and ElevenLabs sources. Public records remain explicitly non-customer-specific.
 - Opens on a compact Coverage workspace with provider, service, incident, and filing facts above one complete service worklist. All opens first, with visible shortcuts for Covered and Needs review.
@@ -44,7 +44,7 @@ The runtime data path does not require an MCP server or a user-supplied `sla.dir
 ## First use
 
 1. Install SLA Review and open it from the Dynatrace Apps page.
-2. The app opens directly in **Coverage** and detects providers from Smartscape topology, cloud dimensions, and source-owned provider tags. The complete loaded inventory is visible under All. Use Covered and Needs review to focus the same data without changing its classification.
+2. The app opens directly in **Coverage** and detects providers from bounded Smartscape cloud inventory, exact service topology, cloud dimensions, and source-owned provider tags. The complete loaded service inventory is visible under All. Use Covered and Needs review to focus the same data without changing its classification. A detected provider can appear before any service is attributed to it.
 3. If a dependency is not visible in topology or tags, confirm its exact service boundary in **Coverage** or enable an account-specific source in **Settings > Provider connections**. AWS, Azure, GCP, and OCI remain peer options.
 4. For each optional account, subscription, project, or tenancy connection, create a least-privilege provider identity and store its secret in Dynatrace Credential Vault. SLA Review receives only the credential record ID.
 5. Add the exact provider hosts to Dynatrace External requests, test the connection, and save it only after verification succeeds. A provider connection can place its provider in scope, but does not assign services or prove provider fault.

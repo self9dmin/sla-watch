@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.61
+
+- Detects AWS, Azure, GCP, and OCI from bounded Smartscape provider inventory, even when no loaded service has a direct provider runtime relationship.
+- Shows aggregate account, subscription, zone-record, and resource-type context without retrieving cloud account identifiers.
+- Separates environment provider presence from service-level attribution and replaces misleading No provider evidence labels with No service-level provider link.
+- Keeps automatic service coverage conservative: only exact provider-native topology, a matching source tag, or an operator-confirmed mapping assigns a service.
+
+## 0.0.60
+
+- Shows only providers supported by current environment evidence, confirmed Coverage, or an enabled incident connection.
+- Adds newly detected provider slugs to the rail automatically while retaining bundled marks for AWS, Azure, GCP, and OCI.
+- Gives other detected providers a readable local monogram without loading remote SVG content.
+
 ## 0.0.59
 
 - Keeps a direct or reloaded grouped-case Incidents link on the requested review while provider matching and case grouping finish asynchronously.

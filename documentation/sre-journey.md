@@ -32,6 +32,7 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 
 - A fresh user reaches Coverage without making a configuration choice.
 - Automatic provider detection is never described as proof of contract coverage, fault, impact, or eligibility.
+- Global provider inventory and service-level attribution are shown as separate states. A detected cloud does not silently claim every service in the environment.
 - No provider credential is requested until an administrator deliberately opens Provider connections.
 - No access or upstream failure is converted into an empty or healthy state.
 - Returning users keep their workspace configuration and do not see first-run ceremony again.

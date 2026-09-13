@@ -22,6 +22,11 @@ import {
   mergeServiceInventory,
 } from "../data/providerAttribution";
 import { buildProviderCoverageModel } from "../data/providerCoverage";
+import {
+  parseProviderInventory,
+  providerInventoryDetail,
+  providerInventorySlugs,
+} from "../data/providerInventory";
 import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
 import { parseProblemRecords } from "../data/problems";
 import { parseServiceTelemetry } from "../data/serviceTelemetry";
@@ -36,6 +41,7 @@ import {
   INCIDENT_SMARTSCAPE_RESULT_LIMIT,
   SERVICE_INVENTORY_COUNT_QUERY,
   SERVICE_RESULT_LIMIT,
+  SMARTSCAPE_PROVIDER_INVENTORY_QUERY,
   SMARTSCAPE_COVERAGE_COUNT_QUERY,
   SMARTSCAPE_RESULT_LIMIT,
   createIncidentServicesQuery,
@@ -275,6 +281,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     isLoading: metricsLoading,
   } = useDql({ query: metricsQuery });
   const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
+  const providerInventoryQuery = useDql({ query: SMARTSCAPE_PROVIDER_INVENTORY_QUERY });
   const topologyCountQuery = useDql({ query: SMARTSCAPE_COVERAGE_COUNT_QUERY });
   const globalEntityServices = useMemo<ServiceRecord[]>(
     () => parseServiceRecords(serviceData),
@@ -367,6 +374,14 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     () => detectedProviderSlugs(providerEvidence),
     [providerEvidence],
   );
+  const providerInventory = useMemo(
+    () => parseProviderInventory(providerInventoryQuery.data),
+    [providerInventoryQuery.data],
+  );
+  const inventoryDetectedProviders = useMemo(
+    () => providerInventorySlugs(providerInventory),
+    [providerInventory],
+  );
   const tagDetectedProviders = useMemo(
     () => detectedProviderTagSlugs(services.map((service) => service.tags), providerLabelKey),
     [providerLabelKey, services],
@@ -385,7 +400,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   );
   const applicableProviderSlugs = useMemo(
     () => resolveEnvironmentProviderSlugs({
-      detected: topologyDetectedProviders,
+      detected: [...inventoryDetectedProviders, ...topologyDetectedProviders],
       tagged: tagDetectedProviders,
       assigned: assignedProviders,
       connected: connectedProviders,
@@ -393,6 +408,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     [
       assignedProviders,
       connectedProviders,
+      inventoryDetectedProviders,
       tagDetectedProviders,
       topologyDetectedProviders,
     ],
@@ -426,6 +442,9 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const logCount = firstCount(logsData, "log_count");
   const spanCount = firstCount(spansData, "span_count");
   const selectedProviderSlug = directoryData?.provider.slug ?? providerSlug;
+  const selectedProviderInventory = providerInventory.find(
+    (summary) => summary.providerSlug === providerSlug,
+  );
   const providerLabels = useMemo(
     () =>
       Array.from(
@@ -526,7 +545,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             ? "Review needed"
             : matchedProviderServices > 0
               ? "Coverage ready"
-              : "No provider coverage";
+              : "No services attributed";
   const coverageTone: Tone =
     telemetryLoading || inventoryLoading || directoryLoading || topologyQuery.isLoading || scopeSettings.loading
       ? "neutral"
@@ -599,6 +618,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             <ProviderSwitcher
               activeProviderSlug={providerSlug}
               providerSlugs={applicableProviderSlugs}
+              inventory={providerInventory}
               onSelect={selectProvider}
             />
           </div>
@@ -623,19 +643,27 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 label="Providers"
                 value={`${applicableProviderSlugs.length}`}
                 detail={
-                  topologyQuery.isLoading || metricsLoading || scopeSettings.loading || providerConnections.loading
+                  providerInventoryQuery.isLoading || topologyQuery.isLoading || metricsLoading || scopeSettings.loading || providerConnections.loading
                     ? "checking this environment"
+                    : providerInventoryQuery.error
+                      ? applicableProviderSlugs.length > 0
+                        ? "provider inventory unavailable; showing linked providers"
+                        : "provider inventory unavailable"
                     : applicableProviderSlugs.length === 0
                       ? "none detected or configured"
                       : directoryLoading
                         ? `checking ${providerDisplayName(providerSlug)}`
                         : directoryData
-                          ? `${providerName} selected`
+                          ? selectedProviderInventory
+                            ? `${providerName}: ${providerInventoryDetail(selectedProviderInventory)}`
+                            : `${providerName} selected`
                           : `${providerDisplayName(providerSlug)} unavailable`
                 }
                 tone={
-                  topologyQuery.isLoading || metricsLoading || scopeSettings.loading || providerConnections.loading
+                  providerInventoryQuery.isLoading || topologyQuery.isLoading || metricsLoading || scopeSettings.loading || providerConnections.loading
                     ? "neutral"
+                    : providerInventoryQuery.error
+                      ? "warning"
                     : applicableProviderSlugs.length === 0
                       ? "warning"
                     : directoryLoading
