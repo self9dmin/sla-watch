@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.59
+
+- Keeps a direct or reloaded grouped-case Incidents link on the requested review while provider matching and case grouping finish asynchronously.
+- Recalculates the requested case page when the Problem worklist changes from its initial ungrouped state to the final correlated state.
+- Preserves normal manual case selection after route restoration is complete.
+
 ## 0.0.58
 
 - Organizes related Dynatrace Problems into potential provider-impact review cases instead of presenting every signal as a separate SLA event.

@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.58",
+    version: "0.0.59",
     label: "Current release",
+    summary: "Kept grouped-case links on the correct review.",
+    details: [
+      "A direct or reloaded Incidents link now follows the requested Problem as provider matching and case grouping finish loading.",
+      "The case list recalculates the correct page when asynchronous evidence changes a Problem from an independent record into a grouped review case.",
+      "Manual case selection remains available after the requested route has settled.",
+    ],
+  },
+  {
+    version: "0.0.58",
+    label: "Previous release",
     summary: "Turned repeated Problems into traceable impact-review cases.",
     details: [
       "Incidents now groups related Dynatrace Problems only when provider service, effective terms scope, time, and shared service or root-cause evidence support one review.",
