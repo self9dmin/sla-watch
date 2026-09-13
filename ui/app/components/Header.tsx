@@ -181,7 +181,7 @@ export const Header = ({
           <p>
             Use Coverage to confirm the provider boundary, Performance to track
             customer objectives, Incidents to inspect Dynatrace Problems, and
-            Evidence to prepare review packages or compare provider reports.
+            Evidence to complete a human review or inspect optional provider corroboration.
             FinOps Agent is planned and is not available in this release.
           </p>
           <section>
@@ -195,8 +195,8 @@ export const Header = ({
             <h3>2. Check performance</h3>
             <p>
               Performance evaluates app-managed customer objectives from
-              Dynatrace service-request telemetry. Provider reports remain
-              separate evidence.
+              Dynatrace service-request telemetry. Provider corroboration remains
+              optional, separate evidence.
             </p>
           </section>
           <section>
@@ -211,8 +211,8 @@ export const Header = ({
             <h3>4. Finish the evidence review</h3>
             <p>
               Evidence lists Problems that overlap confirmed or suggested
-              provider coverage. Mark a package ready or not provider-related,
-              then review any provider-owned report as separate supporting evidence.
+              provider coverage. Mark a case ready, save it for more evidence,
+              or exclude it, then inspect provider corroboration when useful.
               Nothing is submitted from this workspace.
             </p>
           </section>

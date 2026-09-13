@@ -210,7 +210,7 @@ export const PerformanceWorkspace = ({
           <strong>How it is used</strong>
           <span>
             Objective status comes from Dynatrace service telemetry. Incidents
-            and Evidence keep provider reports separate from customer-observed
+            and Evidence keep optional provider corroboration separate from customer-observed
             performance.
           </span>
         </div>
@@ -331,7 +331,7 @@ export const PerformanceWorkspace = ({
                 <div className="performance-boundary">
                   <strong>Measurement boundary</strong>
                   <span>
-                    Provider reports remain separate evidence and do not change
+                    Provider corroboration remains optional evidence and does not change
                     this customer-observed result.
                   </span>
                 </div>

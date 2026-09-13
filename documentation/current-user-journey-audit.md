@@ -11,6 +11,17 @@ This audit followed the installed app in Chrome as an SRE would encounter it. It
 
 The live behavior was compared with the implementation so that a confusing product decision could be separated from a navigation or state bug.
 
+## 0.0.67 completion outcome
+
+The Evidence workspace now completes the SRE journey without creating another system:
+
+- Evidence opens on **Review cases**, with search, explicit state filters, complete counts, and 20 cases per page. **Provider corroboration** remains a separate optional source view.
+- Incidents and Evidence resolve the same current state: **Needs review**, **Needs evidence**, **Ready for follow-up**, **Excluded**, **Mixed review**, or an explicit loading or unavailable state.
+- The selected review leads with readiness across Coverage, Customer impact, Terms, Provider corroboration, and Required items. Supporting telemetry and contract detail stay available without competing with the decision.
+- The evidence status separates **Collected automatically**, **Confirmed externally**, and **Missing**, so provider silence is never presented as proof against customer impact.
+- A completed review can be copied as a concise handoff or downloaded as a versioned JSON artifact. Both actions are local and non-mutating. Nothing is sent.
+- Existing stored decision values remain compatible; only the user-facing language changed to **Ready for follow-up**, **Needs evidence**, and **Excluded from provider follow-up**.
+
 ## 0.0.53 completion outcome
 
 The remaining Evidence and context-continuity findings are implemented without adding another workspace or decision:
@@ -60,8 +71,8 @@ Open app
             -> Coverage when provider scope is missing
             -> Evidence when provider relevance is found
        -> Evidence
-            -> Review candidates
-            -> Provider reports
+            -> Review cases
+            -> Provider corroboration (optional)
        -> Directory
        -> Settings
             -> Review defaults
@@ -70,8 +81,11 @@ Open app
             -> Appearance
             -> Walkthrough
 
-Evidence validation
-  -> currently no explicit final package or completion state
+Evidence review
+  -> Ready for follow-up
+  -> Needs evidence
+  -> Excluded from provider follow-up
+  -> Copy summary or download JSON without submitting
 
 Future FinOps Agent
   -> intentionally disabled
@@ -83,24 +97,24 @@ The navigation labels read like a sequence, but Performance is a persistent moni
 
 | Stage | User question | What the app does today | User action | Exit or success signal | Current emotion and friction |
 | --- | --- | --- | --- | --- | --- |
-| 1. Entry | Where do I start? | Opens Coverage directly. The optional walkthrough describes six areas and changes no state. | Review provider and coverage state, or run the tour. | Coverage should communicate whether action is needed. | Good start. The tour is concise, but its last step is Settings instead of the end of the operational workflow. |
-| 2. Coverage | Which services depend on AWS, and what needs my judgment? | Combines Dynatrace service inventory, provider-native topology, source tags, and confirmed mappings. Defaults to a `Needs review` exception list. | Confirm only ambiguous or unsupported mappings. Inspect covered services only when needed. | One consistent count and a clear `Coverage ready` state. | Broken in the observed tenant. The header says `0 services` and `2 suggestions to review`, the review list says `0`, and Covered shows two confirmed Amazon EC2 mappings. |
-| 3. Performance | Are covered services meeting their objectives? | Shows objectives managed by SLA Review and evaluated by Dynatrace. Opens native SLOs for deeper analysis. | Usually observe. Explicitly create an objective from Coverage only when desired. | Objective state is visible and no action is required unless an SRE chooses to investigate. | Clear and complementary. A possible trust issue remains because the same 30-day service objective showed 71.156% in Coverage and 63.794% in Performance during the audit. |
-| 4. Incidents | Which Problems deserve provider review? | Prioritizes Dynatrace Problems and shows affected services, provider match, root cause availability, state, and observed window. | Select a Problem. Open Problems for investigation, resolve a coverage gap, or continue to Evidence. | A Problem is either unrelated, needs a coverage decision, or is ready for Evidence. | The focused view is clear. The missing-coverage handoff is not. |
-| 5. Coverage repair loop | How do I map the exact service for this Problem? | `Resolve coverage` returns to the general Coverage page. | Manually change the filter to `All loaded`, search for the affected service, map it, return to Incidents, reselect the Problem, then continue. | The same Problem becomes ready for Evidence. | High-friction and easy to abandon. Problem ID, affected service, provider, and return destination are lost. The same context loss exists in Evidence's general `Review coverage` link. |
-| 6. Evidence candidates | Is this incident review valid enough to act on? | Builds candidates from Problem overlap with provider coverage. The SRE can validate or dismiss, add a note, and acknowledge the review boundary. | Validate or dismiss the selected candidate. | A saved decision appears as `Validated` or `Dismissed`. | The mechanics are understandable, but `Validated` is not a meaningful finish. There is no claim package, completeness state, or explicit message that the SRE's work is done and nothing was sent. |
-| 7. Provider reports | Did the provider acknowledge a related event? | Keeps optional account-specific reports separate from Dynatrace evidence. Public terms and Problems remain available without a connection. | Review reports or configure a read-only provider connection. | Reports supplement the candidate or remain unavailable without blocking the workflow. | Correct product boundary. The empty state presents `Configure source` and `Add AWS connection`, which go to the same settings page. |
-| 8. Directory | What terms and evidence requirements apply? | Shows public terms, service coverage, claim requirements, support details, sources, and custom terms. | Read the applicable record. Add custom terms only when a private agreement differs. | Applied terms can be understood without mandatory data entry. | Strong reference experience. The empty Custom terms view repeats the same `Add custom terms` action twice. |
-| 9. Settings | What must an administrator configure? | Holds the active provider, tag key, lookback, optional account connections, custom terms, theme, and tour. | Change shared defaults only when needed. | Settings persist and the operating views consume the same state. | Mostly correct separation. Custom terms currently loads Azure services while AWS is the active runtime provider, which makes the editor unsafe. |
-| 10. Stop | Where does the SRE stop? | The walkthrough says Evidence validation approves operational follow-up, but the product has no final readiness or package state. | Infer that a saved validation is the end. | None beyond `Validated`. | The stopping point is ambiguous. The user cannot tell whether evidence is complete, whether anything was sent, or what remains for a contract owner. |
+| 1. Entry | Where do I start? | Opens Coverage directly. The optional walkthrough describes six areas, ends in Evidence, and changes no state. | Review provider and coverage state, or run the tour. | Coverage communicates the strongest topology evidence and whether any service decision is required. | Immediate value without setup ceremony. |
+| 2. Coverage | Which services depend on this provider, and what needs my judgment? | Separates provider-level infrastructure from verified service links, combines Smartscape topology, source tags, and confirmed mappings, and opens the view that matches the evidence returned. | Inspect all loaded services or confirm only an ambiguous relationship. | Summary, filter counts, rows, and selected-provider evidence derive from one model. | Complete context without fabricating service attribution. |
+| 3. Performance | Are covered services meeting their objectives? | Shows objectives managed by SLA Review and uses the same native Dynatrace evaluation in Coverage and Performance. Opens native SLOs for deeper analysis. | Usually observe. Explicitly create an objective from Coverage only when desired. | Objective state is consistent across both surfaces. | Clear and complementary. |
+| 4. Incidents | Which Problems deserve provider review? | Prioritizes Dynatrace Problems, groups only defensible related records, shows affected services and root-cause context, and reuses the current Evidence state. | Select a case. Open Problems for investigation, resolve a coverage gap, continue to Evidence, or use the guarded bulk exclusion. | Each case clearly needs review, needs evidence, is ready for follow-up, is excluded, is mixed, or is unavailable. | Current state is consistent across Incidents and Evidence. |
+| 5. Coverage repair loop | How do I map the exact service for this Problem? | `Resolve coverage` carries the provider, case, lead Problem, affected service, provider service, and return destination into Coverage. | Confirm the focused relationship, then return to the same review. | The original case resumes with current Coverage. | One bounded detour with no manual rediscovery. |
+| 6. Evidence review | Is this incident review complete enough for operational follow-up? | Carries the selected case forward, leads with readiness, and assembles Dynatrace evidence, objectives, terms, exclusions, required items, and optional provider corroboration. | Save Ready for follow-up, Needs evidence, or Excluded from provider follow-up. Optionally copy or download the review. | The saved state is explicit, supporting detail collapses after completion, and the UI states that nothing was sent. | The SRE has a clear stopping point and a portable handoff without another workflow. |
+| 7. Provider corroboration | Did the provider acknowledge a related event? | Keeps optional account-specific records separate from Dynatrace evidence. Public terms and Problems remain available without a connection. | Review corroboration or configure one read-only provider connection. | Corroboration supplements the review or remains unavailable without blocking it. | The evidence-source boundary and optionality are explicit. |
+| 8. Directory | What terms and evidence requirements apply? | Shows public terms, service coverage, claim requirements, support details, sources, and custom terms. | Read the applicable record. Add custom terms only when a private agreement differs. | Applied terms can be understood without mandatory data entry. | Strong reference experience with one empty-state action. |
+| 9. Settings | What must an administrator configure? | Holds the focused provider, tag key, lookback, optional account connections, custom terms, theme, and tour. Provider-specific editors use the route provider consistently. | Change shared defaults only when needed. | Settings persist and the operating views consume the same state. | Administrative work stays outside the response path. |
+| 10. Stop | Where does the SRE stop? | Evidence saves an explicit current outcome and states that nothing was sent. Ready reviews can be copied or downloaded for a contract owner. | Stop, or hand off the portable review outside the app. | Ready for follow-up, Needs evidence, or Excluded from provider follow-up. | The boundary and next owner are clear. |
 
 ## Emotional curve
 
 ```text
 Entry          Coverage          Performance       Incidents        Evidence         Stop
-curious   ->   uncertain    ->   reassured    ->   focused     ->   cautious    ->   unsure
-                conflicting       clear health      clear triage      valid choice      no finish
-                status            view               until handoff     but no package
+curious   ->   oriented     ->   reassured    ->   focused     ->   deliberate   ->   confident
+                truthful           consistent        bounded cases     clear gaps        explicit outcome
+                topology           objectives        and state         and sources       nothing sent
 ```
 
 ## Complementary versus redundant behavior
@@ -118,7 +132,9 @@ curious   ->   uncertain    ->   reassured    ->   focused     ->   cautious    
 | Two `Add custom terms` buttons in an empty Directory tab | Redundant | Show one primary action when no custom terms exist. Restore the header action after a list exists. |
 | Coverage summary, recommendation, and worklist | Intended reinforcement, currently contradictory | Derive every count and status from one normalized set of covered, review, and unscoped services. |
 
-## Confirmed journey breaks
+## Original audit findings
+
+The findings below describe the `0.0.51` production snapshot. The completion outcomes above record their resolution.
 
 ### Blocker: Custom terms can use the wrong provider
 

@@ -18,6 +18,8 @@ type ProviderNoticesProps = {
 
 type Tone = "neutral" | "warning" | "positive";
 
+const PROVIDER_NOTICE_PAGE_SIZE = 20;
+
 const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode }) => <span className={`status-pill status-pill-${tone}`}>{children}</span>;
 
 const formatDateTime = (value?: string): string => {
@@ -100,16 +102,33 @@ const NoticeDetail = ({ notice, providerName, correlation }: { notice: ProviderN
 export const ProviderNotices = ({ providerSlug, lookbackHours, topology = [], embedded = false }: ProviderNoticesProps) => {
   const source = useProviderNoticeSource(providerSlug, lookbackHours);
   const [selectedId, setSelectedId] = useState<string>();
+  const [page, setPage] = useState(1);
   const response = source.response;
-  const selected = response?.notices.find((notice) => notice.id === selectedId) ?? response?.notices[0];
+  const pageCount = Math.max(1, Math.ceil((response?.notices.length ?? 0) / PROVIDER_NOTICE_PAGE_SIZE));
+  const visibleNotices = useMemo(
+    () => response?.notices.slice((page - 1) * PROVIDER_NOTICE_PAGE_SIZE, page * PROVIDER_NOTICE_PAGE_SIZE) ?? [],
+    [page, response?.notices],
+  );
+  const selected = visibleNotices.find((notice) => notice.id === selectedId) ?? visibleNotices[0];
   const selectedCorrelation = useMemo(
     () => selected ? correlateProviderNoticeToTopology(selected, topology) : { matches: [], matchedResourceCount: 0, matchedServiceNames: [] },
     [selected, topology],
   );
 
   useEffect(() => {
-    if (response?.notices.length && !response.notices.some((notice) => notice.id === selectedId)) setSelectedId(response.notices[0].id);
-  }, [response?.notices, selectedId]);
+    setPage(1);
+    setSelectedId(undefined);
+  }, [lookbackHours, providerSlug, source.effectiveConnectionKey]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, pageCount));
+  }, [pageCount]);
+
+  useEffect(() => {
+    if (visibleNotices.length > 0 && !visibleNotices.some((notice) => notice.id === selectedId)) {
+      setSelectedId(visibleNotices[0].id);
+    }
+  }, [selectedId, visibleNotices]);
 
   const activeCount = response?.notices.filter((notice) => notice.state === "ACTIVE").length ?? 0;
 
@@ -117,10 +136,11 @@ export const ProviderNotices = ({ providerSlug, lookbackHours, topology = [], em
     <>
       <div className="provider-notices-heading">
         <div>
-          <Heading level={embedded ? 3 : 2}>{embedded ? "Provider reports" : "Evidence"}</Heading>
-          <Paragraph>Review provider-owned events as supporting evidence. A report does not establish local impact.</Paragraph>
+          <Heading level={embedded ? 3 : 2}>{embedded ? "Provider corroboration" : "Evidence"}</Heading>
+          <Paragraph>Review provider-owned events as optional supporting evidence. A report does not establish local impact.</Paragraph>
         </div>
         <div className="provider-notices-actions">
+          {embedded ? <StatusPill tone="neutral">Optional</StatusPill> : null}
           {response ? <SourceLabel response={response} /> : null}
           {source.accountConnectionSupported && source.savedConnections.length > 0 ? (
             <select className="provider-notice-source-select" value={source.effectiveConnectionKey} onChange={(event) => source.setSourceConnectionKey(event.target.value)} aria-label={`${source.providerName} notice scope`}>
@@ -158,14 +178,21 @@ export const ProviderNotices = ({ providerSlug, lookbackHours, topology = [], em
           ) : (
             <div className="provider-notices-layout">
               <aside className="provider-notice-queue" aria-label={`${source.providerName} provider evidence`}>
-                <div className="provider-notice-queue-title"><strong>Notice queue</strong><span>{response.notices.length} returned</span></div>
+                <div className="provider-notice-queue-title"><strong>Provider records</strong><span>{response.notices.length} returned</span></div>
                 <div className="provider-notice-queue-list">
-                  {response.notices.slice(0, 20).map((notice) => (
+                  {visibleNotices.map((notice) => (
                     <button type="button" key={notice.id} className={`provider-notice-item${selected?.id === notice.id ? " selected" : ""}`} onClick={() => setSelectedId(notice.id)} aria-pressed={selected?.id === notice.id}>
                       <span><strong>{notice.title}</strong><small>{notice.products.slice(0, 2).map((product) => product.name).join(", ") || notice.id}</small></span>
                       <StatusPill tone={notice.state === "ACTIVE" ? "warning" : "neutral"}>{notice.state === "ACTIVE" ? "Active" : "Closed"}</StatusPill>
                     </button>
                   ))}
+                </div>
+                <div className="provider-notice-queue-footer" aria-label="Provider record pages">
+                  <span>Page {page} of {pageCount}</span>
+                  <div>
+                    <Button size="condensed" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Previous</Button>
+                    <Button size="condensed" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))}>Next</Button>
+                  </div>
                 </div>
               </aside>
               {selected ? <NoticeDetail notice={selected} providerName={response.providerName} correlation={selectedCorrelation} /> : null}
