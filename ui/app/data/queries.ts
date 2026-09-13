@@ -1,6 +1,7 @@
 export const SERVICE_RESULT_LIMIT = 200;
 export const SMARTSCAPE_RESULT_LIMIT = 500;
 export const PROVIDER_INVENTORY_RESULT_LIMIT = 1000;
+export const PROVIDER_HOST_CONTEXT_RESULT_LIMIT = 500;
 export const INCIDENT_SMARTSCAPE_RESULT_LIMIT = 2000;
 export const INCIDENT_SERVICE_FILTER_LIMIT = 200;
 
@@ -22,6 +23,34 @@ smartscapeNodes {"AWS_*", "AZURE_*", "GCP_*", "OCI_*", "ORACLE_*"}, from:-7d, to
 | summarize node_count = count(), by:{node_type}
 | sort node_count desc
 | limit ${PROVIDER_INVENTORY_RESULT_LIMIT}
+`;
+
+export const SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY = `
+smartscapeNodes HOST, from:-7d, to:now()
+| fields target_type = type,
+    cloud_provider = getNodeField(id, "cloud.provider"),
+    cloud_account_id = getNodeField(id, "cloud.account.id"),
+    cloud_region = getNodeField(id, "cloud.region"),
+    aws_account_id = getNodeField(id, "aws.account.id"),
+    aws_region = getNodeField(id, "aws.region"),
+    azure_subscription = getNodeField(id, "azure.subscription"),
+    azure_location = getNodeField(id, "azure.location"),
+    gcp_project_id = getNodeField(id, "gcp.project.id"),
+    gcp_region = getNodeField(id, "gcp.region"),
+    oci_tenancy_id = getNodeField(id, "oci.tenancy.id"),
+    oci_region = getNodeField(id, "oci.region")
+| filter isNotNull(cloud_provider)
+    or isNotNull(aws_account_id)
+    or isNotNull(aws_region)
+    or isNotNull(azure_subscription)
+    or isNotNull(azure_location)
+    or isNotNull(gcp_project_id)
+    or isNotNull(gcp_region)
+    or isNotNull(oci_tenancy_id)
+    or isNotNull(oci_region)
+| summarize host_count = count(), by:{target_type, cloud_provider, cloud_account_id, cloud_region, aws_account_id, aws_region, azure_subscription, azure_location, gcp_project_id, gcp_region, oci_tenancy_id, oci_region}
+| sort host_count desc
+| limit ${PROVIDER_HOST_CONTEXT_RESULT_LIMIT}
 `;
 
 const PREFERRED_COVERAGE_ANCHORS = `target_type == "HOST"

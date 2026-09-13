@@ -15,8 +15,8 @@ import { CONNECTED_PROVIDER_OPTIONS, createProviderConnectionKey, providerConnec
 import { EVIDENCE_LOOKBACK_OPTIONS } from "../data/lookback";
 import { detectedProviderTagSlugs } from "../data/providerTags";
 import { parseProviderInventory, providerInventorySlugs } from "../data/providerInventory";
-import { createServiceMetricsQuery, SERVICES_QUERY, SMARTSCAPE_PROVIDER_INVENTORY_QUERY, SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
-import { detectedProviderSlugs, parseServiceCloudContexts, parseSmartscapeScopeEdges } from "../data/topology";
+import { createServiceMetricsQuery, SERVICES_QUERY, SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY, SMARTSCAPE_PROVIDER_INVENTORY_QUERY, SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
+import { detectedProviderSlugs, parseProviderHostContexts, parseServiceCloudContexts, parseSmartscapeScopeEdges } from "../data/topology";
 import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
 import type { AwsProviderNoticesResponse, AzureProviderNoticesResponse, ContractOverrideValue, ContractScopeKind, EvidenceLookbackHours, GcpProviderNoticesResponse, OciProviderNoticesResponse, ProviderConnectionValue, ServiceRecord, SlaProviderResponse, SlaThemePreference } from "../types";
 
@@ -74,6 +74,7 @@ const WatchSettings = () => {
   const [saved, setSaved] = useState(false);
   const topologyQuery = useDql({ query: SMARTSCAPE_SERVICE_RUNTIME_QUERY });
   const providerInventoryQuery = useDql({ query: SMARTSCAPE_PROVIDER_INVENTORY_QUERY });
+  const providerHostContextQuery = useDql({ query: SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY });
   const serviceCloudQueryText = useMemo(() => createServiceMetricsQuery(lookbackHours), [lookbackHours]);
   const serviceCloudQuery = useDql({ query: serviceCloudQueryText });
   const topology = useMemo(() => parseSmartscapeScopeEdges(topologyQuery.data), [topologyQuery.data]);
@@ -83,10 +84,14 @@ const WatchSettings = () => {
     () => providerInventorySlugs(parseProviderInventory(providerInventoryQuery.data)),
     [providerInventoryQuery.data],
   );
+  const hostDetectedProviders = useMemo(
+    () => parseProviderHostContexts(providerHostContextQuery.data).map((summary) => summary.providerSlug),
+    [providerHostContextQuery.data],
+  );
   const detectedProviders = useMemo(() => resolveEnvironmentProviderSlugs({
-    detected: [...inventoryDetectedProviders, ...detectedProviderSlugs(providerEvidence)],
+    detected: [...inventoryDetectedProviders, ...hostDetectedProviders, ...detectedProviderSlugs(providerEvidence)],
     tagged: detectedProviderTagSlugs(providerEvidence.map((edge) => edge.serviceTags), providerLabelKey),
-  }), [inventoryDetectedProviders, providerEvidence, providerLabelKey]);
+  }), [hostDetectedProviders, inventoryDetectedProviders, providerEvidence, providerLabelKey]);
   const assignedProviders = useMemo(
     () => scopeSettings.assignments
       .filter((assignment) => assignment.enabled)

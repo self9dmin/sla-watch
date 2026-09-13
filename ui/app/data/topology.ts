@@ -1,4 +1,5 @@
 import type { SmartscapeScopeEdge } from "../types";
+import { sortProviderSlugs } from "./providers";
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
@@ -21,6 +22,11 @@ const normalizeCloudProvider = (value: unknown): string | undefined => {
   if (provider === "gcp" || provider === "google_cloud") return "gcp";
   if (provider === "oci" || provider === "oracle" || provider === "oracle_cloud") return "oci";
   return undefined;
+};
+
+const positiveCount = (value: unknown): number => {
+  const count = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(count) && count > 0 ? count : 0;
 };
 
 const tagStrings = (value: unknown): string[] => {
@@ -80,6 +86,73 @@ const providerFromTarget = (row: Record<string, unknown>): { slug?: string; evid
   }
 
   return {};
+};
+
+export type ProviderHostContextSummary = {
+  providerSlug: string;
+  hostCount: number;
+  accountIds: string[];
+  regions: string[];
+  evidence: string[];
+};
+
+export const parseProviderHostContexts = (
+  data: { records?: unknown[] } | undefined,
+): ProviderHostContextSummary[] => {
+  const records = Array.isArray(data?.records) ? data.records : [];
+  const seenGroups = new Set<string>();
+  const summaries = new Map<string, {
+    hostCount: number;
+    accountIds: Set<string>;
+    regions: Set<string>;
+    evidence: Set<string>;
+  }>();
+
+  records.forEach((value) => {
+    const row = asRecord(value);
+    const provider = providerFromTarget(row);
+    const hostCount = positiveCount(row.host_count);
+    if (!provider.slug || hostCount === 0) return;
+
+    const region = firstText(
+      row.aws_region,
+      row.azure_location,
+      row.gcp_region,
+      row.oci_region,
+      row.cloud_region,
+    );
+    const groupKey = [
+      provider.slug,
+      provider.accountId ?? "",
+      region ?? "",
+      optionalText(row.cloud_provider) ?? "",
+    ].join("|");
+    if (seenGroups.has(groupKey)) return;
+    seenGroups.add(groupKey);
+
+    const summary = summaries.get(provider.slug) ?? {
+      hostCount: 0,
+      accountIds: new Set<string>(),
+      regions: new Set<string>(),
+      evidence: new Set<string>(),
+    };
+    summary.hostCount += hostCount;
+    if (provider.accountId) summary.accountIds.add(provider.accountId);
+    if (region) summary.regions.add(region);
+    if (provider.evidence) summary.evidence.add(provider.evidence);
+    summaries.set(provider.slug, summary);
+  });
+
+  return sortProviderSlugs(Array.from(summaries.keys())).map((providerSlug) => {
+    const summary = summaries.get(providerSlug)!;
+    return {
+      providerSlug,
+      hostCount: summary.hostCount,
+      accountIds: Array.from(summary.accountIds).sort(),
+      regions: Array.from(summary.regions).sort(),
+      evidence: Array.from(summary.evidence).sort(),
+    };
+  });
 };
 
 export const parseSmartscapeScopeEdges = (data: { records?: unknown[] } | undefined): SmartscapeScopeEdge[] => {

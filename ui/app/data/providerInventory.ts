@@ -7,6 +7,7 @@ export type ProviderInventorySummary = {
   accountScopeCount: number;
   regionCount: number;
   availabilityZoneCount: number;
+  computeResourceCount: number;
 };
 
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -50,6 +51,15 @@ const isRegionType = (providerSlug: string, nodeType: string): boolean => {
   return nodeType === "OCI_REGION" || nodeType.endsWith("_REGIONS");
 };
 
+const isComputeResourceType = (providerSlug: string, nodeType: string): boolean => {
+  if (providerSlug === "aws") return nodeType === "AWS_EC2_INSTANCE";
+  // This is a Dynatrace Smartscape node type, not a credential.
+  // eslint-disable-next-line noSecrets/no-secrets
+  if (providerSlug === "azure") return nodeType === "AZURE_MICROSOFT_COMPUTE_VIRTUALMACHINES";
+  if (providerSlug === "gcp") return nodeType === "GCP_COMPUTE_INSTANCE" || nodeType === "GCP_GCE_INSTANCE";
+  return nodeType === "OCI_COMPUTE_INSTANCE";
+};
+
 const sortUnique = (values: Iterable<string>): string[] =>
   Array.from(new Set(values)).sort((left, right) => left.localeCompare(right));
 
@@ -63,6 +73,7 @@ export const parseProviderInventory = (
     accountScopeCount: number;
     regionCount: number;
     availabilityZoneCount: number;
+    computeResourceCount: number;
   }>();
 
   records.forEach((value) => {
@@ -78,12 +89,14 @@ export const parseProviderInventory = (
       accountScopeCount: 0,
       regionCount: 0,
       availabilityZoneCount: 0,
+      computeResourceCount: 0,
     };
     summary.nodeCount += nodeCount;
     summary.nodeTypes.add(nodeType);
     if (isAccountScopeType(providerSlug, nodeType)) summary.accountScopeCount += nodeCount;
     if (isRegionType(providerSlug, nodeType)) summary.regionCount += nodeCount;
     if (isAvailabilityZoneType(nodeType)) summary.availabilityZoneCount += nodeCount;
+    if (isComputeResourceType(providerSlug, nodeType)) summary.computeResourceCount += nodeCount;
     summaries.set(providerSlug, summary);
   });
 
@@ -97,6 +110,7 @@ export const parseProviderInventory = (
       accountScopeCount: summary.accountScopeCount,
       regionCount: summary.regionCount,
       availabilityZoneCount: summary.availabilityZoneCount,
+      computeResourceCount: summary.computeResourceCount,
     };
   });
 };
@@ -114,8 +128,14 @@ export const providerInventoryDetail = (summary: ProviderInventorySummary): stri
         : "account";
   const details = [
     summary.accountScopeCount > 0 ? plural(summary.accountScopeCount, scopeNoun, scopeNoun === "tenancy" ? "tenancies" : `${scopeNoun}s`) : undefined,
-    summary.availabilityZoneCount > 0 ? plural(summary.availabilityZoneCount, "zone record") : undefined,
-    plural(summary.nodeTypes.length, "resource type"),
+    summary.computeResourceCount > 0
+      ? summary.providerSlug === "aws"
+        ? plural(summary.computeResourceCount, "EC2 instance")
+        : summary.providerSlug === "azure"
+          ? plural(summary.computeResourceCount, "VM")
+          : plural(summary.computeResourceCount, "compute instance")
+      : undefined,
+    plural(summary.nodeTypes.length, "Smartscape type"),
   ].filter((value): value is string => Boolean(value));
   return details.join(" · ");
 };

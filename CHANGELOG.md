@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Adds a bounded, aggregated host cloud-context query so provider discovery can use monitored-host metadata without loading one row per host.
+- Shows one provider-level infrastructure candidate when Dynatrace detects cloud infrastructure but cannot link a loaded service to it. Separate host and provider-native records are grouped for review without being treated as the same resource.
+- Replaces misleading availability-zone record totals with conservative compute-resource and Smartscape-type context.
+
 ## 0.0.61
 
 - Detects AWS, Azure, GCP, and OCI from bounded Smartscape provider inventory, even when no loaded service has a direct provider runtime relationship.
