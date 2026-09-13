@@ -1,6 +1,21 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.62`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.63`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.63 verified scenarios
+
+The `0.0.63` artifact from source commit `474402a` was deployed to the designated Dynatrace target environment on 2026-09-13 and exercised through the connected Chrome profile. The production smoke was read-only. It changed only the focused provider while checking both views. It did not change provider connections, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.63` manifest, six AppEngine functions, provider-attribution clarification, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `474402a` |
+| Release gate | Type checks, lint, 31 test suites with 176 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 83.72% statement coverage; zero production dependency vulnerabilities |
+| Installed version | The installed change log showed `0.0.63 Current release` and all four provider-attribution changes | Installed production change-log smoke |
+| Provider and service separation | Azure reported one subscription, one VM, and 12 Smartscape types as provider-level infrastructure while `AZURE SERVICE LINKS` reported `0` | Installed production Azure Coverage smoke after both Smartscape queries settled |
+| Evaluated inventory clarity | Coverage stated `8 environment services checked; none linked`, then grouped all eight records under `NOT LINKED TO AZURE` with `No Azure relationship` and `Not linked` on each row | Installed production Azure Coverage accessibility-tree and visual smoke |
+| Manual attribution safety | The selected unlinked service opened with `Assign provider service` set to `Choose a provider service`, plus `No Azure service relationship found`; no provider-wide service was preselected | Installed production Azure Coverage detail smoke |
+| AWS continuity | AWS reported three verified service links across eight evaluated environment services while retaining one account, nine EC2 instances, and 69 Smartscape types | Installed production AWS Coverage smoke |
+| Runtime quality | The complete Azure worklist and detail panel remained inside the bounded dark-theme workspace, and Chrome captured no production browser warning or error | Connected Chrome visual smoke and browser diagnostics |
 
 ## 0.0.62 verified scenarios
 
