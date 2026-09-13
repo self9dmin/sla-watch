@@ -138,35 +138,35 @@ Actor: signed-in user with `app-settings:objects:write` for the app's `contract-
 
 Deny or degraded behavior: without App Settings write permission, the page is read-only. Without service or Smartscape read access, unavailable target types are not fabricated; a provider-wide fallback can still be defined. Saving no record leaves the public directory record unchanged.
 
-## Triage a Problem for evidence review
+## Triage a provider-impact case for evidence review
 
 Actor: signed-in Dynatrace user.
 
 1. Incidents reads each Problem's stable Smartscape affected-entity and root-cause records, retaining deprecated classic fields only as a compatibility fallback, and reuses the canonical Evidence candidate rules.
-2. Active Problems are ordered first, then Problems with an exact overlap to the active provider boundary, then the newest remaining records.
-3. The worklist is limited to eight Problems per page. Changing pages selects the first visible record instead of retaining hidden context.
-4. The focused summary shows affected services, provider-service match, the exact root-cause entity, its loaded provider relationship, state, and observed window.
-5. A provider-relevant Problem opens directly in Evidence with the same Problem selected. A Problem with affected scope but no provider overlap opens Coverage. Full causal investigation opens in the native Dynatrace Problems app.
-6. An SRE may manually select up to 50 eligible closed Problems and explicitly confirm Not provider-related. A missing root cause remains visible but does not block that human decision. Active, provider-linked, incomplete, unconfirmed-scope, and previously reviewed Problems stay individual. Problems sharing one exact root-cause entity can be suggested as a group.
-7. The app writes one decision per Problem. A partial batch failure leaves failed Problems selected, refreshes once, and does not hide successful writes.
-8. Contract details, filing mechanics, credit values, traces, logs, remediation, and full causal analysis stay out of Incidents. They remain in Directory, Evidence, or the native Problems app as appropriate.
+2. The app creates one review case per Problem by default. It combines Problems only when all members resolve to one provider service and one effective contract scope, occur no more than 45 minutes apart within a six-hour maximum case span, and share either an affected service or one exact returned root cause. A host or location custom-term boundary prevents automatic grouping.
+3. Active cases are ordered first, then provider-relevant cases, then the newest remaining cases. The worklist is limited to 16 compact cases per page. Changing pages selects the first visible case instead of retaining hidden context.
+4. The focused summary shows Problem count, affected services, provider service, root-cause signals, state, observed window, and a default-open list of every included Problem.
+5. A provider-relevant case opens directly in Evidence with the same case selected. A case with affected scope but no provider overlap opens Coverage. Full causal investigation opens in the native Dynatrace Problems app.
+6. An SRE may manually select eligible closed cases containing up to 50 Problems and explicitly confirm Not provider-related. A missing root cause remains visible but does not block that human decision. Active, provider-linked, incomplete, unconfirmed-scope, and previously reviewed Problems stay protected.
+7. The app writes one decision per underlying Problem. A partial batch failure leaves the affected case selected, refreshes once, and does not hide successful writes.
+8. Contract details, filing mechanics, credit values, traces, logs, remediation, and full causal analysis stay out of Incidents. They remain in Directory, Evidence, or the native Problems app as appropriate. A case is labeled Potential SLA impact until a human review is complete.
 
-Deny or degraded behavior: missing topology, scope settings, decision-store access, or Problem access is surfaced as unavailable or incomplete. The Problem worklist remains usable when provider matching fails, but bulk mutation is disabled until current decisions and provider relationships can be read. The app never substitutes a name-based guess, treats absence of a provider link as proof, or treats a lower-confidence Smartscape candidate as observed.
+Deny or degraded behavior: missing topology, scope settings, contract settings, decision-store access, or Problem access is surfaced as unavailable or incomplete. The case worklist remains usable when provider matching fails, but automatic grouping and bulk mutation are disabled when the evidence required to do them safely is incomplete. The app never groups on vendor alone, substitutes a name-based guess, treats absence of a provider link as proof, or treats a lower-confidence Smartscape candidate as observed.
 
 ## Review an evidence candidate
 
 Actor: signed-in user with `app-settings:objects:read`; saving a decision also requires `app-settings:objects:write` for `evidence-decisions`.
 
-1. Evidence compares each returned Problem with exact saved scope mappings, explicit provider tags, observed provider-native topology, and lower-confidence Smartscape suggestions for the active provider.
-2. A Problem enters the candidate queue only when at least one exact affected service overlaps one of those boundaries. Saved mappings take precedence over provider tags, which take precedence over topology.
-3. The detail view gives one direct explanation of why the candidate appears and assembles the Problem window, affected services, exact incident-scoped request and failure totals, observed availability, up to three native objective snapshots, coverage basis, resolved terms, filing reference, exclusions, and published evidence requirements.
+1. Evidence compares each returned Problem with exact saved scope mappings, explicit provider tags, observed provider-native topology, and lower-confidence Smartscape suggestions for the active provider, then reuses the same review cases created for Incidents.
+2. A Problem enters the candidate queue only when at least one exact affected service overlaps one of those boundaries. Saved mappings take precedence over provider tags, which take precedence over topology. Problems are combined only by the documented case rules, never by provider name alone.
+3. The detail view gives one direct explanation of why the case appears and assembles the combined observed window, every supporting Problem, affected services, exact incident-scoped request and failure totals, observed availability, up to three native objective snapshots, coverage basis, resolved terms, filing reference, exclusions, and published evidence requirements.
 4. Evidence checks the optional provider source for a time-overlapping report. An exact affected-resource-to-Smartscape-runtime match is labeled exact; provider service plus time is supporting only. A public, missing, unavailable, or contradictory provider report never invalidates customer-observed impact.
-5. A Coverage repair preserves provider, Problem, affected service, selected provider service, and return destination. Provider-native topology is labeled observed, while hostname-only or conflicting topology remains visibly unconfirmed.
-6. Marking a package ready requires every published evidence item plus an explicit review-boundary acknowledgement. Saving Not ready requires a concise description of what remains. Classifying a candidate as Not provider-related requires a concise operational reason.
-7. App Settings stores one bounded Problem snapshot, exact affected entity IDs, the root-cause entity at review time, provider services, mapping basis, three-state decision, acknowledged evidence items, review time, and concise note.
-8. A saved decision remains current only while the Problem state, root-cause identity when recorded, mapping basis, affected entities, and provider-service scope still match. A changed Problem or boundary returns the candidate to Needs review. Reopening removes the decision and requires the current checklist before a new Package ready outcome.
+5. A Coverage repair preserves provider, case, lead Problem, affected service, selected provider service, and return destination. Provider-native topology is labeled observed, while hostname-only or conflicting topology remains visibly unconfirmed.
+6. Marking a package ready requires every published evidence item plus an explicit review-boundary acknowledgement. Saving Not ready requires a concise description of what remains. Classifying a case as Not provider-related requires a concise operational reason.
+7. One case action writes the same outcome to one bounded App Settings record per underlying Problem. Each record retains its Problem snapshot, exact affected entity IDs, root-cause entity at review time, provider services, mapping basis, three-state decision, acknowledged evidence items, review time, and concise note.
+8. A case has one current state only when every included Problem has a current decision with the same status. Partial or differing records appear as Mixed review. A changed Problem or boundary returns the affected case to review. Reopening removes every decision in the case and requires the current checklist before a new Package ready outcome.
 
-Deny or degraded behavior: a failed Problem, topology, directory, telemetry, objective, provider-source, or decision-store read is shown as incomplete rather than empty. A read-only user can inspect candidates and saved decisions but cannot save, reopen, or change an outcome. A decision does not establish provider fault, SLA eligibility, credit approval, or claim submission.
+Deny or degraded behavior: a failed Problem, topology, directory, telemetry, objective, provider-source, contract-setting, or decision-store read is shown as incomplete rather than empty. A read-only user can inspect cases and saved decisions but cannot save, reopen, or change an outcome. A review case and its decision do not establish an SLA violation, provider fault, SLA eligibility, credit approval, or claim submission.
 
 ## Confirm service coverage without runtime context
 

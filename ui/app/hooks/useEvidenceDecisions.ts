@@ -139,11 +139,28 @@ export const useEvidenceDecisions = () => {
   const deleteDecision = async (
     record: EvidenceDecisionRecord,
   ): Promise<void> => {
-    await remove.execute({
-      objectId: record.objectId,
-      optimisticLockingVersion: record.version,
-    });
-    await query.refetch();
+    await deleteDecisions([record]);
+  };
+
+  const deleteDecisions = async (
+    records: EvidenceDecisionRecord[],
+  ): Promise<void> => {
+    const failures: string[] = [];
+    for (const record of records) {
+      try {
+        await remove.execute({
+          objectId: record.objectId,
+          optimisticLockingVersion: record.version,
+        });
+      } catch (error) {
+        failures.push(error instanceof Error
+          ? error.message
+          : `The decision for ${record.problemId} could not be reset.`);
+      }
+    }
+    if (records.length > 0) await query.refetch();
+    if (failures.length > 0)
+      throw new Error(`${records.length - failures.length} decision${records.length - failures.length === 1 ? " was" : "s were"} reset. ${failures.length} failed.`);
   };
 
   return {
@@ -158,6 +175,7 @@ export const useEvidenceDecisions = () => {
     saveDecision,
     saveDecisions,
     deleteDecision,
+    deleteDecisions,
     refetch: query.refetch,
   };
 };

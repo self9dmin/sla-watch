@@ -7,8 +7,20 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.57",
+    version: "0.0.58",
     label: "Current release",
+    summary: "Turned repeated Problems into traceable impact-review cases.",
+    details: [
+      "Incidents now groups related Dynatrace Problems only when provider service, effective terms scope, time, and shared service or root-cause evidence support one review.",
+      "Potential SLA impact replaces premature violation language, while each included Problem remains visible and independently auditable.",
+      "Compact case cards and 16-case pages reduce scanning and pagination in large Problem windows.",
+      "Evidence now carries the complete review case forward, aggregates its affected services and observed window, and lists every supporting Problem in the package.",
+      "A case-level Evidence outcome updates each included Problem record so existing audit, staleness, and partial-failure protections remain intact.",
+    ],
+  },
+  {
+    version: "0.0.57",
+    label: "Previous release",
     summary: "Made provider context visible and immediate.",
     details: [
       "Replaced the active-provider dropdown with a compact AWS, Azure, GCP, and OCI logo rail that keeps all four core providers visible.",

@@ -22,17 +22,17 @@ import {
   assessProblemRootCause,
   bulkDismissalEligibility,
   createBulkDismissalNote,
-  createRootCauseReviewGroups,
-  formatSmartscapeEntityType,
   type IncidentBulkReviewItem,
-  type RootCauseAssessment,
-  type RootCauseReviewGroup,
 } from "../data/incidentTriage";
 import {
   EVIDENCE_LOOKBACK_OPTIONS,
   formatEvidenceLookback,
 } from "../data/lookback";
-import { prioritizeProblems } from "../data/incidentPrioritization";
+import {
+  buildIncidentReviewCases,
+  incidentReviewCaseForProblem,
+  type IncidentReviewCase,
+} from "../data/incidentReviewCases";
 import {
   createCoverageReviewPath,
   createEvidenceReviewPath,
@@ -40,6 +40,7 @@ import {
 } from "../data/reviewRoutes";
 import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
 import { useEvidenceDecisions } from "../hooks/useEvidenceDecisions";
+import { useContractOverrides } from "../hooks/useContractOverrides";
 
 type Tone = "neutral" | "warning" | "positive";
 
@@ -58,7 +59,7 @@ type IncidentReviewProps = {
   error?: Error;
 };
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 16;
 const MAX_BULK_REVIEW = 50;
 
 const StatusPill = ({
@@ -111,47 +112,43 @@ const candidateByProblem = (
   new Map(candidates.map((candidate) => [candidate.problem.id, candidate]));
 
 const IncidentDetail = ({
-  problem,
-  candidate,
-  serviceIds,
-  serviceNames,
+  reviewCase,
+  triageItems,
   providerSlug,
   providerName,
   matchingLoading,
-  rootCauseAssessment,
-  rootCauseGroup,
-  onSelectRootCauseGroup,
 }: {
-  problem: ProblemRecord;
-  candidate?: EvidenceCandidate;
-  serviceIds: string[];
-  serviceNames: string[];
+  reviewCase: IncidentReviewCase;
+  triageItems: IncidentBulkReviewItem[];
   providerSlug: string;
   providerName: string;
   matchingLoading: boolean;
-  rootCauseAssessment: RootCauseAssessment;
-  rootCauseGroup?: RootCauseReviewGroup;
-  onSelectRootCauseGroup: (group: RootCauseReviewGroup) => void;
 }) => {
-  const active = problem.status.toUpperCase() === "ACTIVE";
-  const affectedServices = candidate?.affectedServices.length
-    ? candidate.affectedServices.map((service) => service.name).join(", ")
-    : serviceNames.length > 0
-      ? serviceNames.join(", ")
-      : "No affected service returned";
-  const providerServices = candidate?.providerServiceNames.length
-    ? candidate.providerServiceNames.join(", ")
+  const problem = reviewCase.problems[0];
+  const candidate = reviewCase.candidates[0];
+  const affectedServices = reviewCase.affectedServices.length
+    ? reviewCase.affectedServices.map((service) => service.name).join(", ")
+    : "No affected service returned";
+  const providerServices = reviewCase.providerServiceNames.length
+    ? reviewCase.providerServiceNames.join(", ")
     : "Not matched";
-  const rootCause = problem.rootCause;
-  const rootCauseLabel = rootCause?.name ?? "Not returned";
-  const rootCauseType = rootCause
-    ? formatSmartscapeEntityType(rootCause.type)
-    : "No root-cause entity";
-  const hasAffectedServiceScope = serviceNames.length > 0;
+  const rootCauses = Array.from(new Map(
+    reviewCase.problems.flatMap((item) => item.rootCause
+      ? [[item.rootCause.id.toLowerCase(), item.rootCause] as const]
+      : []),
+  ).values());
+  const rootCauseLabel = rootCauses.length === 0
+    ? "Not returned"
+    : rootCauses.length === 1
+      ? rootCauses[0].name
+      : `${rootCauses.length} distinct signals`;
+  const hasAffectedServiceScope = reviewCase.affectedServices.length > 0;
+  const allCandidatesConfirmed = reviewCase.candidates.length === reviewCase.problems.length &&
+    reviewCase.candidates.every((item) => item.scopeConfirmed);
   const nextTone: Tone = matchingLoading
     ? "neutral"
     : candidate
-      ? candidate.scopeConfirmed
+      ? allCandidatesConfirmed
         ? "positive"
         : "warning"
       : hasAffectedServiceScope
@@ -160,7 +157,7 @@ const IncidentDetail = ({
   const nextLabel = matchingLoading
     ? "Checking coverage"
     : candidate
-      ? candidate.scopeConfirmed
+      ? allCandidatesConfirmed
         ? "Ready for evidence"
         : "Review suggested match"
       : hasAffectedServiceScope
@@ -168,33 +165,61 @@ const IncidentDetail = ({
         : "No service scope";
   const nextDetail = matchingLoading
     ? "Comparing affected services with Coverage and provider-native topology."
-    : candidate?.mappingEvidence ??
+    : candidate
+      ? reviewCase.groupingEvidence
+      :
       (hasAffectedServiceScope
         ? `No affected service currently overlaps ${providerName} coverage. Confirm the boundary before treating this Problem as provider evidence.`
          : "Dynatrace did not return an affected service that SLA Review can compare with provider coverage.");
-  const incidentPath = createIncidentReviewPath({ providerSlug, problemId: problem.id });
-  const evidencePath = createEvidenceReviewPath({ providerSlug, problemId: problem.id });
+  const incidentPath = createIncidentReviewPath({
+    providerSlug,
+    problemId: problem.id,
+    caseId: reviewCase.key,
+  });
+  const evidencePath = createEvidenceReviewPath({
+    providerSlug,
+    problemId: problem.id,
+    caseId: reviewCase.key,
+  });
   const coveragePath = createCoverageReviewPath({
     providerSlug,
     problemId: problem.id,
-    serviceId: serviceIds[0],
-    providerServiceId: candidate?.providerServiceIds[0],
+    serviceId: reviewCase.affectedServices[0]?.id,
+    providerServiceId: reviewCase.providerServiceIds[0],
     returnTo: incidentPath,
   });
+  const title = reviewCase.problems.length > 1
+    ? `${providerServices} impact review`
+    : problem.title;
+  const categories = Array.from(new Set(
+    reviewCase.problems.map((item) => formatStatus(item.category)),
+  )).join(", ");
+  const relatedTriage = triageItems.filter((item) =>
+    reviewCase.problems.some((caseProblem) => caseProblem.id === item.problem.id));
+  const providerLinkedRootCauses = relatedTriage.filter(
+    (item) => item.assessment.relation === "provider-linked",
+  ).length;
 
   return (
     <article className="incident-detail">
       <div className="incident-detail-heading">
         <div>
-          <span>{problem.id} · {formatStatus(problem.category)}</span>
-          <Heading level={3}>{problem.title}</Heading>
+          <span>
+            {reviewCase.problems.length} Dynatrace Problem{reviewCase.problems.length === 1 ? "" : "s"}
+            {categories ? ` · ${categories}` : ""}
+          </span>
+          <Heading level={3}>{title}</Heading>
         </div>
-        <StatusPill tone={active ? "warning" : "neutral"}>
-          {formatStatus(problem.status)}
+        <StatusPill tone={candidate ? "warning" : reviewCase.active ? "warning" : "neutral"}>
+          {candidate ? "Potential SLA impact" : reviewCase.active ? "Active" : formatStatus(problem.status)}
         </StatusPill>
       </div>
 
       <dl className="incident-detail-facts">
+        <div>
+          <dt>Problems</dt>
+          <dd>{reviewCase.problems.length}</dd>
+        </div>
         <div>
           <dt>Affected services</dt>
           <dd title={affectedServices}>{affectedServices}</dd>
@@ -204,28 +229,20 @@ const IncidentDetail = ({
           <dd title={providerServices}>{providerServices}</dd>
         </div>
         <div>
-          <dt>Root cause</dt>
+          <dt>Root-cause signals</dt>
           <dd title={rootCauseLabel}>{rootCauseLabel}</dd>
-        </div>
-        <div>
-          <dt>Provider relationship</dt>
-          <dd title={rootCauseAssessment.detail}>{rootCauseAssessment.label}</dd>
         </div>
       </dl>
 
-      <section className="incident-root-cause-context" aria-label="Dynatrace root-cause context">
+      <section className="incident-root-cause-context" aria-label="Dynatrace case correlation">
         <div>
-          <strong>{rootCause ? rootCauseType : rootCauseAssessment.label}</strong>
-          <span>{rootCauseAssessment.detail}</span>
+          <strong>{reviewCase.problems.length > 1 ? "Grouped review case" : "Independent review case"}</strong>
+          <span>{reviewCase.groupingEvidence}
+            {providerLinkedRootCauses > 0
+              ? ` ${providerLinkedRootCauses} Problem${providerLinkedRootCauses === 1 ? " has" : "s have"} a provider-linked root-cause signal.`
+              : ""}
+          </span>
         </div>
-        {rootCauseGroup ? (
-          <Button
-            size="condensed"
-            onClick={() => onSelectRootCauseGroup(rootCauseGroup)}
-          >
-            Review {rootCauseGroup.problemIds.length} together
-          </Button>
-        ) : null}
       </section>
 
       <section className={`incident-next-step incident-next-step-${nextTone}`}>
@@ -250,12 +267,29 @@ const IncidentDetail = ({
         ) : null}
       </section>
 
+      {reviewCase.problems.length > 1 ? (
+        <details className="incident-case-members" open>
+          <summary>Included Problems ({reviewCase.problems.length})</summary>
+          <ul>
+            {reviewCase.problems.map((item) => (
+              <li key={item.id}>
+                <span>
+                  <strong>{item.title}</strong>
+                  <small>{item.id} · {formatStatus(item.category)}</small>
+                </span>
+                <time>{formatDateTime(item.startedAt)}</time>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+
       <section className="incident-observed-window" aria-label="Observed Problem window">
         <span>Observed window</span>
-        <strong>{formatDateTime(problem.startedAt)}</strong>
+        <strong>{formatDateTime(reviewCase.startedAt)}</strong>
         <small>
-          {problem.endedAt
-            ? `to ${formatDateTime(problem.endedAt)}`
+          {reviewCase.endedAt
+            ? `to ${formatDateTime(reviewCase.endedAt)}`
             : "Ongoing or end unavailable"}
         </small>
       </section>
@@ -278,11 +312,13 @@ export const IncidentReview = ({
   error,
 }: IncidentReviewProps) => {
   const location = useLocation();
-  const requestedProblemId = new URLSearchParams(location.search).get("problem");
-  const [selectedId, setSelectedId] = useState<string | null>(requestedProblemId);
+  const routeParams = new URLSearchParams(location.search);
+  const requestedProblemId = routeParams.get("problem");
+  const requestedCaseId = routeParams.get("case");
+  const [selectedId, setSelectedId] = useState<string | null>(requestedCaseId);
   const [page, setPage] = useState(1);
   const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedProblemIds, setSelectedProblemIds] = useState<Set<string>>(
+  const [selectedCaseIds, setSelectedCaseIds] = useState<Set<string>>(
     () => new Set(),
   );
   const [confirmingBulkReview, setConfirmingBulkReview] = useState(false);
@@ -291,9 +327,10 @@ export const IncidentReview = ({
     tone: "positive" | "warning";
     message: string;
   }>();
-  const lastRequestedProblem = useRef<string | null>(null);
+  const lastRequestedSelection = useRef<string | null>(null);
   const scopeSettings = useProviderScopeAssignments();
   const evidenceSettings = useEvidenceDecisions();
+  const contractSettings = useContractOverrides();
   const providerSlug = provider?.provider.slug ?? "provider";
   const providerName = provider?.provider.name ?? "the selected provider";
   const matchingLoading = topologyLoading || scopeSettings.loading;
@@ -307,8 +344,8 @@ export const IncidentReview = ({
     !evidenceSettings.error &&
     !evidenceSettings.incomplete &&
     evidenceSettings.canRead;
-  const serviceNamesById = useMemo(
-    () => new Map(services.map((service) => [service.id, service.name])),
+  const serviceIds = useMemo(
+    () => new Set(services.map((service) => service.id)),
     [services],
   );
   const candidates = useMemo(
@@ -391,82 +428,107 @@ export const IncidentReview = ({
     ),
     [triageItems],
   );
-  const reviewGroups = useMemo(
-    () => createRootCauseReviewGroups(triageItems),
-    [triageItems],
+  const reviewCases = useMemo(
+    () => buildIncidentReviewCases({
+      providerSlug,
+      problems,
+      candidates,
+      services,
+      contractOverrides: contractSettings.overrides,
+      allowGrouping: !contractSettings.loading &&
+        !contractSettings.error &&
+        contractSettings.canRead,
+    }),
+    [
+      candidates,
+      contractSettings.canRead,
+      contractSettings.error,
+      contractSettings.loading,
+      contractSettings.overrides,
+      problems,
+      providerSlug,
+      services,
+    ],
   );
-  const reviewGroupByProblem = useMemo(() => {
-    const groups = new Map<string, RootCauseReviewGroup>();
-    reviewGroups.forEach((group) =>
-      group.problemIds.forEach((problemId) => groups.set(problemId, group)),
-    );
-    return groups;
-  }, [reviewGroups]);
-  const candidateProblemIds = useMemo(
-    () => new Set(
-      triageItems
-        .filter((item) => item.candidate &&
-          item.decision?.status !== "validated" &&
-          item.decision?.status !== "dismissed")
-        .map((item) => item.problem.id),
-    ),
-    [triageItems],
+  const decisionStatusByCase = useMemo(() => new Map(reviewCases.map((reviewCase) => {
+    if (reviewCase.candidates.length === 0)
+      return [reviewCase.key, undefined] as const;
+    const statuses = reviewCase.candidates.map((candidate) =>
+      triageItemByProblem.get(candidate.problem.id)?.decision?.status);
+    const status = statuses.every((value) => value && value === statuses[0])
+      ? statuses[0]
+      : statuses.some(Boolean)
+        ? "mixed" as const
+        : undefined;
+    return [reviewCase.key, status] as const;
+  })), [reviewCases, triageItemByProblem]);
+  const orderedCases = useMemo(
+    () => [...reviewCases].sort((left, right) => {
+      const leftStatus = decisionStatusByCase.get(left.key);
+      const rightStatus = decisionStatusByCase.get(right.key);
+      const score = (reviewCase: IncidentReviewCase, status?: string) =>
+        (reviewCase.active ? 16 : 0) +
+        (reviewCase.candidates.length > 0 && status !== "validated" && status !== "dismissed" ? 8 : 0) +
+        (reviewCase.candidates.length > 0 ? 4 : 0);
+      const difference = score(right, rightStatus) - score(left, leftStatus);
+      if (difference !== 0) return difference;
+      return (Date.parse(right.startedAt ?? "") || 0) -
+        (Date.parse(left.startedAt ?? "") || 0);
+    }),
+    [decisionStatusByCase, reviewCases],
   );
-  const orderedProblems = useMemo(
-    () => prioritizeProblems(problems, candidateProblemIds),
-    [candidateProblemIds, problems],
-  );
-  const pageCount = Math.max(1, Math.ceil(orderedProblems.length / PAGE_SIZE));
-  const visibleProblems = useMemo(
+  const pageCount = Math.max(1, Math.ceil(orderedCases.length / PAGE_SIZE));
+  const visibleCases = useMemo(
     () =>
-      orderedProblems.slice(
+      orderedCases.slice(
         (page - 1) * PAGE_SIZE,
         page * PAGE_SIZE,
       ),
-    [orderedProblems, page],
+    [orderedCases, page],
   );
-  const selectedProblem =
-    visibleProblems.find((problem) => problem.id === selectedId) ??
-    visibleProblems[0] ??
-    orderedProblems[0];
-  const selectedCandidate = selectedProblem
-    ? candidatesByProblem.get(selectedProblem.id)
-    : undefined;
-  const selectedTriageItem = selectedProblem
-    ? triageItemByProblem.get(selectedProblem.id)
-    : undefined;
-  const selectedRootCauseAssessment = selectedTriageItem?.assessment ?? {
-    relation: "unavailable" as const,
-    label: "Root cause unavailable",
-    detail: "Dynatrace did not return a root-cause Smartscape entity for this Problem.",
-    linkedProviderSlugs: [],
-  };
-  const selectedServiceNames = selectedProblem
-    ? selectedProblem.affectedEntityIds
-        .map((id) => serviceNamesById.get(id))
-        .filter((name): name is string => Boolean(name))
-    : [];
-  const selectedServiceIds = selectedProblem
-    ? selectedProblem.affectedEntityIds.filter((id) => serviceNamesById.has(id))
-    : [];
+  const selectedCase =
+    visibleCases.find((reviewCase) => reviewCase.key === selectedId) ??
+    visibleCases[0] ??
+    orderedCases[0];
   const activeProblems = problems.filter(
     (problem) => problem.status.toUpperCase() === "ACTIVE",
   ).length;
+  const activeCases = reviewCases.filter((reviewCase) => reviewCase.active).length;
   const affectedServiceCount = new Set(
     problems
       .flatMap((problem) => problem.affectedEntityIds)
-      .filter((id) => serviceNamesById.has(id)),
+      .filter((id) => serviceIds.has(id)),
   ).size;
-  const eligibleBulkCount = Array.from(eligibilityByProblem.values())
+  const eligibilityByCase = useMemo(() => new Map(reviewCases.map((reviewCase) => {
+    const candidateItems = reviewCase.candidates.flatMap((candidate) => {
+      const item = triageItemByProblem.get(candidate.problem.id);
+      return item ? [item] : [];
+    });
+    if (candidateItems.length !== reviewCase.problems.length)
+      return [reviewCase.key, { eligible: false, reason: "Every Problem in the case must have confirmed provider coverage." }] as const;
+    if (candidateItems.length > MAX_BULK_REVIEW)
+      return [reviewCase.key, { eligible: false, reason: `This case exceeds the ${MAX_BULK_REVIEW}-Problem bulk review limit.` }] as const;
+    const blocked = candidateItems
+      .map((item) => eligibilityByProblem.get(item.problem.id))
+      .find((eligibility) => !eligibility?.eligible);
+    return [reviewCase.key, blocked ?? { eligible: true, reason: "Available for bulk review." }] as const;
+  })), [eligibilityByProblem, reviewCases, triageItemByProblem]);
+  const eligibleBulkCount = Array.from(eligibilityByCase.values())
     .filter((eligibility) => eligibility.eligible).length;
-  const unresolvedCandidateCount = triageItems.filter(
-    (item) => item.candidate &&
-      item.decision?.status !== "validated" &&
-      item.decision?.status !== "dismissed",
+  const unresolvedCandidateCases = reviewCases.filter((reviewCase) => {
+    const status = decisionStatusByCase.get(reviewCase.key);
+    return reviewCase.candidates.length > 0 &&
+      status !== "validated" && status !== "dismissed";
+  }).length;
+  const providerRelevantCases = reviewCases.filter(
+    (reviewCase) => reviewCase.candidates.length > 0,
   ).length;
+  const selectedCases = reviewCases.filter((reviewCase) =>
+    selectedCaseIds.has(reviewCase.key));
   const selectedBulkItems = triageItems.filter(
     (item): item is IncidentBulkReviewItem & { candidate: EvidenceCandidate } =>
-      selectedProblemIds.has(item.problem.id) &&
+      selectedCases.some((reviewCase) =>
+        reviewCase.problems.some((problem) => problem.id === item.problem.id)) &&
       Boolean(item.candidate) &&
       eligibilityByProblem.get(item.problem.id)?.eligible === true,
   ).slice(0, MAX_BULK_REVIEW);
@@ -480,40 +542,45 @@ export const IncidentReview = ({
 
   useEffect(() => {
     if (
-      requestedProblemId &&
-      requestedProblemId !== lastRequestedProblem.current
+      (requestedCaseId || requestedProblemId) &&
+      `${requestedCaseId ?? ""}|${requestedProblemId ?? ""}` !== lastRequestedSelection.current
     ) {
-      const requestedIndex = orderedProblems.findIndex(
-        (problem) => problem.id === requestedProblemId,
-      );
+      const requested = orderedCases.find((reviewCase) =>
+        reviewCase.key === requestedCaseId) ??
+        (requestedProblemId
+          ? incidentReviewCaseForProblem(orderedCases, requestedProblemId)
+          : undefined);
+      const requestedIndex = requested
+        ? orderedCases.findIndex((reviewCase) => reviewCase.key === requested.key)
+        : -1;
       if (requestedIndex >= 0) {
-        lastRequestedProblem.current = requestedProblemId;
-        setSelectedId(requestedProblemId);
+        lastRequestedSelection.current = `${requestedCaseId ?? ""}|${requestedProblemId ?? ""}`;
+        setSelectedId(requested?.key ?? null);
         setPage(Math.floor(requestedIndex / PAGE_SIZE) + 1);
         return;
       }
     }
-    if (orderedProblems.length === 0) {
+    if (orderedCases.length === 0) {
       setSelectedId(null);
       return;
     }
-    if (!visibleProblems.some((problem) => problem.id === selectedId))
-      setSelectedId(visibleProblems[0]?.id ?? orderedProblems[0].id);
-  }, [orderedProblems, requestedProblemId, selectedId, visibleProblems]);
+    if (!visibleCases.some((reviewCase) => reviewCase.key === selectedId))
+      setSelectedId(visibleCases[0]?.key ?? orderedCases[0].key);
+  }, [orderedCases, requestedCaseId, requestedProblemId, selectedId, visibleCases]);
 
   useEffect(() => {
-    setSelectedProblemIds((current) => {
+    setSelectedCaseIds((current) => {
       const remaining = Array.from(current).filter(
-        (problemId) => eligibilityByProblem.get(problemId)?.eligible,
+        (caseId) => eligibilityByCase.get(caseId)?.eligible,
       );
       if (remaining.length === current.size) return current;
       return new Set(remaining);
     });
-  }, [eligibilityByProblem]);
+  }, [eligibilityByCase]);
 
   useEffect(() => {
     setSelectionMode(false);
-    setSelectedProblemIds(new Set());
+    setSelectedCaseIds(new Set());
     setConfirmingBulkReview(false);
     setBulkFeedback(undefined);
   }, [lookbackHours, providerSlug]);
@@ -521,23 +588,20 @@ export const IncidentReview = ({
   const closeBulkReview = () => {
     setSelectionMode(false);
     setConfirmingBulkReview(false);
-    setSelectedProblemIds(new Set());
+    setSelectedCaseIds(new Set());
   };
 
-  const selectRootCauseGroup = (group: RootCauseReviewGroup) => {
-    setSelectionMode(true);
-    setConfirmingBulkReview(false);
-    setBulkFeedback(undefined);
-    setSelectedProblemIds(new Set(group.problemIds.slice(0, MAX_BULK_REVIEW)));
-  };
-
-  const setProblemSelected = (problemId: string, checked: boolean) => {
+  const setCaseSelected = (reviewCase: IncidentReviewCase, checked: boolean) => {
     setBulkFeedback(undefined);
     setConfirmingBulkReview(false);
-    setSelectedProblemIds((current) => {
+    setSelectedCaseIds((current) => {
       const next = new Set(current);
-      if (checked && next.size < MAX_BULK_REVIEW) next.add(problemId);
-      else if (!checked) next.delete(problemId);
+      const selectedProblemCount = reviewCases
+        .filter((item) => next.has(item.key))
+        .reduce((total, item) => total + item.problems.length, 0);
+      if (checked && selectedProblemCount + reviewCase.problems.length <= MAX_BULK_REVIEW)
+        next.add(reviewCase.key);
+      else if (!checked) next.delete(reviewCase.key);
       return next;
     });
   };
@@ -569,7 +633,12 @@ export const IncidentReview = ({
       const failedProblemIds = selectedBulkItems
         .filter((item) => failedKeys.has(item.candidate.key))
         .map((item) => item.problem.id);
-      setSelectedProblemIds(new Set(failedProblemIds));
+      setSelectedCaseIds(new Set(
+        reviewCases
+          .filter((reviewCase) => reviewCase.problems.some((problem) =>
+            failedProblemIds.includes(problem.id)))
+          .map((reviewCase) => reviewCase.key),
+      ));
       setConfirmingBulkReview(false);
       if (result.failures.length > 0 || result.refreshError) {
         const saved = result.savedDecisionKeys.length;
@@ -619,18 +688,18 @@ export const IncidentReview = ({
 
       <div className="overview-facts incidents-facts" aria-label="Incident status">
         <IncidentFact
-          label="Active"
-          value={loading ? "Checking" : activeProblems.toLocaleString()}
-          detail="open Dynatrace Problems"
-          tone={activeProblems > 0 ? "warning" : "neutral"}
+          label="Active cases"
+          value={loading ? "Checking" : activeCases.toLocaleString()}
+          detail={`${activeProblems.toLocaleString()} open Dynatrace Problems`}
+          tone={activeCases > 0 ? "warning" : "neutral"}
         />
         <IncidentFact
-          label="Needs evidence review"
-          value={matchingLoading || evidenceSettings.loading
+          label="Potential impact cases"
+          value={matchingLoading || evidenceSettings.loading || contractSettings.loading
             ? "Checking"
-            : unresolvedCandidateCount.toLocaleString()}
-          detail={`${candidates.length.toLocaleString()} provider-relevant total`}
-          tone={unresolvedCandidateCount > 0 ? "warning" : "positive"}
+            : unresolvedCandidateCases.toLocaleString()}
+          detail={`${candidates.length.toLocaleString()} Problems in ${providerRelevantCases.toLocaleString()} provider-relevant cases`}
+          tone={unresolvedCandidateCases > 0 ? "warning" : "positive"}
         />
         <IncidentFact
           label="Affected services"
@@ -665,7 +734,7 @@ export const IncidentReview = ({
             <div>
               <strong id="dynatrace-problems-title">Dynatrace Problems</strong>
               <span>
-                Dynatrace Intelligence identifies impact and root cause.
+                Related Problems are organized into potential provider-impact cases.
               </span>
             </div>
           </div>
@@ -682,9 +751,9 @@ export const IncidentReview = ({
               title={!evidenceSettings.canWrite
                 ? "App Settings write access is required for review decisions."
                 : !bulkReviewContextComplete
-                  ? "Provider relationships or existing review decisions are incomplete. Review Problems individually."
-                : eligibleBulkCount === 0
-                  ? "No closed confirmed candidate is available for manual bulk review."
+                  ? "Provider relationships or existing review decisions are incomplete. Review cases individually."
+                  : eligibleBulkCount === 0
+                    ? "No closed confirmed case is available for manual bulk review."
                   : undefined}
               onClick={() => {
                 if (selectionMode) closeBulkReview();
@@ -710,9 +779,9 @@ export const IncidentReview = ({
         <div className="scope-map-boundary">
           <strong>How it is used</strong>
           <span>
-            SLA Review prioritizes active and provider-relevant Problems. Open
-            Problems for full investigation; move to Evidence only after a
-            provider relationship is found.
+            A case combines Problems only when provider service, Dynatrace scope,
+            and time support one review. Open Problems for full investigation.
+            Evidence keeps every included Problem for traceability.
           </span>
         </div>
       </div>
@@ -721,13 +790,13 @@ export const IncidentReview = ({
         <section className="incident-bulk-review" aria-label="Bulk incident review">
           <div>
             <strong>{confirmingBulkReview
-              ? `Mark ${selectedBulkItems.length} not provider-related?`
-              : `${selectedBulkItems.length} selected`}</strong>
+              ? `Mark ${selectedCases.length} case${selectedCases.length === 1 ? "" : "s"} not provider-related?`
+              : `${selectedCases.length} case${selectedCases.length === 1 ? "" : "s"} selected · ${selectedBulkItems.length} Problems`}</strong>
             <span>{confirmingBulkReview
               ? selectedWithoutRootCauseCount > 0
                 ? `${selectedWithoutRootCauseCount} selected Problem${selectedWithoutRootCauseCount === 1 ? " has" : "s have"} no returned root cause. Each receives its own audited decision. This is your classification, not proof, and nothing is submitted.`
                 : "Each Problem receives its own audited decision. Dynatrace root cause is a triage aid, not proof, and nothing is submitted."
-              : `Select up to ${MAX_BULK_REVIEW} closed candidates. A missing root cause does not block manual review. Active, provider-linked, incomplete, and previously reviewed Problems stay individual.`}</span>
+              : `Select closed review cases containing up to ${MAX_BULK_REVIEW} Problems. A missing root cause does not block manual review. Active, provider-linked, incomplete, and previously reviewed cases stay individual.`}</span>
           </div>
           <div className="incident-bulk-actions">
             {confirmingBulkReview ? (
@@ -742,7 +811,7 @@ export const IncidentReview = ({
               <Button
                 size="condensed"
                 disabled={selectedBulkItems.length === 0 || bulkSaving}
-                onClick={() => setSelectedProblemIds(new Set())}
+                onClick={() => setSelectedCaseIds(new Set())}
               >
                 Clear
               </Button>
@@ -797,89 +866,96 @@ export const IncidentReview = ({
         </div>
       ) : (
         <div className="incidents-layout">
-          <section className="incidents-browser" aria-label="Observed Problems">
+          <section className="incidents-browser" aria-label="Provider impact review cases">
             <div className="incident-tile-grid">
-              {visibleProblems.map((problem) => {
-                const candidate = candidatesByProblem.get(problem.id);
-                const active = problem.status.toUpperCase() === "ACTIVE";
-                const triageItem = triageItemByProblem.get(problem.id);
-                const decision = triageItem?.decision;
-                const assessment = triageItem?.assessment;
-                const eligibility = eligibilityByProblem.get(problem.id) ?? {
+              {visibleCases.map((reviewCase) => {
+                const problem = reviewCase.problems[0];
+                const candidate = reviewCase.candidates[0];
+                const decisionStatus = decisionStatusByCase.get(reviewCase.key);
+                const eligibility = eligibilityByCase.get(reviewCase.key) ?? {
                   eligible: false,
-                  reason: "This Problem is not available for bulk review.",
+                  reason: "This case is not available for bulk review.",
                 };
-                const checked = selectedProblemIds.has(problem.id);
-                const group = reviewGroupByProblem.get(problem.id);
-                const decisionLabel = decision?.status === "validated"
+                const checked = selectedCaseIds.has(reviewCase.key);
+                const decisionLabel = decisionStatus === "validated"
                   ? "Package ready"
-                  : decision?.status === "not-ready"
+                  : decisionStatus === "not-ready"
                     ? "Not ready"
-                    : decision?.status === "dismissed"
+                    : decisionStatus === "dismissed"
                       ? "Not provider-related"
-                      : active
+                      : decisionStatus === "mixed"
+                        ? "Mixed review"
+                      : reviewCase.active
                         ? "Active"
                         : candidate
-                          ? "Candidate"
+                          ? "Potential SLA impact"
                           : formatStatus(problem.status);
-                const decisionTone: Tone = active || decision?.status === "not-ready"
+                const decisionTone: Tone = reviewCase.active || decisionStatus === "not-ready" || (candidate && !decisionStatus)
                   ? "warning"
-                  : decision?.status === "validated"
-                    ? "positive"
-                  : candidate && !decision
+                  : decisionStatus === "validated"
                     ? "positive"
                     : "neutral";
+                const title = reviewCase.problems.length > 1
+                  ? `${reviewCase.providerServiceNames.join(", ") || providerName} impact review`
+                  : problem.title;
+                const rootCauseCount = new Set(reviewCase.problems.flatMap((item) =>
+                  item.rootCause ? [item.rootCause.id.toLowerCase()] : [])).size;
                 return (
                   <div
                     className={`incident-tile-wrapper${checked ? " checked" : ""}`}
-                    key={problem.id}
+                    key={reviewCase.key}
                   >
                     {selectionMode ? (
                       <input
                         type="checkbox"
-                        aria-label={`Select ${problem.id} for bulk review`}
+                        aria-label={`Select ${title} for bulk review`}
                         checked={checked}
                         disabled={
                           confirmingBulkReview ||
                           bulkSaving ||
                           !eligibility.eligible ||
-                          (!checked && selectedBulkItems.length >= MAX_BULK_REVIEW)
+                          (!checked && selectedBulkItems.length + reviewCase.problems.length > MAX_BULK_REVIEW)
                         }
                         title={eligibility.reason}
                         onChange={(event) =>
-                          setProblemSelected(problem.id, event.target.checked)}
+                          setCaseSelected(reviewCase, event.target.checked)}
                       />
                     ) : null}
                     <button
                       type="button"
-                      className={`incident-tile${selectedProblem?.id === problem.id ? " active" : ""}${candidate ? " candidate" : ""}${selectionMode ? " selecting" : ""}`}
-                      onClick={() => setSelectedId(problem.id)}
-                      aria-pressed={selectedProblem?.id === problem.id}
+                      className={`incident-tile${selectedCase?.key === reviewCase.key ? " active" : ""}${candidate ? " candidate" : ""}${selectionMode ? " selecting" : ""}`}
+                      onClick={() => setSelectedId(reviewCase.key)}
+                      aria-pressed={selectedCase?.key === reviewCase.key}
                     >
                       <span className="incident-tile-heading">
-                        <strong>{problem.title}</strong>
+                        <strong>{title}</strong>
                         <StatusPill tone={decisionTone}>{decisionLabel}</StatusPill>
                       </span>
                       <span className="incident-tile-meta">
-                        {problem.id} · {formatStatus(problem.category)}
-                        {candidate ? " · Provider match" : ""}
+                        {reviewCase.problems.length} Problem{reviewCase.problems.length === 1 ? "" : "s"}
+                        {` · ${reviewCase.affectedServices.length} service${reviewCase.affectedServices.length === 1 ? "" : "s"}`}
+                        {candidate ? ` · ${reviewCase.providerServiceNames.join(", ") || "Provider match"}` : ""}
                       </span>
-                      <span className="incident-tile-root" title={assessment?.detail}>
-                        {problem.rootCause
-                          ? `${problem.rootCause.name} · ${assessment?.label ?? "Relation unavailable"}`
-                          : assessment?.label ?? "Root cause unavailable"}
-                        {group ? ` · ${group.problemIds.length} share root cause` : ""}
+                      <span className="incident-tile-root" title={reviewCase.groupingEvidence}>
+                        {reviewCase.groupingBasis === "root-cause"
+                          ? "Shared Dynatrace root cause"
+                          : reviewCase.groupingBasis === "affected-service"
+                            ? "Shared affected service and review window"
+                            : rootCauseCount > 0
+                              ? "Root-cause signal available"
+                              : "Root cause unavailable"}
                       </span>
                       <span className="incident-tile-time">
-                        {formatDateTime(problem.startedAt)}
+                        {formatDateTime(reviewCase.startedAt)}
+                        {reviewCase.endedAt ? ` to ${formatDateTime(reviewCase.endedAt)}` : ""}
                       </span>
                     </button>
                   </div>
                 );
               })}
             </div>
-            <div className="incident-pagination" aria-label="Problem pages">
-              <span>Page {page} of {pageCount}</span>
+            <div className="incident-pagination" aria-label="Review case pages">
+              <span>{orderedCases.length.toLocaleString()} cases · page {page} of {pageCount}</span>
               <div>
                 <Button
                   size="condensed"
@@ -900,20 +976,13 @@ export const IncidentReview = ({
               </div>
             </div>
           </section>
-          {selectedProblem ? (
+          {selectedCase ? (
             <IncidentDetail
-              problem={selectedProblem}
-              candidate={selectedCandidate}
-              serviceIds={selectedServiceIds}
-              serviceNames={selectedServiceNames}
+              reviewCase={selectedCase}
+              triageItems={triageItems}
               providerSlug={provider?.provider.slug ?? "provider"}
               providerName={provider?.provider.name ?? "the selected provider"}
               matchingLoading={matchingLoading}
-              rootCauseAssessment={selectedRootCauseAssessment}
-              rootCauseGroup={selectedProblem && evidenceSettings.canWrite
-                ? reviewGroupByProblem.get(selectedProblem.id)
-                : undefined}
-              onSelectRootCauseGroup={selectRootCauseGroup}
             />
           ) : null}
         </div>

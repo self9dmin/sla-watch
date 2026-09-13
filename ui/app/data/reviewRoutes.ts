@@ -1,6 +1,7 @@
 type ProblemRouteContext = {
   providerSlug: string;
   problemId: string;
+  caseId?: string;
 };
 
 type CoverageRouteContext = ProblemRouteContext & {
@@ -21,17 +22,21 @@ const withParams = (pathname: string, values: Record<string, string | undefined>
 export const createIncidentReviewPath = ({
   providerSlug,
   problemId,
+  caseId,
 }: ProblemRouteContext): string => withParams("/incidents", {
   provider: providerSlug.toLowerCase(),
   problem: problemId,
+  case: caseId,
 });
 
 export const createEvidenceReviewPath = ({
   providerSlug,
   problemId,
+  caseId,
 }: ProblemRouteContext): string => withParams("/evidence", {
   provider: providerSlug.toLowerCase(),
   problem: problemId,
+  case: caseId,
 });
 
 export const createCoverageReviewPath = ({
