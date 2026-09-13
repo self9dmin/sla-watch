@@ -3,8 +3,8 @@
   "environmentUrl": "https://your-environment.apps.dynatrace.com/",
   "app": {
     "name": "SLA Review",
-    "version": "0.0.54",
-    "icon": "ui/assets/sla-watch-icon.svg",
+    "version": "0.0.55",
+    "icon": "ui/assets/sla-review-icon.svg",
     "description": "Review provider terms against Dynatrace evidence and service ownership",
     "id": "my.sla",
     "scopes": [
