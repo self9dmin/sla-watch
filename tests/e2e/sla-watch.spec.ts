@@ -124,15 +124,16 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(app.getByRole("button", { name: "Add custom terms" })).toHaveCount(0);
     await expectNoPageScroll(app);
 
-    const providerScopeText = await app
+    const providerServiceLinks = app
       .getByLabel("Coverage status")
       .locator(".overview-fact")
-      .filter({ hasText: "Provider scope" })
-      .innerText();
-    const coverageTotals = providerScopeText.match(/(\d[\d,]*) of (\d[\d,]*)/);
-    expect(coverageTotals).not.toBeNull();
-    await expect(coveredCoverage.locator("strong")).toHaveText(coverageTotals?.[1] ?? "");
-    await expect(allCoverage.locator("strong")).toHaveText(coverageTotals?.[2] ?? "");
+      .filter({ hasText: /service links/i });
+    const linkedTotal = await providerServiceLinks.locator("strong").innerText();
+    const evaluatedDetail = await providerServiceLinks.locator("small").innerText();
+    const evaluatedTotal = evaluatedDetail.match(/^(\d[\d,]*) environment service/);
+    expect(evaluatedTotal).not.toBeNull();
+    await expect(coveredCoverage.locator("strong")).toHaveText(linkedTotal);
+    await expect(allCoverage.locator("strong")).toHaveText(evaluatedTotal?.[1] ?? "");
 
     await coveredCoverage.click();
     await expect(coveredCoverage).toHaveAttribute("aria-pressed", "true");
