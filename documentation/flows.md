@@ -147,7 +147,7 @@ Actor: signed-in Dynatrace user.
 3. The worklist is limited to eight Problems per page. Changing pages selects the first visible record instead of retaining hidden context.
 4. The focused summary shows affected services, provider-service match, the exact root-cause entity, its loaded provider relationship, state, and observed window.
 5. A provider-relevant Problem opens directly in Evidence with the same Problem selected. A Problem with affected scope but no provider overlap opens Coverage. Full causal investigation opens in the native Dynatrace Problems app.
-6. An SRE may select up to 50 eligible closed Problems and explicitly confirm Not provider-related. Active, missing-root-cause, provider-linked, incomplete, unconfirmed-scope, and previously reviewed Problems stay individual. Problems sharing one exact root-cause entity can be selected as a group.
+6. An SRE may manually select up to 50 eligible closed Problems and explicitly confirm Not provider-related. A missing root cause remains visible but does not block that human decision. Active, provider-linked, incomplete, unconfirmed-scope, and previously reviewed Problems stay individual. Problems sharing one exact root-cause entity can be suggested as a group.
 7. The app writes one decision per Problem. A partial batch failure leaves failed Problems selected, refreshes once, and does not hide successful writes.
 8. Contract details, filing mechanics, credit values, traces, logs, remediation, and full causal analysis stay out of Incidents. They remain in Review terms, Evidence, or the native Problems app as appropriate.
 
