@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.63`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.65`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.65 verified scenarios
+
+The `0.0.65` artifact from source commit `14b467b` was deployed to the designated Dynatrace target environment on 2026-09-13 and exercised through the connected Chrome profile. The production smoke was read-only. It changed only the focused provider and opened native Smartscape views in separate AppShell tabs. It did not change provider connections, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.65` manifest, six AppEngine functions, topology-first Coverage workspace, and provider-aware Smartscape handoff deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commits `90bdb36` and `14b467b` |
+| Release gate | UI and API type checks, lint, 32 test suites with 182 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 83.77% statement coverage; zero production dependency vulnerabilities |
+| Installed version | The installed change log showed `0.0.65 Current release`, the topology-first `0.0.64` record, and the provider-specific Smartscape handoff changes | Installed production change-log smoke |
+| Topology-first landing | Azure opened on `Detected topology` because Dynatrace detected provider infrastructure but returned no verified Azure service relationship | Installed production Azure Coverage smoke |
+| Topology evidence | Azure showed one subscription, one VM, one monitored host, and 12 Smartscape types. The bounded evidence included 121 availability-zone records, 109 location records, and the detected Azure resource categories without claiming they were services | Installed production Azure Coverage accessibility-tree and visual smoke |
+| Service separation | `Service links` remained at zero for Azure and explicitly stated that all eight environment services were checked but none was attributed from provider presence alone | Installed production Azure Coverage smoke |
+| AWS continuity | AWS opened on its service-link view with three verified service links across eight services, while retaining one account, nine EC2 instances, two monitored hosts, and 69 Smartscape types | Installed production AWS Coverage smoke |
+| Provider-aware handoff | `Open Smartscape` opened the exact Azure overview in production. The AWS handoff opened the exact AWS overview in the tenant-hosted local release | Connected Chrome navigation smoke |
+| Runtime quality | Both provider views remained bounded in the dark-theme workspace, and Chrome captured no production browser warning or error | Connected Chrome visual smoke and browser diagnostics |
 
 ## 0.0.63 verified scenarios
 
