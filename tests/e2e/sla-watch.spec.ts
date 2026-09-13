@@ -101,9 +101,18 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       coverageEvidenceViews.getByRole("button", { name: /^Service links/ }),
     ).toHaveAttribute("aria-pressed", "true");
+    const detectedTopology = coverageEvidenceViews.getByRole("button", {
+      name: /^Detected topology/,
+    });
+    await expect(detectedTopology).toBeVisible();
+    await detectedTopology.click();
     await expect(
-      coverageEvidenceViews.getByRole("button", { name: /^Detected topology/ }),
+      app.getByRole("searchbox", { name: "Find Smartscape node types" }),
     ).toBeVisible();
+    await expect(
+      app.getByRole("list", { name: /Smartscape node types/ }),
+    ).toBeVisible();
+    await coverageEvidenceViews.getByRole("button", { name: /^Service links/ }).click();
     await expect(
       app.getByRole("listbox", { name: "Provider coverage worklist" }),
     ).toBeVisible();
