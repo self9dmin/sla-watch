@@ -489,6 +489,15 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const suggestedServiceCount = coverageModel.reviewRows.length;
   const unattributedServiceCount = coverageModel.unattributedRows.length;
   const taggedProviderServices = coverageModel.taggedServiceCount;
+  const evaluatedServiceCount = coverageModel.rows.length;
+  const evaluatedServiceLabel = `${evaluatedServiceCount.toLocaleString()} environment service${evaluatedServiceCount === 1 ? "" : "s"} checked`;
+  const providerServiceLinkDetail = suggestedServiceCount > 0
+    ? `${evaluatedServiceLabel} · ${suggestedServiceCount.toLocaleString()} need review · ${unattributedServiceCount.toLocaleString()} not linked`
+    : matchedProviderServices === 0
+      ? `${evaluatedServiceLabel}; none linked`
+      : unattributedServiceCount > 0
+        ? `${evaluatedServiceLabel} · ${unattributedServiceCount.toLocaleString()} not linked`
+        : `${evaluatedServiceLabel}; all linked`;
   const providerInfrastructureCandidate = matchedProviderServices === 0
     ? buildProviderInfrastructureCandidate({
         providerSlug: selectedProviderSlug,
@@ -567,11 +576,11 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             ? "Inventory incomplete"
           : suggestedServiceCount > 0
             ? "Review needed"
-            : matchedProviderServices > 0
-              ? "Coverage ready"
+              : matchedProviderServices > 0
+                ? "Coverage ready"
               : providerInfrastructureCandidate
-                ? "Infrastructure candidate"
-              : "No services attributed";
+                ? "Infrastructure detected"
+              : "No service links";
   const coverageTone: Tone =
     telemetryLoading || inventoryLoading || directoryLoading || providerHostContextQuery.isLoading || topologyQuery.isLoading || scopeSettings.loading
       ? "neutral"
@@ -700,23 +709,13 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 }
               />
               <OverviewFact
-                label="Provider scope"
+                label={`${providerName} service links`}
                 value={
                   servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "Checking"
-                    : `${matchedProviderServices.toLocaleString()} of ${coverageModel.rows.length.toLocaleString()}`
+                    : matchedProviderServices.toLocaleString()
                 }
-                detail={
-                  suggestedServiceCount > 0
-                    ? `${suggestedServiceCount} need review · ${unattributedServiceCount} not attributed`
-                    : providerInfrastructureCandidate
-                      ? `1 provider-level candidate · ${unattributedServiceCount} services not linked`
-                    : unattributedServiceCount > 0
-                      ? `${matchedProviderServices} covered · ${unattributedServiceCount} not attributed`
-                      : matchedProviderServices > 0
-                        ? "all loaded services covered"
-                        : `No loaded service evidence for ${providerName}`
-                }
+                detail={providerServiceLinkDetail}
                 tone={
                   servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "neutral"

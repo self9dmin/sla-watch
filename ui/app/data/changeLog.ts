@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.62",
+    version: "0.0.63",
     label: "Current release",
+    summary: "Separated provider discovery from verified service links.",
+    details: [
+      "Coverage now reports the selected provider's verified service links separately from the complete environment service inventory that Dynatrace checked.",
+      "Provider-level cloud evidence names the detected resources and explicitly reports when zero loaded services have a verified relationship.",
+      "Unlinked rows identify the selected provider by name instead of implying that every loaded service is a provider candidate.",
+      "Manual assignment starts without a preselected provider service, so the detail panel cannot imply a relationship that Dynatrace did not return.",
+    ],
+  },
+  {
+    version: "0.0.62",
+    label: "Previous release",
     summary: "Surfaced cloud infrastructure without guessing service coverage.",
     details: [
       "Bounded Smartscape host context now contributes provider, account, location, and compute-resource evidence for AWS, Azure, GCP, and OCI.",

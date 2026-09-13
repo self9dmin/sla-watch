@@ -66,8 +66,8 @@ export const providerInfrastructureCandidateDetail = (
       : undefined,
   ].filter((value): value is string => Boolean(value));
   const grouping = signals.length > 1
-    ? "These signals are grouped once at the provider level and are not assumed to represent the same resource."
-    : "This evidence is shown once at the provider level.";
+    ? "These provider-level signals may describe different resources."
+    : "This is provider-level evidence.";
 
-  return `Dynatrace detected ${signals.join(" and ")}. ${grouping} No service is assigned until Dynatrace returns a service relationship, a matching source tag exists, or an operator confirms one.`;
+  return `Dynatrace found ${signals.join(" and ")}. ${grouping} This evidence establishes provider presence, not a service relationship.`;
 };

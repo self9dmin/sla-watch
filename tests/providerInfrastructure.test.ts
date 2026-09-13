@@ -35,7 +35,7 @@ describe("provider infrastructure candidates", () => {
       computeResourceCount: 1,
     });
     expect(providerInfrastructureCandidateDetail(candidate!)).toBe(
-      "Dynatrace detected 1 monitored host with Azure metadata and 1 Azure VM in provider-native topology. These signals are grouped once at the provider level and are not assumed to represent the same resource. No service is assigned until Dynatrace returns a service relationship, a matching source tag exists, or an operator confirms one.",
+      "Dynatrace found 1 monitored host with Azure metadata and 1 Azure VM in provider-native topology. These provider-level signals may describe different resources. This evidence establishes provider presence, not a service relationship.",
     );
   });
 

@@ -179,7 +179,10 @@ export const CoverageWorkspace = ({
         (selectedRow.sourceTag ? "*" : ""),
       );
     } else {
-      setSelectedProviderServiceId(selectedRow.assignment?.providerServiceId ?? "*");
+      setSelectedProviderServiceId(
+        selectedRow.assignment?.providerServiceId ??
+        (selectedRow.sourceTag ? "*" : ""),
+      );
     }
     setFeedback(undefined);
   }, [focusedProviderServiceId, focusedServiceId, provider, selectedRow]);
@@ -302,8 +305,8 @@ export const CoverageWorkspace = ({
         <span className="scope-node"><ServicesIcon /><span><small>Service</small><strong>{row.service.name}</strong></span></span>
         <span className="scope-connector"><span aria-hidden="true" /><small>found in</small></span>
         <span className="scope-node coverage-source-node"><ServicesIcon /><span><small>Coverage source</small><strong>{row.sourceTag ? `${providerTagKey}:${providerSlug}` : row.conflicting ? "Different provider tag" : "Service inventory"}</strong></span></span>
-        <span className="scope-connector"><span aria-hidden="true" /><small>No runtime</small></span>
-        <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.conflicting ? "Different provider tag" : "No service-level link"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.conflicting ? row.values.join(", ") : "Not attributed"}</strong></span></span>
+        <span className="scope-connector"><span aria-hidden="true" /><small>{assignment || row.sourceTag ? "No runtime" : `No ${providerName} link`}</small></span>
+        <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.conflicting ? "Different provider tag" : `No ${providerName} relationship`}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.conflicting ? row.values.join(", ") : "Not linked"}</strong></span></span>
       </button>
     );
   };
@@ -333,7 +336,9 @@ export const CoverageWorkspace = ({
         : selectionMatchesCandidate
           ? "Recommended match"
           : selectedRow?.kind === "service"
-            ? "Manual mapping"
+            ? selectedProviderService
+              ? "Manual selection"
+              : "Not linked"
             : "Needs review";
   const stateTitle = selectedAssignment
     ? `Confirmed provider service: ${assignmentDisplayName(selectedAssignment)}`
@@ -347,6 +352,8 @@ export const CoverageWorkspace = ({
           ? "More than one provider service is possible"
         : selectionMatchesCandidate
           ? `Smartscape recommends: ${selectedProviderService?.name}`
+          : selectedRow?.kind === "service" && !selectedProviderService
+            ? `No ${providerName} service relationship found`
           : selectedProviderService
             ? `Selected provider service: ${selectedProviderService.name}`
             : "Choose the provider service for this Dynatrace service";
@@ -378,7 +385,7 @@ export const CoverageWorkspace = ({
   return (
     <section className="scope-map-view setup-scope-map" aria-labelledby="service-coverage-title">
       <div className="scope-map-toolbar">
-        <div className="scope-map-title"><ServicesIcon /><div><strong id="service-coverage-title">Service coverage</strong><span>See every loaded service. Provider presence alone does not assign a service.</span></div></div>
+        <div className="scope-map-title"><ServicesIcon /><div><strong id="service-coverage-title">Service coverage</strong><span>{infrastructureCandidate ? `Dynatrace detected ${providerName} infrastructure and checked every loaded service for a verified relationship.` : `See every loaded service and its verified ${providerName} relationship.`}</span></div></div>
         <div className="scope-map-toolbar-actions">
           <Button size="condensed" onClick={() => openApp("dynatrace.smartscape", "view/dynatrace.smartscape.smartscape-on-grail")}><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
         </div>
@@ -388,10 +395,11 @@ export const CoverageWorkspace = ({
         <div className="coverage-infrastructure-candidate" role="status">
           <HostsIcon />
           <div>
-            <strong>{providerName} infrastructure candidate</strong>
+            <strong>{providerName} infrastructure detected</strong>
             <span>{providerInfrastructureCandidateDetail(infrastructureCandidate)}</span>
+            <span>{coverageRows.length.toLocaleString()} environment service{coverageRows.length === 1 ? " was" : "s were"} checked. None has a verified {providerName} relationship.</span>
           </div>
-          <StatusPill tone="warning">Provider-level only</StatusPill>
+          <StatusPill tone="warning">0 services linked</StatusPill>
         </div>
       ) : null}
       {focusedProblemId ? (
@@ -450,7 +458,7 @@ export const CoverageWorkspace = ({
                 <>
                   {renderGroup("Needs review", visibleReviewRows)}
                   {renderGroup("Covered", visibleCoveredRows)}
-                  {renderGroup("No service-level provider link", visibleUnscopedRows)}
+                  {renderGroup(`Not linked to ${providerName}`, visibleUnscopedRows)}
                 </>
               ) : (
                 <div className="coverage-list-empty">
@@ -471,10 +479,10 @@ export const CoverageWorkspace = ({
           <aside className="scope-detail" aria-label="Provider coverage for selected service">
             {selectedRow ? (
               <>
-                <label className="field-label">Provider service
+                <label className="field-label">{selectedRow.kind === "service" && !selectedAssignment && !selectedSourceTag ? "Assign provider service" : "Provider service"}
                   <select value={selectedProviderServiceId} onChange={(event) => { setSelectedProviderServiceId(event.target.value); setFeedback(undefined); }} disabled={selectedConflict}>
-                    {selectedRow.kind === "service" ? <option value="*">{providerName} (provider-wide)</option> : <option value="">Select a provider service</option>}
-                    {provider.services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
+                    {selectedRow.kind === "service" ? <><option value="">Choose a provider service</option><option value="*">{providerName} (provider-wide)</option></> : <option value="">Select a provider service</option>}
+                    {provider.services.map((service, index) => <option key={`${service.id}:${service.name}:${index}`} value={service.id}>{service.name}</option>)}
                   </select>
                 </label>
                 <div className="scope-mapping-state">
