@@ -383,28 +383,26 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
       .map((connection) => connection.providerSlug),
     [providerConnections.connections],
   );
-  const enabledProviderSlugs = useMemo(
+  const applicableProviderSlugs = useMemo(
     () => resolveEnvironmentProviderSlugs({
       detected: topologyDetectedProviders,
       tagged: tagDetectedProviders,
       assigned: assignedProviders,
       connected: connectedProviders,
-      fallback: requestedProviderSlug,
     }),
     [
       assignedProviders,
       connectedProviders,
-      requestedProviderSlug,
       tagDetectedProviders,
       topologyDetectedProviders,
     ],
   );
-  const preferredProviderSlug = routeProviderSlug && enabledProviderSlugs.includes(routeProviderSlug)
+  const preferredProviderSlug = routeProviderSlug && applicableProviderSlugs.includes(routeProviderSlug)
     ? routeProviderSlug
     : requestedProviderSlug;
-  const providerSlug = enabledProviderSlugs.includes(preferredProviderSlug)
+  const providerSlug = applicableProviderSlugs.includes(preferredProviderSlug)
     ? preferredProviderSlug
-    : enabledProviderSlugs[0] ?? requestedProviderSlug;
+    : applicableProviderSlugs[0] ?? requestedProviderSlug;
   const directoryRequest = useMemo(
     () => ({ vendor: providerSlug }),
     [providerSlug],
@@ -571,7 +569,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   );
 
   const selectProvider = (nextProviderSlug: string) => {
-    if (!enabledProviderSlugs.includes(nextProviderSlug)) return;
+    if (!applicableProviderSlugs.includes(nextProviderSlug)) return;
     void updatePreferences({ providerSlug: nextProviderSlug });
     if (routeProviderSlug) {
       const nextParams = new URLSearchParams(location.search);
@@ -596,13 +594,15 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
 
       <div className="watch-toolbar">
         <WatchNavigation section={section} providerSlug={providerSlug} />
-        <div className="watch-provider-switcher">
-          <ProviderSwitcher
-            activeProviderSlug={providerSlug}
-            enabledProviderSlugs={enabledProviderSlugs}
-            onSelect={selectProvider}
-          />
-        </div>
+        {applicableProviderSlugs.length > 0 ? (
+          <div className="watch-provider-switcher">
+            <ProviderSwitcher
+              activeProviderSlug={providerSlug}
+              providerSlugs={applicableProviderSlugs}
+              onSelect={selectProvider}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className={`watch-view watch-view-${section}`}>
@@ -621,20 +621,28 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             <div className="overview-facts coverage-facts" aria-label="Coverage status">
               <OverviewFact
                 label="Providers"
-                value={`${enabledProviderSlugs.length}`}
+                value={`${applicableProviderSlugs.length}`}
                 detail={
-                  directoryLoading
-                    ? `checking ${providerDisplayName(providerSlug)}`
-                    : directoryData
-                      ? `${providerName} selected`
-                      : `${providerDisplayName(providerSlug)} unavailable`
+                  topologyQuery.isLoading || metricsLoading || scopeSettings.loading || providerConnections.loading
+                    ? "checking this environment"
+                    : applicableProviderSlugs.length === 0
+                      ? "none detected or configured"
+                      : directoryLoading
+                        ? `checking ${providerDisplayName(providerSlug)}`
+                        : directoryData
+                          ? `${providerName} selected`
+                          : `${providerDisplayName(providerSlug)} unavailable`
                 }
                 tone={
-                  directoryLoading
+                  topologyQuery.isLoading || metricsLoading || scopeSettings.loading || providerConnections.loading
                     ? "neutral"
-                    : directoryData
-                      ? "positive"
-                      : "warning"
+                    : applicableProviderSlugs.length === 0
+                      ? "warning"
+                    : directoryLoading
+                      ? "neutral"
+                      : directoryData
+                        ? "positive"
+                        : "warning"
                 }
               />
               <OverviewFact
