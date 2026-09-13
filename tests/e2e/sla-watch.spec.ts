@@ -189,7 +189,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByLabel("Incident status").locator(".overview-fact"),
     ).toHaveCount(4);
-    await expect(app.getByText("Needs evidence review", { exact: true })).toBeVisible();
+    await expect(app.getByText("Potential impact cases", { exact: true })).toBeVisible();
     await expect(app.getByText("Dynatrace Problems", { exact: true })).toBeVisible();
     await expect(
       app.getByRole("button", { name: /Select multiple \(\d+\)/ }),
@@ -197,14 +197,14 @@ test.describe("SLA Review deployed smoke", () => {
     const openProblems = app.getByRole("button", { name: "Open Problems" });
     await expect(openProblems).toBeVisible();
     await expect(openProblems.locator("svg")).toHaveCount(1);
-    const problemsRegion = app.getByRole("region", { name: "Observed Problems" });
+    const problemsRegion = app.getByRole("region", { name: "Provider impact review cases" });
     const emptyProblems = app.getByText(/No Problems in the last/);
     await expect(problemsRegion.or(emptyProblems)).toBeVisible();
     if (await problemsRegion.count()) {
       const visibleProblemCount = await problemsRegion.locator(".incident-tile").count();
       expect(visibleProblemCount).toBeGreaterThan(0);
-      expect(visibleProblemCount).toBeLessThanOrEqual(8);
-      await expect(app.getByLabel("Problem pages")).toBeVisible();
+      expect(visibleProblemCount).toBeLessThanOrEqual(16);
+      await expect(app.getByLabel("Review case pages")).toBeVisible();
       await expect(
         problemsRegion.locator(".incident-tile-root").first(),
       ).toBeVisible();

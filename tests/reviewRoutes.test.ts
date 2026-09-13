@@ -36,4 +36,12 @@ describe("review routes", () => {
     expect(safeWorkspaceReturnPath("https://example.test/escape")).toBe("/incidents");
     expect(safeWorkspaceReturnPath(null, "/evidence")).toBe("/evidence");
   });
+
+  it("preserves a grouped review case without breaking the Problem fallback", () => {
+    expect(createEvidenceReviewPath({
+      providerSlug: "AWS",
+      problemId: "P-1",
+      caseId: "case:ec2:p-1",
+    })).toBe("/evidence?provider=aws&problem=P-1&case=case%3Aec2%3Ap-1");
+  });
 });

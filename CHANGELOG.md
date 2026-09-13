@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.58
+
+- Organizes related Dynatrace Problems into potential provider-impact review cases instead of presenting every signal as a separate SLA event.
+- Groups only when one provider service, one effective terms scope, a bounded time window, and either a shared affected service or exact root cause agree. Same-vendor Problems alone never merge.
+- Shows 16 compact cases per page, with every included Problem available inside the selected case for traceability.
+- Carries the same case into Evidence, where affected services, observed time, telemetry, objectives, provider reports, and supporting Problems are reviewed together.
+- Persists case outcomes as one audited decision per underlying Problem, retaining existing staleness checks, guarded bulk review, and partial-failure reporting.
+- Uses **Potential SLA impact** until an SRE validates the evidence. The app does not declare an SLA violation, provider fault, eligibility, or approval.
+
 ## 0.0.57
 
 - Replaces the active-provider dropdown with a compact logo rail for AWS, Microsoft Azure, Google Cloud, and OCI.
