@@ -41,6 +41,7 @@ import {
 import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
 import { useEvidenceDecisions } from "../hooks/useEvidenceDecisions";
 import { useContractOverrides } from "../hooks/useContractOverrides";
+import { formatDavisImpact, summarizeDavisImpact } from "../data/problems";
 
 type Tone = "neutral" | "warning" | "positive";
 
@@ -199,6 +200,7 @@ const IncidentDetail = ({
   const providerLinkedRootCauses = relatedTriage.filter(
     (item) => item.assessment.relation === "provider-linked",
   ).length;
+  const davisImpact = formatDavisImpact(reviewCase.problems);
 
   return (
     <article className="incident-detail">
@@ -217,8 +219,8 @@ const IncidentDetail = ({
 
       <dl className="incident-detail-facts">
         <div>
-          <dt>Problems</dt>
-          <dd>{reviewCase.problems.length}</dd>
+          <dt>Davis impact</dt>
+          <dd title={davisImpact}>{davisImpact}</dd>
         </div>
         <div>
           <dt>Affected services</dt>
@@ -472,6 +474,9 @@ export const IncidentReview = ({
         (reviewCase.candidates.length > 0 ? 4 : 0);
       const difference = score(right, rightStatus) - score(left, leftStatus);
       if (difference !== 0) return difference;
+      const userDifference = (summarizeDavisImpact(right.problems).maximumAffectedUsers ?? -1) -
+        (summarizeDavisImpact(left.problems).maximumAffectedUsers ?? -1);
+      if (userDifference !== 0) return userDifference;
       return (Date.parse(right.startedAt ?? "") || 0) -
         (Date.parse(left.startedAt ?? "") || 0);
     }),
@@ -909,6 +914,7 @@ export const IncidentReview = ({
                   : problem.title;
                 const rootCauseCount = new Set(reviewCase.problems.flatMap((item) =>
                   item.rootCause ? [item.rootCause.id.toLowerCase()] : [])).size;
+                const affectedUsers = summarizeDavisImpact(reviewCase.problems).maximumAffectedUsers;
                 return (
                   <div
                     className={`incident-tile-wrapper${checked ? " checked" : ""}`}
@@ -943,6 +949,7 @@ export const IncidentReview = ({
                       <span className="incident-tile-meta">
                         {reviewCase.problems.length} Problem{reviewCase.problems.length === 1 ? "" : "s"}
                         {` · ${reviewCase.affectedServices.length} service${reviewCase.affectedServices.length === 1 ? "" : "s"}`}
+                        {affectedUsers === undefined ? "" : ` · ${affectedUsers.toLocaleString()} users`}
                         {candidate ? ` · ${reviewCase.providerServiceNames.join(", ") || "Provider match"}` : ""}
                       </span>
                       <span className="incident-tile-root" title={reviewCase.groupingEvidence}>

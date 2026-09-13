@@ -95,7 +95,7 @@ describe("buildSetupRecommendations", () => {
       services: [],
       problems: [],
       telemetrySignalsPresent: false,
-      telemetryError: new Error("storage:entities:read denied"),
+      telemetryError: new Error("storage:smartscape:read denied"),
       directoryData: provider,
       providerLabels: [],
       selectedProviderSlug: "aws",

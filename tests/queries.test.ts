@@ -21,6 +21,10 @@ describe("bounded inventory queries", () => {
     const query = createProblemsQuery(168);
 
     expect(query).toContain("smartscape.affected_entities");
+    expect(query).toContain("dt.smartscape.service");
+    expect(query).toContain("dt.smartscape_source.id");
+    expect(query).toContain("dt.davis.affected_users_count");
+    expect(query).toContain("dt.davis.impact_level");
     expect(query).toContain("root_cause.smartscape_entity");
     expect(query).toContain("affected_entity_ids");
     expect(query).toContain("root_cause_entity_id");
@@ -28,11 +32,18 @@ describe("bounded inventory queries", () => {
   });
 
   it("keeps the global inventory bounded and focused on coverage anchors", () => {
+    expect(SERVICES_QUERY).toContain("smartscapeNodes SERVICE");
+    expect(SERVICES_QUERY).toContain('getNodeField(id, "id_classic")');
+    expect(SERVICES_QUERY).not.toContain("fetch dt.entity.service");
     expect(SERVICES_QUERY).toContain(`limit ${SERVICE_RESULT_LIMIT}`);
+    expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).toContain('smartscapeEdges "*", from:-7d');
     expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).toContain(`limit ${SMARTSCAPE_RESULT_LIMIT}`);
     expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).toContain('target_type == "HOST"');
     expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).toContain('target_type == "K8S_CLUSTER"');
     expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).toContain('startsWith(target_type, "AWS_")');
+    expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).toContain('startsWith(target_type, "AZURE_")');
+    expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).toContain('startsWith(target_type, "GCP_")');
+    expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).toContain('startsWith(target_type, "OCI_")');
     expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).not.toContain('target_type == "PROCESS"');
     expect(SMARTSCAPE_SERVICE_RUNTIME_QUERY).not.toContain('target_type == "CONTAINER"');
     expect(SMARTSCAPE_COVERAGE_COUNT_QUERY).toContain("countDistinctExact(source_id)");
@@ -91,6 +102,8 @@ describe("bounded inventory queries", () => {
     ]);
     expect(query.match(/"SERVICE-ABC"/g)).toHaveLength(1);
     expect(query).not.toContain("fetch logs");
+    expect(query).toContain("smartscapeNodes SERVICE");
+    expect(query).not.toContain("fetch dt.entity.service");
     expect(query).toContain(`limit ${INCIDENT_SERVICE_FILTER_LIMIT}`);
   });
 

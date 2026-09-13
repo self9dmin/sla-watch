@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.66
+
+- Migrates service inventory and exact incident service lookups from classic entities to `smartscapeNodes SERVICE` after a live identity, name, and tag-equivalence check.
+- Discovers direct service relationships through a bounded Smartscape wildcard scan, preserving provider-native dependencies such as `calls` instead of labeling every relationship as `runs on`.
+- Adds stable Davis service, source, impact-level, and affected-user context to incident prioritization and Evidence while keeping unavailable fields explicit.
+- Removes the unused classic entity-read scope and keeps Azure infrastructure separate from service attribution when Dynatrace returns no service-level Azure edge.
+
 ## 0.0.62
 
 - Adds a bounded, aggregated host cloud-context query so provider discovery can use monitored-host metadata without loading one row per host.

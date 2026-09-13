@@ -39,6 +39,7 @@ import {
   incidentReviewCaseForProblem,
   type IncidentReviewCase,
 } from "../data/incidentReviewCases";
+import { formatDavisImpact } from "../data/problems";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { useEvidenceDecisions } from "../hooks/useEvidenceDecisions";
 import { useObjectiveEvaluations } from "../hooks/useObjectiveEvaluations";
@@ -415,6 +416,7 @@ const CandidateDetail = ({
   ].filter((item): item is string => Boolean(item));
   const readyEnough = packageGaps.length === 0;
   const objectiveServices = reviewCase.affectedServices.slice(0, 3);
+  const davisImpact = formatDavisImpact(reviewCase.problems);
 
   const toggleEvidence = (item: string) => {
     setAcknowledgedEvidence((current) => current.includes(item)
@@ -454,8 +456,8 @@ const CandidateDetail = ({
           <dd title={providerServices}>{providerServices}</dd>
         </div>
         <div>
-          <dt>Problem records</dt>
-          <dd>{reviewCase.problems.length} included · {reviewCase.active ? "active impact" : "closed window"}</dd>
+          <dt>Davis impact</dt>
+          <dd title={davisImpact}>{davisImpact}</dd>
         </div>
       </dl>
 

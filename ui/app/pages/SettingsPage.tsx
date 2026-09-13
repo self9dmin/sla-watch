@@ -18,6 +18,7 @@ import { parseProviderInventory, providerInventorySlugs } from "../data/provider
 import { createServiceMetricsQuery, SERVICES_QUERY, SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY, SMARTSCAPE_PROVIDER_INVENTORY_QUERY, SMARTSCAPE_SERVICE_RUNTIME_QUERY } from "../data/queries";
 import { detectedProviderSlugs, parseProviderHostContexts, parseServiceCloudContexts, parseSmartscapeScopeEdges } from "../data/topology";
 import { providerDisplayName, resolveEnvironmentProviderSlugs } from "../data/providers";
+import { parseServiceRecords } from "../data/serviceInventory";
 import type { AwsProviderNoticesResponse, AzureProviderNoticesResponse, ContractOverrideValue, ContractScopeKind, EvidenceLookbackHours, GcpProviderNoticesResponse, OciProviderNoticesResponse, ProviderConnectionValue, ServiceRecord, SlaProviderResponse, SlaThemePreference } from "../types";
 
 const SETUP_LINKS = [
@@ -60,9 +61,6 @@ const RailGroup = ({ title, links, page }: { title: string; links: readonly (rea
 );
 
 const SavedNote = ({ text }: { text: string }) => <div className="saved-note" role="status">{text}</div>;
-
-const asRecord = (value: unknown): Record<string, unknown> => typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
-const recordText = (value: unknown, fallback: string): string => typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
 
 const WatchSettings = () => {
   const { preferences, updatePreferences } = useSlaPreferences();
@@ -525,16 +523,7 @@ const SlaOverrideSettings = () => {
   const contractSettings = useContractOverrides();
 
   const entityServices = useMemo<ServiceRecord[]>(() => {
-    const records = Array.isArray(serviceQuery.data?.records) ? serviceQuery.data.records : [];
-    return records.map((value, index) => {
-      const record = asRecord(value);
-      return {
-        id: recordText(record.id, `service-${index + 1}`),
-        name: recordText(record.name, "Unnamed service"),
-        type: recordText(record.type, "SERVICE"),
-        tags: [],
-      };
-    });
+    return parseServiceRecords(serviceQuery.data);
   }, [serviceQuery.data]);
   const topology = useMemo(() => parseSmartscapeScopeEdges(topologyQuery.data), [topologyQuery.data]);
   const services = useMemo(() => mergeServiceInventory(entityServices, topology), [entityServices, topology]);

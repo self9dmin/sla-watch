@@ -113,11 +113,12 @@ The official [dtctl repository](https://github.com/dynatrace-oss/dtctl) supplies
 - OCI is not covered by a dedicated skill in the reviewed official collection. Use current Dynatrace documentation, tenant discovery, and conservative generic Smartscape rules. Do not copy AWS behavior into OCI.
 - A global `AWS_*`, `AZURE_*`, `GCP_*`, or OCI inventory query establishes provider presence only. It must not fan out that provider assignment to every service.
 
-## Audit findings to resolve deliberately
+## 0.0.66 source verification
 
-1. `ui/app/data/queries.ts` still uses `fetch dt.entity.service` for two pure service-list queries. Current migration guidance favors `smartscapeNodes SERVICE`. Migrate only after live equivalence checks preserve service identity, names, tags, counts, filtering, and Problem correlation.
-2. The shared service-runtime query currently restricts edges to `runs_on` and `belongs_to`. That is appropriate for verified named relationships but may not discover Azure or GCP provider-resource paths whose edge names are empty. Probe `smartscapeEdges "*"` by source and target type, then add provider-specific strategies with conservative matching and tests.
-3. The Problem query already reads `smartscape.affected_entities` and root-cause fields. Evaluate adding native `dt.smartscape.service`, `dt.smartscape_source.id`, `dt.davis.affected_users_count`, and `dt.davis.impact_level` so Evidence can prioritize native impact without inventing another correlation system.
-4. Cross-app navigation must distinguish manifest page tokens from URL routes. The 0.0.65 Smartscape handoff is isolated and production-verified because the installed Smartscape manifest exposed no page tokens.
+1. A read-only target-tenant comparison returned the same six service identities and names from classic service entities and `smartscapeNodes SERVICE`; tags were semantically empty in both forms. Pure service inventory and exact incident service lookups now use Smartscape, so the unused classic entity-read scope was removed.
+2. A bounded `smartscapeEdges "*"` probe found direct `SERVICE` relationships to AWS EC2 and AWS RDS, plus supporting host anchors. Coverage now accepts direct provider-owned targets, preserves the returned relationship, and limits host or Kubernetes anchors to structural `runs_on` or `belongs_to` relationships.
+3. The same probe found Azure hosts and an Azure VM but no `SERVICE` to Azure-resource edge. Azure therefore remains provider-level infrastructure in this tenant and does not gain fabricated service coverage.
+4. The stable Davis Problem fields `dt.smartscape.service`, `dt.smartscape_source.id`, `dt.davis.affected_users_count`, and `dt.davis.impact_level` were accepted by the target query engine. The current user lacked event-bucket access, so value parsing and unavailable behavior are covered by focused tests rather than claimed as live returned data.
+5. Cross-app navigation continues to distinguish manifest page tokens from URL routes. The 0.0.65 Smartscape handoff remains isolated and production-verified because the installed Smartscape manifest exposed no page tokens.
 
-These findings are not permission to broaden attribution. Each change still requires a target-environment probe, focused tests, release-gate completion, and a read-only production smoke.
+These checks do not broaden attribution. Provider presence, service coverage, customer impact, provider fault, contract eligibility, and credit approval remain separate decisions.

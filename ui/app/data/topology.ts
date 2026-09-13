@@ -162,7 +162,7 @@ export const parseSmartscapeScopeEdges = (data: { records?: unknown[] } | undefi
     const serviceNodeId = optionalText(row.service_node_id);
     const targetNodeId = optionalText(row.target_node_id);
     if (!serviceNodeId || !targetNodeId) return [];
-    const relationship = optionalText(row.relationship) === "belongs_to" ? "belongs_to" as const : "runs_on" as const;
+    const relationship = optionalText(row.relationship) ?? "related_to";
     const provider = providerFromTarget(row);
 
     const region = firstText(
@@ -255,6 +255,15 @@ export const uniqueLocations = (edges: SmartscapeScopeEdge[]): string[] =>
 export const detectedProviderSlugs = (edges: SmartscapeScopeEdge[]): string[] => (
   Array.from(new Set(edges.map((edge) => edge.providerSlug).filter((value): value is string => Boolean(value)))).sort()
 );
+
+export const formatSmartscapeRelationship = (relationship: string): string => {
+  const normalized = relationship.trim().toLowerCase();
+  if (normalized === "runs_on") return "runs on";
+  if (normalized === "belongs_to") return "belongs to";
+  if (normalized === "is_attached_to") return "attached to";
+  if (normalized === "related_to") return "related to";
+  return normalized.replaceAll("_", " ") || "related to";
+};
 
 const topologyEdgeKey = (edge: SmartscapeScopeEdge): string => [
   edge.serviceClassicId ?? edge.serviceNodeId,

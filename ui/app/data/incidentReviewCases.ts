@@ -5,6 +5,7 @@ import type {
 } from "../types";
 import { getOverrideScopeIds } from "./contractOverrides";
 import type { EvidenceCandidate } from "./evidenceCandidates";
+import { summarizeDavisImpact } from "./problems";
 
 const CASE_LINK_GAP_MS = 45 * 60 * 1000;
 const CASE_MAX_SPAN_MS = 6 * 60 * 60 * 1000;
@@ -267,6 +268,9 @@ export const buildIncidentReviewCases = ({
       if (left.active !== right.active) return left.active ? -1 : 1;
       if ((left.candidates.length > 0) !== (right.candidates.length > 0))
         return left.candidates.length > 0 ? -1 : 1;
+      const userDifference = (summarizeDavisImpact(right.problems).maximumAffectedUsers ?? -1) -
+        (summarizeDavisImpact(left.problems).maximumAffectedUsers ?? -1);
+      if (userDifference !== 0) return userDifference;
       return (timestamp(right.startedAt) ?? 0) - (timestamp(left.startedAt) ?? 0);
     });
 };
