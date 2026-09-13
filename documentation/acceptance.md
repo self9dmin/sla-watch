@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.57`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.58`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.58 verified scenarios
+
+The `0.0.58` artifact from source commit `412cd5d` was deployed to the designated Dynatrace target environment on 2026-09-13 and exercised through the connected Chrome profile. The production smoke was read-only. It did not change provider configuration, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.58` manifest, six AppEngine functions, review-case model, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `412cd5d` |
+| Release gate | Type checks, lint, 28 test suites with 164 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24 | Local release commands; 83.29% statement coverage; zero production dependency vulnerabilities |
+| Real-tenant consolidation | The 30-day AWS window retained all 94 Dynatrace Problems while reducing the operating worklist from 94 records to 78 review cases and from 12 pages to 5 pages of at most 16 compact cases | Installed production Incidents accessibility-tree and dark-theme visual smoke |
+| Provider-relevant consolidation | Thirty-two provider-relevant Problems were organized into 16 cases. Ten cases still needed review and six reflected existing Not provider-related decisions | Installed production Incidents and Evidence smoke after scope and decision settings finished loading |
+| Conservative live grouping | One selected AWS case combined `P-260915`, `P-260916`, and `P-260917` because they resolved to the same provider scope, shared one affected service, and occurred from 6:51 PM through 7:27 PM on 2026-09-01 | Installed production case detail; all three source Problems remained default-open and visible |
+| Evidence continuity | Review evidence preserved the case route, displayed the same three supporting Problems, combined observed window and affected service, retained applicable terms, and kept one human stopping point | Installed production Evidence accessibility-tree and dark-theme visual smoke; no decision was saved |
+| Truthful language | The consolidated unit is labeled Potential SLA impact and Correlated case. No screen labeled it an SLA violation, provider fault, eligibility finding, approved credit, or submitted claim | Installed production Incidents, Evidence, and release-history smoke |
+| Release history | Change log showed `0.0.58 Current release` and all five case-review changes | Installed production change-log smoke |
+| Runtime observation | Incidents and Evidence completed without a visible application error. Chrome recorded one outer-page extension message-channel error, not an app-frame exception | Connected Chrome visual smoke and browser diagnostics |
 
 ## 0.0.57 verified scenarios
 
