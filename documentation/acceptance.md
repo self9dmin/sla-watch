@@ -1,6 +1,20 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.55`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.56`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.56 verified scenarios
+
+The `0.0.56` artifact from source commit `3baed90` was deployed to the designated Dynatrace target environment on 2026-09-13 and exercised through the connected Chrome profile. The production smoke entered and exited the bulk-review confirmation path without saving a decision. It did not change provider configuration, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.56` manifest, six AppEngine functions, manual bulk-selection behavior, and UI deployed successfully under the unchanged `my.sla` application ID | Installed production deployment and Chrome smoke; source commit `3baed90` |
+| Release gate | Type checks, lint, 27 test suites with 156 tests, coverage collection, production build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 82.79% statement coverage; zero production dependency vulnerabilities |
+| Manual multi-select availability | Incidents loaded 94 Problems, 32 provider-relevant candidates, and 31 needing review. The formerly disabled control became `Select multiple (31)` even though Dynatrace had not returned root-cause entities for those candidates | Installed production Incidents accessibility-tree and visual smoke |
+| Guarded bulk interaction | Two real closed candidates without returned root cause were selected together. The second step stated that both lacked root-cause evidence, identified the outcome as the operator's classification rather than proof, and exposed `Confirm 2 decisions` | Installed production Incidents interaction smoke; confirmation was not submitted |
+| Safety continuity | Missing root cause no longer blocks manual review, but exact-root suggestions still require one returned root-cause identity. Active, selected-provider-linked, incomplete, unconfirmed-scope, and previously reviewed Problems remain ineligible | `tests/incidentTriage.test.ts`; six focused triage tests passed |
+| Release history | Change log showed `0.0.56 Current release` and all three manual multi-select details | Installed production change-log smoke |
+| Runtime quality | The final production Incidents layout remained bounded and the app frame emitted no captured browser warnings or errors | Connected Chrome visual and app-frame browser-log smoke |
 
 ## 0.0.55 verified scenarios
 
