@@ -1,6 +1,21 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.69`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.70`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.70 verified scenarios
+
+The `0.0.70` artifact from source commits `caed93b` and `f627b76` was built and deployed to the designated Dynatrace target environment with Node 24.19.0 on 2026-09-13, then exercised through the connected Chrome profile. The production smoke was read-only and changed only the selected Coverage evidence view and provider before restoring AWS. It did not change provider connections, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.70` manifest, six AppEngine functions, topology-family model, and compact Coverage visualization deployed successfully under the unchanged `my.sla` application ID | Supported-runtime deployment and connected Chrome smoke; source commits `caed93b` and `f627b76` |
+| Release gate | UI and API type checks, lint, 36 test suites with 199 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 84.61% statement coverage; zero production dependency vulnerabilities |
+| AWS topology map | Production grouped all 70 returned AWS Smartscape types into eight readable resource families. The selected Network family retained 19 exact types and 1,817 topology records, with exact type names searchable in the inspector | Installed AWS Coverage accessibility-tree and visual smoke |
+| Azure topology map | Production grouped all 12 returned Azure Smartscape types into five readable resource families. The selected Network family retained five exact types, while provider-level infrastructure remained separate from the zero verified Azure service links | Installed Azure Coverage accessibility-tree and visual smoke |
+| Evidence boundary | Each returned type is represented by one satellite and the interface explicitly states that the visual grouping is not a dependency graph. No relationship edge, service attribution, or cloud-resource identity is inferred by the visualization | Component tests, source review, and installed AWS and Azure Coverage smoke |
+| Layout behavior | The dense node-type card grid and nested topology scrollbar were replaced by a single map-and-inspector workspace that stayed fully readable inside the production shell | Installed dark-theme desktop visual smoke plus prior local desktop, tablet, and mobile checks |
+| Installed version | The installed change log showed `0.0.70 Current release` and the three topology-review changes | Installed production change-log smoke |
+| Runtime quality | AWS and Azure Coverage completed loading without an app-originated browser error. Two generic Chrome extension message-channel entries were present and were not emitted by the deployed app bundle | Connected Chrome post-deploy smoke and browser diagnostics |
 
 ## 0.0.69 verified scenarios
 
