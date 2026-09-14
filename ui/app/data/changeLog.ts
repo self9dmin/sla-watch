@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.67",
+    version: "0.0.68",
     label: "Current release",
+    summary: "Made detected topology easier to scan and manage.",
+    details: [
+      "Detected topology now presents larger, readable resource cards without a nested scrolling pane.",
+      "A provider-scoped search filters both human-readable resource names and raw Smartscape node types.",
+      "The mapping handoff stays available while scrolling, and narrow screens no longer overflow horizontally.",
+    ],
+  },
+  {
+    version: "0.0.67",
+    label: "Previous release",
     summary: "Turned Evidence into a complete, portable SRE handoff.",
     details: [
       "Evidence now opens on a searchable, filterable Review cases queue with complete counts and 20 cases per page.",
