@@ -1,6 +1,21 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.71`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.72`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.72 verified scenarios
+
+The `0.0.72` artifact from source commits `696deff` and `86c38e9` was built and deployed to the designated Dynatrace target environment with Node 24.19.0 on 2026-09-14, then exercised through the connected Chrome profile. The production smoke was read-only and changed only the browser viewport and selected application route before restoring the normal viewport and Coverage route. It did not change provider connections, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.72` manifest, six AppEngine functions, and AppShell-aware topology layout deployed successfully under the unchanged `my.sla` application ID | Supported-runtime deployment and connected Chrome smoke; source commits `696deff` and `86c38e9` |
+| Release gate | UI and API type checks, lint, 36 test suites with 199 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 84.61% statement coverage; zero production dependency vulnerabilities |
+| Narrow AppShell layout | At an outer viewport of 1050 by 1180 pixels, the 913-pixel-wide topology view changed to a four-column resource-family grid, hid radial spokes, retained 44-pixel controls, and had no card overlap or horizontal overflow | Installed production DOM and responsive visual smoke |
+| Mobile-width layout | At an outer viewport of 480 by 900 pixels, the 355-pixel-wide topology view stacked the explorer, map, and inspector into one column, retained 44-pixel family controls, and had no card overlap or horizontal overflow | Installed production DOM and responsive visual smoke |
+| Wide-layout continuity | After restoring the normal browser viewport, the 1,646-pixel-wide app view returned to the radial map with visible spokes and positioned family cards, with no overlap or horizontal overflow | Installed production DOM and responsive visual smoke |
+| Coverage entry default | Returning from the change log opened Azure Coverage with `Detected topology 12` selected and `Service links 0` unselected | Installed production accessibility-tree smoke |
+| Installed version | The installed change log showed `0.0.72 Current release` and described the AppShell-responsive topology change | Installed production change-log smoke |
+| Runtime quality | Coverage completed loading without a visible app error or app-bundle warning. Chrome reported one generic extension message-channel error that was not emitted by the deployed app bundle | Connected Chrome post-deploy smoke and browser diagnostics |
 
 ## 0.0.71 verified scenarios
 
