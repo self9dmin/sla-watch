@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.68",
+    version: "0.0.69",
     label: "Current release",
+    summary: "Expanded provider discovery without weakening attribution.",
+    details: [
+      "Exact Smartscape provider identities now recognize direct AI providers and map hosted services to the cloud provider that owns the contract.",
+      "Databricks native topology can establish provider presence, while models, frameworks, database technologies, and loose log text remain ignored.",
+      "Provider marks from sla.directory are sanitized, bundled locally, and displayed only after environment evidence enables the provider.",
+    ],
+  },
+  {
+    version: "0.0.68",
+    label: "Previous release",
     summary: "Made detected topology easier to scan and manage.",
     details: [
       "Detected topology now presents larger, readable resource cards without a nested scrolling pane.",
