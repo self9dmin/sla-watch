@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.68
+
+- Makes the detected Smartscape topology inventory easier to scan without adding another workflow.
+- Adds provider-scoped search across readable resource names and raw Smartscape node types.
+- Uses one scrolling surface, keeps the service-mapping handoff visible, and removes narrow-screen overflow.
+
+## 0.0.67
+
+- Reworks Evidence around a searchable review-case queue with explicit states shared with Incidents.
+- Separates Dynatrace facts, optional provider corroboration, and missing evidence.
+- Adds non-mutating copy and JSON download actions for an SRE follow-up package.
+
 ## 0.0.66
 
 - Migrates service inventory and exact incident service lookups from classic entities to `smartscapeNodes SERVICE` after a live identity, name, and tag-equivalence check.
