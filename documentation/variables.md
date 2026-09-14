@@ -1,5 +1,7 @@
 # Variables, configuration, and secrets
 
+Start with [Getting started and configuration](getting-started.md). This page is the implementation reference for administrators and deployers who need exact configuration, retention, and secret boundaries.
+
 ## Configuration inventory
 
 | Name | Used by | Scope | Source | Rotation or retention | Risk |

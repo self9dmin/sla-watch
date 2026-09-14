@@ -32,12 +32,12 @@ export const SetupAdvisor = ({
     <div className="setup-section-heading">
       <div>
         <h3 id="setup-checks-title">Coverage checks</h3>
-        <p>Resolve telemetry and ownership gaps before reviewing an incident.</p>
+        <p>Resolve required SLA-match gaps first. Use recommendations when they improve the handoff.</p>
       </div>
       {!loading ? <span className="advisor-count">{statusLabel}</span> : null}
     </div>
     {loading ? (
-      <div className="advisor-empty" role="status">Reading the tenant boundary before making recommendations...</div>
+      <div className="advisor-empty" role="status">Checking provider coverage before making recommendations...</div>
     ) : visibleRecommendations.length === 0 ? (
       <div className="advisor-empty">
         <strong>No blocking coverage gaps detected.</strong>

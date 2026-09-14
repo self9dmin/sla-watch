@@ -2,6 +2,8 @@
 
 Provider connections are optional, read-only sources of provider-reported service health. They supplement public `sla.directory` terms and Dynatrace evidence. They do not replace either source, prove that a Dynatrace service was affected, establish provider fault, or determine service credit eligibility.
 
+Do not start here unless the review needs customer-scoped provider reports. Provider detection, published terms, Dynatrace evidence, and the core SRE review work without a provider credential. Start with [Getting started and configuration](getting-started.md).
+
 An installed copy of SLA Review can keep multiple AWS accounts, Azure subscriptions, Google Cloud projects, and OCI tenancies at the same time. Every connection belongs to the Dynatrace environment where it was created.
 
 ## What works without a provider connection
@@ -9,7 +11,7 @@ An installed copy of SLA Review can keep multiple AWS accounts, Azure subscripti
 - Published terms load automatically from `sla.directory`. The user does not supply an API key or configure the `sla.directory` MCP server.
 - Coverage, Smartscape-backed SLA matching, Performance, Incidents, Evidence, Directory, custom terms, and Dynatrace telemetry review remain available.
 - Google Cloud and OCI can use clearly labeled public status sources. Those feeds are not project- or tenancy-specific.
-- AWS and Azure remain available for contracts and Dynatrace evidence, but account-specific provider notices require a configured connection.
+- AWS and Azure remain available for published terms and Dynatrace evidence, but account-specific provider notices require a configured connection.
 
 ## Administrator prerequisites
 
@@ -27,8 +29,8 @@ See the Dynatrace guidance for [Credential Vault](https://docs.dynatrace.com/doc
 
 | Provider source | One connection represents | Provider prerequisite | Credential Vault Token value | Required outbound hosts | Behavior without a connection |
 | --- | --- | --- | --- | --- | --- |
-| AWS Health | One 12-digit AWS account | An eligible AWS Health API support plan and `health:DescribeEvents`, `health:DescribeEventDetails`, `health:DescribeAffectedEntities` | JSON containing `accessKeyId`, `secretAccessKey`, and optional `sessionToken` | `sts.us-east-1.amazonaws.com`, `health.us-east-1.amazonaws.com` | No AWS provider notices; contracts and Dynatrace evidence remain available |
-| Azure Service Health | One Azure subscription | A dedicated Microsoft Entra service principal with `Microsoft.ResourceHealth/events/read` on that subscription | JSON containing `tenantId`, `clientId`, and `clientSecret` | `login.microsoftonline.com`, `management.azure.com` | No Azure provider notices; contracts and Dynatrace evidence remain available |
+| AWS Health | One 12-digit AWS account | An eligible AWS Health API support plan and `health:DescribeEvents`, `health:DescribeEventDetails`, `health:DescribeAffectedEntities` | JSON containing `accessKeyId`, `secretAccessKey`, and optional `sessionToken` | `sts.us-east-1.amazonaws.com`, `health.us-east-1.amazonaws.com` | No AWS provider notices; published terms and Dynatrace evidence remain available |
+| Azure Service Health | One Azure subscription | A dedicated Microsoft Entra service principal with `Microsoft.ResourceHealth/events/read` on that subscription | JSON containing `tenantId`, `clientId`, and `clientSecret` | `login.microsoftonline.com`, `management.azure.com` | No Azure provider notices; published terms and Dynatrace evidence remain available |
 | Google Cloud Personalized Service Health | One Google Cloud project | Enable `servicehealth.googleapis.com`; grant `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer` | The service account JSON key | `oauth2.googleapis.com`, `servicehealth.googleapis.com` | Public Google Cloud status remains available and is labeled non-project-specific |
 | OCI Announcements | One commercial OCI tenancy and region | A dedicated API user in a group granted `Allow group AnnouncementListers to inspect announcements in tenancy` | JSON containing `userOcid`, `fingerprint`, and unencrypted RSA `privateKey` | Exact `announcements.<region>.oraclecloud.com` hostname | Public OCI regional status remains available and is labeled non-tenancy-specific |
 

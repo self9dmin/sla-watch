@@ -63,7 +63,7 @@ export const Header = ({
           >
             <AppHeader.ActionButton
               onClick={() => {
-                void navigate("/settings/watch");
+                void navigate("/settings/intro");
               }}
               className={isSettings ? "active" : undefined}
               aria-label="Open workspace settings"
@@ -76,12 +76,12 @@ export const Header = ({
           </Tooltip>
           <Tooltip
             className="header-action-tooltip"
-            text="Start or replay walkthrough"
+            text="Show quick tour"
             placement="bottom"
           >
             <AppHeader.ActionButton
               onClick={onStartTour}
-              aria-label="Start or replay product walkthrough"
+              aria-label="Show quick tour"
               data-tour="tour"
             >
               <Button.Prefix>
@@ -167,7 +167,7 @@ export const Header = ({
           <div className="help-drawer-header">
             <div>
               <div className="eyebrow">Review guide</div>
-              <h2>Provider attribution guidance</h2>
+              <h2>How SLA Review works</h2>
             </div>
             <button
               type="button"
@@ -179,16 +179,16 @@ export const Header = ({
             </button>
           </div>
           <p>
-            Use Coverage to review detected topology and SLA matches, Performance to track
-            customer objectives, Incidents to inspect Dynatrace Problems, and
-            Evidence to complete a human review or inspect optional provider corroboration.
-            FinOps Agent is planned and is not available in this release.
+            SLA Review opens with the providers and topology Dynatrace can see.
+            Settings is optional. Use it only when the workspace needs a different
+            review default, custom terms, or customer-scoped provider reports.
           </p>
           <section>
             <h3>1. Confirm coverage</h3>
             <p>
-              Start in Coverage. Review Smartscape recommendations and services
-              without runtime context in the same worklist.
+              Start in Coverage. Review detected topology, then resolve only SLA
+              matches that need a decision. Provider presence alone does not
+              assign every service.
             </p>
           </section>
           <section>
@@ -202,33 +202,35 @@ export const Header = ({
           <section>
             <h3>3. Review incidents</h3>
             <p>
-              Select one Problem at a time and compare its observed impact with
-              provider terms. A matching service does not prove provider fault
-              or credit eligibility.
+              Incidents groups related Problems only when the provider service,
+              applicable terms, time, and shared service or exact root cause support
+              one review. Open Problems for the full investigation.
             </p>
           </section>
           <section>
             <h3>4. Finish the evidence review</h3>
             <p>
-              Evidence lists Problems that overlap confirmed or suggested
-              provider coverage. Mark a case ready, save it for more evidence,
-              or exclude it, then inspect provider corroboration when useful.
-              Nothing is submitted from this workspace.
+              Evidence carries forward the SLA match, observed impact, applicable
+              terms, and optional provider reports. Mark a case ready, keep it open
+              for evidence, or exclude it. Nothing is submitted. This is where the
+              SRE review stops.
             </p>
           </section>
           <section>
             <h3>5. Review provider terms</h3>
             <p>
-              Directory separates availability terms, service-level coverage,
-              support options, and custom terms for the active provider.
+              Directory separates published terms, service-level coverage,
+              support options, filing instructions, and custom terms for the
+              active provider. It is a reference, not a required detour.
             </p>
           </section>
           <section>
-            <h3>6. Get support</h3>
+            <h3>6. Configure only when needed</h3>
             <p>
-              {communityLive
-                ? "The change log documents application releases. Questions and issue discussion belong on the Dynatrace Community profile."
-                : "The change log documents application releases. Dynatrace Community support will be enabled at public launch."}
+              Review defaults changes the focused provider, source-tag convention,
+              and evidence window. Custom terms are for private agreements.
+              Provider connections require provider IAM, Credential Vault, and
+              approved External requests.
             </p>
           </section>
           <div className="help-drawer-actions">
@@ -237,10 +239,10 @@ export const Header = ({
               className="link-button"
               onClick={() => {
                 setHelpOpen(false);
-                void navigate("/settings/watch");
+                void navigate("/settings/intro");
               }}
             >
-              Open workspace settings
+              Open getting started
             </button>
             <CommunityLink
               className="link-button"
@@ -255,7 +257,7 @@ export const Header = ({
                 onStartTour();
               }}
             >
-              Replay walkthrough
+              Show quick tour
             </button>
           </div>
         </aside>

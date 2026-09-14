@@ -69,12 +69,19 @@ When data is missing, denied, stale, or truncated, the app says so. It does not 
 
 ## Getting started
 
-You need:
+For an installed copy:
 
-- Dynatrace AppEngine in the target environment.
-- A user or deployment identity with the scopes declared in [`app.config.json`](app.config.json).
-- `sla.directory` added under Dynatrace **Settings > General > External requests**.
-- Node.js 24 for local development and deployment.
+1. Open SLA Review. It lands in **Coverage** and starts with the provider topology Dynatrace can see.
+2. Review **SLA matches** only when the app cannot safely resolve a service relationship.
+3. Use **Incidents** to narrow Dynatrace Problems, then finish the human decision in **Evidence**.
+
+Published terms do not require a provider credential. A tenant administrator must allow `sla.directory` under Dynatrace **Settings > General > External requests**. Provider connections are optional and are only for customer-scoped provider reports.
+
+The [getting started and configuration guide](documentation/getting-started.md) separates SRE, reviewer, administrator, and developer requirements and explains when each setting is needed.
+
+### Install or develop
+
+You need Dynatrace AppEngine in the target environment, a deployment identity with `app-engine:apps:install` and `app-engine:apps:run`, the scopes declared in [`app.config.json`](app.config.json), and Node.js 24.
 
 Install dependencies and run the release gate:
 
@@ -95,9 +102,7 @@ Deploy to a target environment:
 npx dt-app deploy --environment-url https://your-environment.apps.dynatrace.com/
 ~~~
 
-`app.config.json` contains a safe placeholder environment URL. You can also set `DT_APP_ENVIRONMENT_URL` in the shell or CI environment.
-
-The installed app opens directly in Coverage. Published terms do not require a credential. Configure a provider connection only when you want customer-scoped provider events, and follow the provider guide instead of placing a secret in the repository or app settings.
+`app.config.json` contains a safe placeholder environment URL. You can also set `DT_APP_ENVIRONMENT_URL` in the shell or CI environment. Follow the provider connection guide instead of placing a secret in the repository or App Settings.
 
 ## Permissions and data
 
@@ -124,6 +129,7 @@ npm audit --omit=dev
 
 ## Repository guide
 
+- [Getting started and configuration](documentation/getting-started.md)
 - [Architecture](documentation/architecture.md)
 - [User flows](documentation/flows.md)
 - [Provider connections](documentation/provider-connections.md)
