@@ -73,4 +73,52 @@ describe("provider Smartscape inventory", () => {
       { node_type: "AWS_EC2_INSTANCE", node_count: 0 },
     ] })).toEqual([]);
   });
+
+  it("maps exact provider identities to the contract owner", () => {
+    const identityInventory = parseProviderInventory({ records: [
+      { node_type: "GENAI_PROVIDER", provider_identity: "anthropic", node_count: 2 },
+      { node_type: "GENAI_PROVIDER", provider_identity: "openai", node_count: 1 },
+      { node_type: "GENAI_PROVIDER", provider_identity: "aws.bedrock", node_count: 1 },
+      { node_type: "GENAI_PROVIDER", provider_identity: "azure.ai.openai", node_count: 1 },
+      { node_type: "GENAI_PROVIDER", provider_identity: "gcp.gemini", node_count: 1 },
+      { node_type: "GENAI_PROVIDER", provider_identity: "elevenlabs", node_count: 1 },
+    ] });
+
+    expect(providerInventorySlugs(identityInventory)).toEqual([
+      "aws",
+      "azure",
+      "gcp",
+      "openai",
+      "anthropic",
+      "elevenlabs",
+    ]);
+    expect(identityInventory.find(({ providerSlug }) => providerSlug === "anthropic")).toMatchObject({
+      nodeCount: 2,
+      nodeTypes: ["GENAI_PROVIDER"],
+      providerIdentities: ["anthropic"],
+    });
+    expect(providerInventoryDetail(identityInventory.find(({ providerSlug }) => providerSlug === "anthropic")!))
+      .toBe("1 provider identity · 1 Smartscape type");
+  });
+
+  it("recognizes vetted native topology without guessing from names or technologies", () => {
+    const identityInventory = parseProviderInventory({ records: [
+      { node_type: "DATABRICKS_CLUSTER", provider_identity: "workspace-a", node_count: 10 },
+      { node_type: "DATABRICKS_MODEL_SERVING_ENDPOINT", provider_identity: "endpoint-a", node_count: 3 },
+      { node_type: "DATABRICKS_WORKSPACE", provider_identity: "workspace-a", node_count: 1 },
+      { node_type: "GENAI_MODEL", provider_identity: "claude-sonnet-4", node_count: 3 },
+      { node_type: "GENAI_PROVIDER", provider_identity: "langchain", node_count: 2 },
+      { node_type: "DB_INSTANCE_ORACLE", provider_identity: "oracle", node_count: 4 },
+      { node_type: "VENDOR_CLOUDFLARE", provider_identity: "cloudflare", node_count: 1 },
+    ] });
+
+    expect(providerInventorySlugs(identityInventory)).toEqual(["databricks"]);
+    expect(identityInventory[0]).toMatchObject({
+      providerSlug: "databricks",
+      nodeCount: 14,
+      providerIdentities: [],
+    });
+    expect(providerInventoryDetail(identityInventory[0])).toBe("14 topology nodes · 3 Smartscape types");
+    expect(providerInventoryNodeTypeLabel("DATABRICKS_MODEL_SERVING_ENDPOINT", 3)).toBe("Model serving endpoints");
+  });
 });

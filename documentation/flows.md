@@ -12,7 +12,7 @@ Sequence:
 
 1. `App` restores personal and workspace state. If app-state reads fail, it uses local browser state and displays the degraded storage message.
 2. `Dashboard` issues bounded DQL reads for services, Problems, logs, spans, service-request telemetry, and preferred Smartscape coverage anchors. Separate aggregate queries verify whether the returned service or relationship inventory is complete. Exact affected-service IDs also drive incident-scoped topology, service, request, and failure reads, so Evidence does not depend on a global service-list cap.
-3. `Dashboard` builds the active-provider list from detected topology, cloud dimensions, source-owned provider tags, saved scope mappings, and enabled incident connections. It calls the `slaDirectory` AppEngine function with the focused provider slug. Unrelated catalog providers do not enter the operating selector.
+3. `Dashboard` builds the active-provider list from detected topology, exact reviewed provider identities, cloud dimensions, source-owned provider tags, saved scope mappings, and enabled incident connections. Hosted GenAI identities resolve to their contract owner, while unknown identities and model or framework names remain ignored. It calls the `slaDirectory` AppEngine function with the focused provider slug. Unrelated catalog providers do not enter the operating selector.
 4. The function validates the slug, calls the allowlisted public API, applies an eight-second timeout, validates the response, and returns normalized provider and service records.
 5. The app reads active tenant custom terms, confirmed provider-service scope mappings, and prior human evidence decisions from App Settings. It preserves the public directory record as the fallback baseline.
 6. Coverage classifies the current provider boundary as loading, access-incomplete, inventory-incomplete, contract-unavailable, action-required, boundary-ready, or review-available. It never reports complete coverage from a truncated or unverified inventory.
@@ -25,7 +25,7 @@ Deny or degraded behavior: a missing read scope is shown as access incomplete, n
 
 Actor: user with `state:app-states:write`.
 
-1. Settings lets the user choose among providers automatically placed in scope, then edit the tag key or evidence lookback. Providers enter scope from bounded Smartscape cloud inventory, service-level Dynatrace evidence, confirmed Coverage mappings, or enabled incident connections. Provider presence alone does not attribute a service.
+1. Settings lets the user choose among providers automatically placed in scope, then edit the tag key or evidence lookback. Providers enter scope from bounded Smartscape cloud inventory, exact reviewed provider identities, service-level Dynatrace evidence, confirmed Coverage mappings, or enabled incident connections. Standard identities are portable across tenants; uncommon providers can still use source metadata or a confirmed mapping. Provider presence alone does not attribute a service.
 2. Inputs are normalized before persistence. The focused provider is a valid lowercase slug and the operating surface constrains it to the runtime provider collection.
 3. The context optimistically updates the UI and writes the workspace state with an expiry just inside the platform's 90-day limit.
 4. If the shared write is denied, the same normalized value is kept in local storage and a status message explains the fallback.

@@ -1,17 +1,11 @@
 import { canonicalProviderSlug, providerDisplayName } from "./providers";
+import { hasBundledProviderLogo } from "./providerLogoSlugs";
 
 export type ProviderPresentation = {
   slug: string;
   label: string;
   logo?: string;
   monogram: string;
-};
-
-const PROVIDER_LOGOS: Readonly<Record<string, string>> = {
-  aws: "assets/provider-aws.svg",
-  azure: "assets/provider-azure.svg",
-  gcp: "assets/provider-gcp.svg",
-  oci: "assets/provider-oci.svg",
 };
 
 const providerMonogram = (label: string): string => {
@@ -35,7 +29,7 @@ export const providerPresentation = (value: string): ProviderPresentation => {
   return {
     slug,
     label,
-    logo: PROVIDER_LOGOS[slug],
+    logo: hasBundledProviderLogo(slug) ? `assets/providers/${slug}.svg` : undefined,
     monogram: providerMonogram(label),
   };
 };

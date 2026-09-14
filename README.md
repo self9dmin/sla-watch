@@ -28,7 +28,9 @@ Settings is not another required workflow. Administrators use it for optional pr
 
 ## Provider support
 
-Provider detection comes from bounded Smartscape inventory, monitored-host cloud context, service topology, source tags, saved Coverage mappings, or enabled connections. Detection establishes that a provider exists in the environment. It does not establish that a specific service depends on that provider.
+Provider detection comes from bounded Smartscape inventory, exact provider identities, monitored-host cloud context, service topology, source tags, saved Coverage mappings, or enabled connections. Standard Smartscape cloud families work across tenants. Exact GenAI identities are mapped to the contract owner, so Bedrock remains AWS, Azure OpenAI remains Azure, and Google-hosted GenAI remains GCP. Databricks native topology is also recognized. Unknown identities, model names, framework names, and plain-text log mentions do not enable a provider. Detection establishes that a provider exists in the environment. It does not establish that a specific service depends on that provider.
+
+Provider marks are copied from the public `sla.directory` logo set and bundled locally with the app. The logo catalog never enables a provider by itself. If Dynatrace detects a provider without a bundled mark, the UI uses a generated monogram.
 
 | Provider | Optional customer-scoped incident source | Public fallback |
 | --- | --- | --- |

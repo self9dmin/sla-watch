@@ -20,6 +20,7 @@ describe("provider infrastructure candidates", () => {
           { nodeType: "AZURE_MICROSOFT_COMPUTE_VIRTUALMACHINES", nodeCount: 1 },
           { nodeType: "AZURE_MICROSOFT_RESOURCES_SUBSCRIPTIONS", nodeCount: 1 },
         ],
+        providerIdentities: [],
         accountScopeCount: 1,
         regionCount: 0,
         availabilityZoneCount: 121,
@@ -54,6 +55,7 @@ describe("provider infrastructure candidates", () => {
         nodeTypeCounts: [
           { nodeType: "AZURE_MICROSOFT_RESOURCES_LOCATIONS_AVAILABILITYZONES", nodeCount: 121 },
         ],
+        providerIdentities: [],
         accountScopeCount: 0,
         regionCount: 0,
         availabilityZoneCount: 121,
