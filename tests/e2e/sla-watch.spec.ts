@@ -369,6 +369,50 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(app.getByRole("button", { name: "Start walkthrough" })).toBeVisible();
   });
 
+  test("reflows detected topology when AppShell space becomes narrow", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1050, height: 1180 });
+    const app = await openWatch(page);
+    const topologyMap = app.getByLabel(/topology inventory map/i);
+
+    await expect(topologyMap).toBeVisible();
+    await expect(topologyMap.locator(".coverage-topology-spokes")).toBeHidden();
+
+    const layout = await topologyMap.locator(".coverage-topology-family").evaluateAll(
+      (elements) => {
+        const boxes = elements.map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+            position: getComputedStyle(element).position,
+          };
+        });
+        const overlaps = boxes.flatMap((left, index) =>
+          boxes.slice(index + 1).filter((right) => !(
+            left.x + left.width <= right.x
+            || right.x + right.width <= left.x
+            || left.y + left.height <= right.y
+            || right.y + right.height <= left.y
+          )),
+        );
+
+        return {
+          overlaps: overlaps.length,
+          positions: boxes.map(({ position }) => position),
+          minimumHeight: Math.min(...boxes.map(({ height }) => height)),
+        };
+      },
+    );
+
+    expect(layout.overlaps).toBe(0);
+    expect(layout.positions.every((position) => position === "static")).toBe(true);
+    expect(layout.minimumHeight).toBeGreaterThanOrEqual(44);
+  });
+
   test("keeps new custom terms in Settings and reserves the modal for edits", async ({
     page,
   }) => {

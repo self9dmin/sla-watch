@@ -252,7 +252,7 @@ export const ProviderTopologyMap = ({
         })}
 
         <div className="coverage-topology-canvas-note">
-          One dot per returned type. Visual grouping only, not a dependency graph.
+          Visual grouping only, not a dependency graph.
         </div>
       </div>
     </div>
