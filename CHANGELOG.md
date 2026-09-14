@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.74
+
+- Opens Settings on a concise Getting started page that explains what works immediately, what an administrator must provide, and which configuration is optional.
+- Replaces the six-step walkthrough with a five-step quick tour that follows Coverage, Performance, Incidents, Evidence, and Directory without treating Settings as part of the SRE workflow.
+- Adds one role-based setup and configuration guide, then links the README, permissions, provider connections, and secret inventory back to it.
+- Makes Evidence the explicit stopping point and updates incident guidance to match the current grouped review-case experience.
+
+## 0.0.73
+
+- Uses SLA match consistently for workload-to-provider relationships across Coverage, Incidents, Evidence, Settings, and documentation.
+- Separates Published terms from Custom terms and uses Applies to for the Dynatrace scope where those terms apply.
+- Keeps existing App Settings records compatible because stored schema and field identifiers did not change.
+
 ## 0.0.72
 
 - Keeps the radial provider-topology map on wide screens while changing to a compact family layout when AppShell space gets tight.

@@ -24,7 +24,7 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 - Remove the five-step onboarding wizard and duplicate provider confirmation.
 - Make Coverage the first screen for every new and returning user.
 - Keep provider additions and optional incident connections in Settings.
-- Keep the walkthrough explicit, replayable, and non-mutating.
+- Keep the quick tour optional, replayable, and non-mutating.
 - End the SRE path in Evidence with an explicit ready-for-follow-up, needs-evidence, or excluded state. Keep submission outside the current product.
 - Measure success by time to evidence, resolved coverage exceptions, and repeat incident review, not onboarding completion.
 

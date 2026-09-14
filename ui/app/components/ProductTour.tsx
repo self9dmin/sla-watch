@@ -11,33 +11,28 @@ type TourStep = { target: string; title: string; body: string };
 const STEPS: TourStep[] = [
   {
     target: '[data-tour="coverage"]',
-    title: "Review SLA matches",
-    body: "Coverage is the starting point. Review what Dynatrace found, then confirm only the SLA matches that need a decision.",
+    title: "Start with what Dynatrace found",
+    body: "Coverage opens automatically with detected providers and topology. Review only ambiguous SLA matches. Provider presence alone does not assign every service.",
   },
   {
     target: '[data-tour="performance"]',
-    title: "Track customer objectives",
-    body: "Performance evaluates the customer objectives created from Coverage. It keeps optional provider corroboration separate and opens native Dynatrace objectives for deeper analysis.",
+    title: "Check customer performance",
+    body: "Performance evaluates customer objectives from Dynatrace request telemetry. Provider reports remain separate supporting evidence.",
   },
   {
     target: '[data-tour="incidents"]',
-    title: "Review observed incidents",
-    body: "Incidents prioritizes active and provider-relevant Dynatrace Problems. Use the focused summary to choose the next step, or open Problems for full investigation.",
-  },
-  {
-    target: '[data-tour="directory"]',
-    title: "Open provider records",
-    body: "Directory holds the active provider's published terms, service coverage, claim requirements, support options, and custom terms.",
-  },
-  {
-    target: '[data-tour="settings"]',
-    title: "Configure the workspace",
-    body: "Settings controls monitored providers, optional incident connections, custom terms, the tag key, and the lookback window. Provider connections can be added for more than one account scope.",
+    title: "Triage review cases",
+    body: "Incidents narrows Dynatrace Problems into defensible review cases. Open Problems when you need the full investigation.",
   },
   {
     target: '[data-tour="evidence"]',
-    title: "Finish the human review",
-    body: "Evidence assembles the observed impact, provider relationship, current terms, and required evidence. Mark the case ready, save it for more evidence, or exclude it. Nothing is sent, and this is where the SRE review stops.",
+    title: "Make the review decision",
+    body: "Evidence brings together impact, SLA matches, applicable terms, and optional provider reports. Mark the case ready, keep it open for evidence, or exclude it. Nothing is sent. The SRE review stops here.",
+  },
+  {
+    target: '[data-tour="directory"]',
+    title: "Check provider terms",
+    body: "Directory is the reference for published terms, service coverage, support options, filing instructions, and any environment-owned custom terms.",
   },
 ];
 
@@ -87,7 +82,7 @@ export const ProductTour = ({ onComplete }: { onComplete: () => void }) => {
     <div
       className="product-tour"
       role="dialog"
-      aria-label="Product walkthrough"
+      aria-label="Quick tour"
     >
       {rect ? (
         <>
@@ -132,13 +127,13 @@ export const ProductTour = ({ onComplete }: { onComplete: () => void }) => {
       )}
       <div className="tour-panel" style={{ top, left, width: panelWidth }}>
         <div className="eyebrow">
-          Product walkthrough · {index + 1}/{STEPS.length}
+          Quick tour · {index + 1}/{STEPS.length}
         </div>
         <button
           type="button"
           className="tour-close"
           onClick={onComplete}
-          aria-label="Close walkthrough"
+          aria-label="Close quick tour"
         >
           Close
         </button>

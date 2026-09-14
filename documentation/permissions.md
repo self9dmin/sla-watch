@@ -2,6 +2,19 @@
 
 Dynatrace evaluates an app call using both the scope declared in `app.config.json` and the current user's IAM grants. The app must not assume that a declared scope is granted to every user.
 
+Start with [Getting started and configuration](getting-started.md) for the operator flow. Use this page when defining IAM policies or checking a denied capability.
+
+## Access profiles
+
+| Profile | Intended access |
+| --- | --- |
+| Reader | Run the app and read the Dynatrace sources used by the views they need. Denied sources stay explicitly unavailable. |
+| Reviewer | Reader access plus App Settings write access for SLA matches, custom terms, and Evidence decisions. Add `slo:slos:write` only when the user should create an objective. |
+| Provider connection administrator | Reviewer access plus permission to use the selected Credential Vault record, provider-side least-privilege IAM, and the adapter's exact External requests hosts. |
+| Deployer | Separate `app-engine:apps:install` and `app-engine:apps:run` access for local or CI deployment. Runtime data access still follows the app and current user. |
+
+These profiles describe product responsibilities, not prebuilt Dynatrace groups. Grant only the rows and scopes each person needs.
+
 ## App-declared scopes
 
 | Scope | Operation | Deny behavior |

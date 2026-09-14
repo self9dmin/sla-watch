@@ -22,11 +22,11 @@ import { parseServiceRecords } from "../data/serviceInventory";
 import type { AwsProviderNoticesResponse, AzureProviderNoticesResponse, ContractOverrideValue, ContractScopeKind, EvidenceLookbackHours, GcpProviderNoticesResponse, OciProviderNoticesResponse, ProviderConnectionValue, ServiceRecord, SlaProviderResponse, SlaThemePreference } from "../types";
 
 const SETUP_LINKS = [
+  ["intro", "Getting started"],
   ["watch", "Review defaults"],
   ["provider-connections", "Provider connections"],
   ["sla-overrides", "Custom terms"],
   ["appearance", "Appearance"],
-  ["intro", "Walkthrough"],
 ] as const;
 
 const OPERATE_LINKS = [
@@ -39,7 +39,7 @@ const SettingsRail = ({ page }: { page: string }) => {
     <aside className="settings-rail">
       <Button variant="default" onClick={() => { void navigate("/"); }}>Back to SLA Review</Button>
       <div className="settings-rail-title">Workspace settings</div>
-      <RailGroup title="MY SETUP" links={SETUP_LINKS} page={page} />
+      <RailGroup title="CONFIGURE" links={SETUP_LINKS} page={page} />
       <div className="settings-rail-group">
         <div className="settings-rail-label">OPERATE</div>
         {OPERATE_LINKS.map(([href, label]) => <NavLink key={href} to={href} className="settings-rail-link">{label}</NavLink>)}
@@ -660,17 +660,22 @@ const IntroSettings = () => {
   const navigate = useNavigate();
   return (
     <section className="settings-page">
-      <div className="page-intro"><Text className="eyebrow">Settings · guidance</Text><Heading level={1}>Product walkthrough.</Heading><Paragraph>Coverage is the starting point. Use this short tour when a responder needs an orientation to Coverage, Performance, Incidents, Evidence, and provider terms.</Paragraph></div>
-      <div className="settings-actions"><Button variant="emphasized" onClick={() => void navigate("/?walkthrough=1")}>Start walkthrough</Button></div>
-      <div className="settings-callout"><strong>The walkthrough changes nothing</strong><span>It does not change providers, connections, coverage, telemetry, tags, terms, or evidence decisions.</span></div>
+      <div className="page-intro"><Text className="eyebrow">Settings · getting started</Text><Heading level={1}>Start with Coverage.</Heading><Paragraph>Most users do not need to configure anything before the first review. SLA Review reads the current environment and opens on Coverage.</Paragraph></div>
+      <div className="settings-actions"><Button variant="emphasized" onClick={() => void navigate("/")}>Open Coverage</Button><Button onClick={() => void navigate("/?walkthrough=1")}>Show quick tour</Button></div>
+      <div className="settings-callout"><strong>What must already be available</strong><span>A tenant administrator installs the app, grants the required Dynatrace access, and allows <code>sla.directory</code> under External requests so published terms can load.</span></div>
+      <div className="settings-summary-grid">
+        <NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Optional</span><strong>Change review defaults.</strong><span>Choose the focused provider, source-tag convention, or evidence window.</span></NavLink>
+        <NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">When terms differ</span><strong>Add custom terms.</strong><span>Use an explicit scope and agreement reference for negotiated or private terms.</span></NavLink>
+        <NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Administrator</span><strong>Connect provider reports.</strong><span>Add customer-scoped provider events only when they help. Provider IAM, Credential Vault, and External requests are required.</span></NavLink>
+      </div>
+      <div className="settings-callout"><strong>Evidence is the stopping point</strong><span>The SRE records Ready for follow-up, Needs evidence, or Excluded from provider follow-up. SLA Review does not submit a claim, send email, or decide fault or credit.</span></div>
+      <div className="settings-callout"><strong>The quick tour changes nothing</strong><span>It does not change providers, connections, SLA matches, telemetry, tags, terms, objectives, or evidence decisions.</span></div>
     </section>
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">Review workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure review defaults, optional incident data, custom terms, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Review defaults</span><strong>Choose the focused provider, source tag convention, and evidence window.</strong><span>Providers are discovered automatically and SLA matches remain in Coverage.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Published terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">Custom terms</span><strong>Define environment-specific terms and where they apply.</strong><span>Apply one terms record to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Walkthrough</span><strong>Tour the operating views.</strong><span>Coverage opens first. The walkthrough is optional and changes no workspace configuration.</span></NavLink></div></section>;
-
 export const SettingsPage = () => {
-  const { page = "watch" } = useParams();
-  const content = page === "appearance" ? <AppearanceSettings /> : page === "intro" ? <IntroSettings /> : page === "provider-connections" ? <ProviderConnectionsSettings /> : page === "sla-overrides" ? <SlaOverrideSettings /> : page === "watch" ? <WatchSettings /> : <SettingsLanding />;
+  const { page = "intro" } = useParams();
+  const content = page === "appearance" ? <AppearanceSettings /> : page === "provider-connections" ? <ProviderConnectionsSettings /> : page === "sla-overrides" ? <SlaOverrideSettings /> : page === "watch" ? <WatchSettings /> : <IntroSettings />;
   return <div className="settings-layout"><SettingsRail page={page} /><main className={`settings-content settings-content-${page}`}>{content}</main></div>;
 };

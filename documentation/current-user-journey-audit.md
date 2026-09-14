@@ -7,7 +7,7 @@ Observed source revision: `ecbd2a3626453ec7b48b236cdc6695d116d0684c`
 
 ## Audit scope
 
-This audit followed the installed app in Chrome as an SRE would encounter it. It covered Coverage, Performance, Incidents, Evidence, Provider reports, Directory, Settings, and the six-step walkthrough. The audit was read-only. No provider, mapping, objective, term, connection, or evidence-decision state was changed.
+This audit followed the installed app in Chrome as an SRE would encounter it. It covered Coverage, Performance, Incidents, Evidence, Provider reports, Directory, Settings, and the product tour available in that release. The audit was read-only. No provider, mapping, objective, term, connection, or evidence-decision state was changed.
 
 The live behavior was compared with the implementation so that a confusing product decision could be separated from a navigation or state bug.
 
@@ -75,11 +75,11 @@ Open app
             -> Provider corroboration (optional)
        -> Directory
        -> Settings
+            -> Getting started
             -> Review defaults
             -> Provider connections
             -> Custom terms
             -> Appearance
-            -> Walkthrough
 
 Evidence review
   -> Ready for follow-up
@@ -97,7 +97,7 @@ The navigation labels read like a sequence, but Performance is a persistent moni
 
 | Stage | User question | What the app does today | User action | Exit or success signal | Current emotion and friction |
 | --- | --- | --- | --- | --- | --- |
-| 1. Entry | Where do I start? | Opens Coverage directly. The optional walkthrough describes six areas, ends in Evidence, and changes no state. | Review provider and coverage state, or run the tour. | Coverage communicates the strongest topology evidence and whether any service decision is required. | Immediate value without setup ceremony. |
+| 1. Entry | Where do I start? | Opens Coverage directly. The optional five-step quick tour follows the operating flow without making changes. | Review provider and coverage state, or show the tour. | Coverage communicates the strongest topology evidence and whether any service decision is required. | Immediate value without setup ceremony. |
 | 2. Coverage | Which services depend on this provider, and what needs my judgment? | Separates provider-level infrastructure from verified SLA matches, combines Smartscape topology, source tags, and operator-confirmed matches, and opens the view that matches the evidence returned. | Inspect detected topology or confirm only an ambiguous SLA match. | Summary, filter counts, rows, and selected-provider evidence derive from one model. | Complete context without fabricating service attribution. |
 | 3. Performance | Are covered services meeting their objectives? | Shows objectives managed by SLA Review and uses the same native Dynatrace evaluation in Coverage and Performance. Opens native SLOs for deeper analysis. | Usually observe. Explicitly create an objective from Coverage only when desired. | Objective state is consistent across both surfaces. | Clear and complementary. |
 | 4. Incidents | Which Problems deserve provider review? | Prioritizes Dynatrace Problems, groups only defensible related records, shows affected services and root-cause context, and reuses the current Evidence state. | Select a case. Open Problems for investigation, resolve a coverage gap, continue to Evidence, or use the guarded bulk exclusion. | Each case clearly needs review, needs evidence, is ready for follow-up, is excluded, is mixed, or is unavailable. | Current state is consistent across Incidents and Evidence. |
@@ -105,7 +105,7 @@ The navigation labels read like a sequence, but Performance is a persistent moni
 | 6. Evidence review | Is this incident review complete enough for operational follow-up? | Carries the selected case forward, leads with readiness, and assembles Dynatrace evidence, objectives, terms, exclusions, required items, and optional provider corroboration. | Save Ready for follow-up, Needs evidence, or Excluded from provider follow-up. Optionally copy or download the review. | The saved state is explicit, supporting detail collapses after completion, and the UI states that nothing was sent. | The SRE has a clear stopping point and a portable handoff without another workflow. |
 | 7. Provider corroboration | Did the provider acknowledge a related event? | Keeps optional account-specific records separate from Dynatrace evidence. Published terms and Problems remain available without a connection. | Review corroboration or configure one read-only provider connection. | Corroboration supplements the review or remains unavailable without blocking it. | The evidence-source boundary and optionality are explicit. |
 | 8. Directory | What terms and evidence requirements apply? | Shows published terms, service coverage, claim requirements, support details, sources, and custom terms. | Read the applicable record. Add custom terms only when a private agreement differs. | Applied terms can be understood without mandatory data entry. | Strong reference experience with one empty-state action. |
-| 9. Settings | What must an administrator configure? | Holds the focused provider, tag key, lookback, optional account connections, custom terms, theme, and tour. Provider-specific editors use the route provider consistently. | Change shared defaults only when needed. | Settings persist and the operating views consume the same state. | Administrative work stays outside the response path. |
+| 9. Settings | What must an administrator configure? | Opens with Getting started, then separates the focused provider, tag key, lookback, optional account connections, custom terms, and personal theme. Provider-specific editors use the route provider consistently. | Change shared defaults only when needed. | Settings persist and the operating views consume the same state. | Administrative work stays outside the response path. |
 | 10. Stop | Where does the SRE stop? | Evidence saves an explicit current outcome and states that nothing was sent. Ready reviews can be copied or downloaded for a contract owner. | Stop, or hand off the portable review outside the app. | Ready for follow-up, Needs evidence, or Excluded from provider follow-up. | The boundary and next owner are clear. |
 
 ## Emotional curve
@@ -314,8 +314,8 @@ Use this SRE scenario:
 4. Open Incidents. Select one provider-relevant Problem if available and one Problem that needs Coverage. For every primary action, record the destination URL, the screen that opens, and whether provider, Problem ID, affected service, filter, selection, and return path are preserved.
 5. Open Evidence. Review both Review candidates and Provider reports. Determine what the SRE is deciding, what information is inherited, what must be entered again, and what exact screen state communicates completion. Do not save a decision.
 6. Open Directory. Inspect published terms, service coverage, claim requirements, support information, sources, and Custom terms. Confirm whether the active provider remains consistent. Do not add terms.
-7. Open Settings read-only. Inspect Review defaults, Provider connections, Custom terms, Appearance, and Walkthrough. Confirm which settings are optional, which are shared, and whether any control duplicates an operating-view control.
-8. Run the full product walkthrough and compare every step with the actual current page behavior.
+7. Open Settings read-only. Inspect Getting started, Review defaults, Provider connections, Custom terms, and Appearance. Confirm which settings are optional, which are shared, and whether any control duplicates an operating-view control.
+8. Run the full quick tour and compare every step with the actual current page behavior.
 
 For each stage, capture:
 

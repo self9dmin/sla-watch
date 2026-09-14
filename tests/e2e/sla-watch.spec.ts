@@ -298,6 +298,16 @@ test.describe("SLA Review deployed smoke", () => {
 
     await app.getByRole("button", { name: "Open workspace settings" }).click();
     await expect(
+      app.getByRole("heading", { name: "Start with Coverage." }),
+    ).toBeVisible();
+    await expect(
+      app.getByText(/Most users do not need to configure anything/i),
+    ).toBeVisible();
+    await expect(
+      app.getByText(/Evidence is the stopping point/i),
+    ).toBeVisible();
+    await app.getByRole("link", { name: "Review defaults" }).click();
+    await expect(
       app.getByRole("heading", { name: "Review defaults." }),
     ).toBeVisible();
     await expect(
@@ -359,14 +369,14 @@ test.describe("SLA Review deployed smoke", () => {
       app.getByRole("textbox", { name: /OCI tenancy OCID/i }),
     ).toBeVisible();
 
-    await app.getByRole("link", { name: "Walkthrough" }).click();
+    await app.getByRole("link", { name: "Getting started" }).click();
     await expect(
-      app.getByRole("heading", { name: "Product walkthrough." }),
+      app.getByRole("heading", { name: "Start with Coverage." }),
     ).toBeVisible();
     await expect(
-      app.getByText(/walkthrough changes nothing/i),
+      app.getByText(/quick tour changes nothing/i),
     ).toBeVisible();
-    await expect(app.getByRole("button", { name: "Start walkthrough" })).toBeVisible();
+    await expect(app.getByRole("button", { name: "Show quick tour" })).toBeVisible();
   });
 
   test("reflows detected topology when AppShell space becomes narrow", async ({
@@ -524,8 +534,8 @@ test.describe("SLA Review deployed smoke", () => {
     const tooltipCases = [
       { action: "Open workspace settings", tooltip: "Open workspace settings" },
       {
-        action: "Start or replay product walkthrough",
-        tooltip: "Start or replay walkthrough",
+        action: "Show quick tour",
+        tooltip: "Show quick tour",
       },
       { action: "Open review guide", tooltip: "Open review guide" },
       { action: "Open change log", tooltip: "Open change log" },

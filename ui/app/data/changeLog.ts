@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.73",
+    version: "0.0.74",
     label: "Current release",
+    summary: "Made first use and optional configuration easier to understand.",
+    details: [
+      "Settings now opens with concise Getting started guidance that separates the core SRE review from optional administrator configuration.",
+      "The five-step quick tour follows Coverage, Performance, Incidents, Evidence, and Directory, with Evidence called out as the human stopping point.",
+      "Role-based requirements now distinguish readers, reviewers, provider connection administrators, and deployers without making provider credentials a core prerequisite.",
+    ],
+  },
+  {
+    version: "0.0.73",
+    label: "Previous release",
     summary: "Made SLA matching and provider terms use one clear vocabulary.",
     details: [
       "Coverage now calls workload-to-provider relationships SLA matches across metrics, states, actions, guidance, and Evidence.",
