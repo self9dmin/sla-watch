@@ -1,6 +1,21 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.72`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.73`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.73 verified scenarios
+
+The `0.0.73` artifact from source commit `c746261` was built and deployed to the designated Dynatrace target environment with Node 24.19.0 on 2026-09-14, then exercised through the connected Chrome profile. The production smoke was read-only and changed only the selected provider and application route before restoring the bare Coverage route with AWS selected. It did not change provider connections, credentials, SLA matches, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.73` manifest and six AppEngine functions deployed successfully under the unchanged `my.sla` application ID | Supported-runtime deployment and connected Chrome smoke; source commit `c746261` |
+| Release gate | UI and API type checks, lint, 36 test suites with 199 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 84.61% statement, 67.17% branch, 91.13% function, and 89.6% line coverage; zero production dependency vulnerabilities |
+| Coverage language and entry | A bare app entry opened AWS Coverage with `Detected topology 70` selected, `SLA matches 3` unselected, and the summary reported three verified SLA matches across nine checked environment services | Installed production accessibility-tree smoke |
+| Workflow continuity | Performance loaded the existing AWS objective; Incidents grouped seven Problems into three review cases; Evidence showed the same three excluded cases, a confirmed SLA match, and Published terms | Installed production navigation and accessibility-tree smoke |
+| Terms vocabulary | Directory exposed Published terms and Custom terms, while Settings used Custom terms, Applies to, Provider default, and Agreement reference | Installed production Directory and Settings smoke |
+| Stored-data compatibility | The three existing AWS SLA matches, one existing AWS objective, three saved Evidence outcomes, and one existing custom-terms record remained readable after the display-language and schema-metadata update | Installed production read-only smoke; stored schema and field identifiers were unchanged |
+| Installed version | The installed change log showed `0.0.73 Current release` and described the shared SLA-match and provider-terms vocabulary | Installed production change-log smoke |
+| Runtime quality | Every checked route completed loading without a visible app error or app-bundle warning. Chrome reported one generic extension message-channel error that was not emitted by the deployed app bundle | Connected Chrome post-deploy smoke and browser diagnostics |
 
 ## 0.0.72 verified scenarios
 
