@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.69
 
 - Detects exact Smartscape GenAI provider identities and Databricks native topology without requiring tenant-specific provider setup.
 - Maps hosted AI identities to the contract owner, keeps direct OpenAI, Anthropic, and ElevenLabs identities distinct, and ignores model, framework, database-technology, and free-text vendor names.
