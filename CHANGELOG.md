@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.71
+
+- Opens Coverage on Detected topology for normal app entry and provider switching.
+- Keeps direct service-review links focused on Service links so incident and evidence handoffs still land on the requested task.
+- Removes the redundant topology-footer action because the visible Service links tab already provides that path.
+
 ## 0.0.70
 
 - Replaces the dense Smartscape node-type grid with a compact provider topology inventory map organized by readable resource families.
