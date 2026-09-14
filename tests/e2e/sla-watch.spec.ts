@@ -98,14 +98,10 @@ test.describe("SLA Review deployed smoke", () => {
       name: "Coverage evidence views",
     });
     await expect(coverageEvidenceViews).toBeVisible();
-    await expect(
-      coverageEvidenceViews.getByRole("button", { name: /^Service links/ }),
-    ).toHaveAttribute("aria-pressed", "true");
     const detectedTopology = coverageEvidenceViews.getByRole("button", {
       name: /^Detected topology/,
     });
-    await expect(detectedTopology).toBeVisible();
-    await detectedTopology.click();
+    await expect(detectedTopology).toHaveAttribute("aria-pressed", "true");
     await expect(
       app.getByRole("searchbox", { name: "Find Smartscape node types" }),
     ).toBeVisible();
@@ -118,6 +114,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByText(/Visual grouping only, not a dependency graph/i),
     ).toBeVisible();
+    await expect(app.getByRole("button", { name: "Review service links" })).toHaveCount(0);
     await coverageEvidenceViews.getByRole("button", { name: /^Service links/ }).click();
     await expect(
       app.getByRole("listbox", { name: "Provider coverage worklist" }),

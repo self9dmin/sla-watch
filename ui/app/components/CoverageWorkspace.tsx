@@ -90,7 +90,7 @@ export const CoverageWorkspace = ({
   const [selectedProviderServiceId, setSelectedProviderServiceId] = useState("");
   const [feedback, setFeedback] = useState<{ tone: Tone; message: string }>();
   const [coverageFilter, setCoverageFilter] = useState<CoverageFilter>("all");
-  const [evidenceView, setEvidenceView] = useState<CoverageEvidenceView>("services");
+  const [evidenceView, setEvidenceView] = useState<CoverageEvidenceView>("topology");
   const [searchText, setSearchText] = useState("");
   const [topologySearchText, setTopologySearchText] = useState("");
   const [page, setPage] = useState(0);
@@ -114,13 +114,9 @@ export const CoverageWorkspace = ({
   const hasProviderTopology = Boolean(
     infrastructureCandidate || providerInventory || providerHostContext,
   );
-  const preferTopology = Boolean(
-    infrastructureCandidate && coveredRows.length === 0 && reviewRows.length === 0,
-  );
-
   useEffect(() => {
-    setEvidenceView(focusedServiceId || !preferTopology ? "services" : "topology");
-  }, [focusedServiceId, preferTopology, providerSlug]);
+    setEvidenceView(focusedServiceId ? "services" : "topology");
+  }, [focusedServiceId, providerSlug]);
 
   useEffect(() => {
     setTopologySearchText("");
@@ -484,9 +480,6 @@ export const CoverageWorkspace = ({
                 ? `Service links are shown separately because provider inventory does not establish which Dynatrace service inherits ${providerName} terms.`
                 : `${coverageRows.length.toLocaleString()} environment service${coverageRows.length === 1 ? " was" : "s were"} checked. None is attributed from provider presence alone.`}</span>
             </div>
-            <Button size="condensed" variant={coveredRows.length > 0 ? "emphasized" : "default"} onClick={() => setEvidenceView("services")}>
-              {coveredRows.length > 0 ? "Review service links" : "Map a service"}
-            </Button>
           </div>
         </section>
       ) : !provider ? (
