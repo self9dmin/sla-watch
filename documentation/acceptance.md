@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.73`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.74`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.74 verified scenarios
+
+The `0.0.74` artifact from source commit `1a50d3e` was built and deployed to the designated Dynatrace target environment with Node 24.19.0 on 2026-09-14, then exercised through the connected Chrome profile. The production smoke was read-only and changed only application routes and the open or closed state of guidance surfaces. It did not change provider connections, credentials, SLA matches, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.74` manifest and six AppEngine functions deployed successfully under the unchanged `my.sla` application ID | Supported-runtime deployment and connected Chrome smoke; source commit `1a50d3e` |
+| Release gate | UI and API type checks, lint, 36 test suites with 199 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 84.61% statement, 67.17% branch, 91.13% function, and 89.6% line coverage; zero production dependency vulnerabilities |
+| Direct first use | A refreshed bare app entry opened Coverage on Detected topology with no wizard or configuration gate | Installed production accessibility-tree smoke |
+| Getting started | The Settings action opened Getting started and clearly separated automatic first use, tenant prerequisites, optional review defaults, custom terms, provider connections, and the Evidence stopping point | Installed production accessibility-tree and visual smoke |
+| Quick tour | The explicit quick tour presented exactly five steps in the current workflow order: Coverage, Performance, Incidents, Evidence, and Directory. Evidence stated that nothing is sent and that the SRE review stops there | Installed production five-step interaction smoke |
+| Review guide | The header guide matched grouped incident behavior, treated Directory as a reference, and described provider connections as optional administrator configuration | Installed production accessibility-tree smoke |
+| Documentation | The README, getting-started guide, permission profiles, provider-connection guide, configuration inventory, SRE journey, and user flows use the same requirements and terminology | Source review of commit `1a50d3e` |
+| Installed version | The installed change log showed `0.0.74 Current release` and summarized the first-use and optional-configuration changes | Installed production change-log smoke |
+| Runtime quality | Every checked surface completed loading without a visible app error | Connected Chrome post-deploy smoke |
 
 ## 0.0.73 verified scenarios
 
