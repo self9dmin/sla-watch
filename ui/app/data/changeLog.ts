@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.71",
+    version: "0.0.72",
     label: "Current release",
+    summary: "Made detected topology respond to the space AppShell actually provides.",
+    details: [
+      "Wide Coverage views keep the radial topology map, while constrained AppShell views switch to a collision-free resource-family layout.",
+      "The topology now responds to its own container width, including browser resizing, the Dynatrace rail, and split-screen panes.",
+      "Phone-width views stack into a touch-friendly list without losing provider context, search, or exact Smartscape types.",
+    ],
+  },
+  {
+    version: "0.0.71",
+    label: "Previous release",
     summary: "Made detected topology the clear Coverage starting point.",
     details: [
       "Coverage now opens on Detected topology during normal app entry and provider switching.",

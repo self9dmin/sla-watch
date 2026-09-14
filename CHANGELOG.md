@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.72
+
+- Keeps the radial provider-topology map on wide screens while changing to a compact family layout when AppShell space gets tight.
+- Uses the Coverage component's available width instead of the browser width, so the layout also responds correctly to the Dynatrace rail and split-screen panes.
+- Stacks the topology into a touch-friendly mobile view without hiding search, exact Smartscape types, or provider context.
+
 ## 0.0.71
 
 - Opens Coverage on Detected topology for normal app entry and provider switching.
