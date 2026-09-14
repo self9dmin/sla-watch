@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.68`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.69`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.69 verified scenarios
+
+The `0.0.69` artifact from source commits `c6fd97e` and `885e5b2` was built and deployed to the designated Dynatrace target environment with Node 24.19.0 on 2026-09-13, then exercised through the connected Chrome profile. The production smoke was read-only and changed only the selected provider before restoring AWS. It did not change provider connections, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.69` manifest, six AppEngine functions, expanded provider-identity adapter, and bundled provider marks deployed successfully under the unchanged `my.sla` application ID | Supported-runtime deployment and connected Chrome smoke; source commits `c6fd97e` and `885e5b2` |
+| Release gate | UI and API type checks, lint, 35 test suites with 196 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 84.4% statement coverage; zero production dependency vulnerabilities |
+| Provider identity discovery | The bounded Smartscape inventory groups exact OpenTelemetry provider identities and maps only declared aliases. The target environment returned one AWS provider identity, raising the AWS inventory summary to 70 Smartscape types without treating unknown values as providers | Live target-environment DQL probe, parser tests, and installed AWS Coverage smoke |
+| Additional provider contract | Exact identities for OpenAI, Anthropic, ElevenLabs, Amazon Bedrock, Azure OpenAI, Google Gemini, and Databricks can enable their corresponding provider views. AWS-hosted Bedrock, Azure-hosted OpenAI, and GCP-hosted Gemini remain attributed to their hyperscaler | Adapter unit coverage and live target-environment DQL probe containing Anthropic, `aws.bedrock`, `azure.ai.openai`, `gcp.gemini`, and `gcp.gen_ai` |
+| Environment-driven provider rail | Production displayed only AWS and Azure because those providers have tenant evidence. AWS was restored as selected after verifying the Azure view | Installed production Coverage accessibility-tree smoke |
+| Attribution boundary | Azure continued to show one subscription, one VM, one monitored host, and 12 Smartscape types while retaining zero Azure service links across eight checked services | Installed Azure Coverage smoke; provider presence did not fabricate service attribution |
+| Bundled provider marks | The release contains a sanitized local catalog of 300 SVG provider marks copied from the public directory source. Detection remains data-driven, and a logo alone cannot enable a provider | Import-script validation, asset tests, production build, and source review |
+| Installed version | The installed change log showed `0.0.69 Current release` and the provider-identity, provider-mark, and conservative-attribution changes | Installed production change-log smoke |
+| Runtime quality | AWS and Azure Coverage completed loading without an app-originated browser error. Two generic Chrome extension message-channel entries were present and were not emitted by the deployed app bundle | Connected Chrome post-deploy smoke and browser diagnostics |
 
 ## 0.0.68 verified scenarios
 
