@@ -22,14 +22,8 @@ import {
   type CoverageRow,
   type ProviderCoverageModel,
 } from "../data/providerCoverage";
-import {
-  providerInfrastructureCandidateDetail,
-  type ProviderInfrastructureCandidate,
-} from "../data/providerInfrastructure";
-import {
-  providerInventoryNodeTypeLabel,
-  type ProviderInventorySummary,
-} from "../data/providerInventory";
+import type { ProviderInfrastructureCandidate } from "../data/providerInfrastructure";
+import type { ProviderInventorySummary } from "../data/providerInventory";
 import {
   createProviderScopeAssignmentKey,
   createServiceScopeAssignment,
@@ -46,6 +40,7 @@ import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAss
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { SetupAdvisor } from "./SetupAdvisor";
 import { ServiceObjectivePreview } from "./ServiceObjectivePreview";
+import { ProviderTopologyMap } from "./ProviderTopologyMap";
 
 type Tone = "neutral" | "warning" | "positive";
 type CoverageEvidenceView = "topology" | "services";
@@ -72,19 +67,6 @@ const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode 
 );
 
 const COVERAGE_PAGE_SIZE = 50;
-
-const providerScopeNoun = (providerSlug: string): string => {
-  if (providerSlug === "azure") return "Subscriptions";
-  if (providerSlug === "gcp") return "Projects";
-  if (providerSlug === "oci") return "Tenancies";
-  return "Accounts";
-};
-
-const providerComputeNoun = (providerSlug: string): string => {
-  if (providerSlug === "aws") return "EC2 instances";
-  if (providerSlug === "azure") return "Virtual machines";
-  return "Compute instances";
-};
 
 export const CoverageWorkspace = ({
   provider,
@@ -422,38 +404,7 @@ export const CoverageWorkspace = ({
     !selectionUsesObservedMatch &&
     (!selectedSourceTag || selectedAssignment || selectedProviderService.id !== "*"),
   );
-  const monitoredHostCount = providerHostContext?.hostCount ?? infrastructureCandidate?.hostCount ?? 0;
-  const topologyFacts = [
-    providerInventory && providerInventory.accountScopeCount > 0
-      ? { label: providerScopeNoun(providerSlug), value: providerInventory.accountScopeCount }
-      : null,
-    providerInventory && providerInventory.computeResourceCount > 0
-      ? { label: providerComputeNoun(providerSlug), value: providerInventory.computeResourceCount }
-      : null,
-    providerInventory && providerInventory.providerIdentities.length > 0
-      ? { label: "Provider identities", value: providerInventory.providerIdentities.length }
-      : null,
-    monitoredHostCount > 0
-      ? { label: "Monitored hosts", value: monitoredHostCount }
-      : null,
-    providerInventory
-      && providerSlug === "databricks"
-      && providerInventory.nodeCount > 0
-      ? { label: "Topology nodes", value: providerInventory.nodeCount }
-      : null,
-    providerInventory && providerInventory.nodeTypes.length > 0
-      ? { label: "Smartscape types", value: providerInventory.nodeTypes.length }
-      : null,
-  ].filter((fact): fact is { label: string; value: number } => fact !== null);
   const topologyTypeCounts = providerInventory?.nodeTypeCounts ?? [];
-  const normalizedTopologySearch = topologySearchText.trim().toLowerCase();
-  const visibleTopologyTypeCounts = normalizedTopologySearch
-    ? topologyTypeCounts.filter(({ nodeType, nodeCount }) =>
-        `${providerInventoryNodeTypeLabel(nodeType, nodeCount)} ${nodeType}`
-          .toLowerCase()
-          .includes(normalizedTopologySearch),
-      )
-    : topologyTypeCounts;
   const smartscapeHref = buildSmartscapeOverviewHref(
     getAppLink("dynatrace.smartscape"),
     providerSlug,
@@ -512,75 +463,20 @@ export const CoverageWorkspace = ({
         <div className="directory-loading" role="status"><strong>Loading provider coverage</strong><span>Reading provider topology, service inventory, and confirmed mappings.</span></div>
       ) : evidenceView === "topology" && hasProviderTopology ? (
         <section className="coverage-topology-view" aria-label={`${providerName} detected topology`}>
-          <div className="coverage-topology-heading">
-            <div>
-              <span className="coverage-topology-icon"><SmartscapeIcon /></span>
-              <div>
-                <strong>What Dynatrace found for {providerName}</strong>
-                <span>{infrastructureCandidate
-                  ? providerInfrastructureCandidateDetail(infrastructureCandidate)
-                  : `Dynatrace found ${providerInventory?.nodeCount.toLocaleString() ?? "provider"} provider-owned Smartscape nodes in the bounded inventory.`}</span>
-              </div>
+          {topologyTypeCounts.length > 0 ? (
+            <ProviderTopologyMap
+              providerSlug={providerSlug}
+              providerName={providerName}
+              nodeTypeCounts={topologyTypeCounts}
+              searchText={topologySearchText}
+              onSearchTextChange={setTopologySearchText}
+            />
+          ) : (
+            <div className="coverage-topology-empty">
+              <HostsIcon />
+              <span>Dynatrace returned provider metadata on monitored hosts, but no provider-native node-type summary.</span>
             </div>
-            <StatusPill tone="positive">Provider detected</StatusPill>
-          </div>
-          {topologyFacts.length > 0 ? (
-            <div className="coverage-topology-facts" aria-label={`${providerName} topology summary`}>
-              {topologyFacts.map((fact) => (
-                <div key={fact.label}>
-                  <strong>{fact.value.toLocaleString()}</strong>
-                  <span>{fact.label}</span>
-                </div>
-              ))}
-            </div>
-          ) : null}
-          <div className="coverage-topology-types">
-            <div className="coverage-topology-types-heading">
-              <div>
-                <strong>Smartscape node types</strong>
-                <span>Counts are topology records from the bounded seven-day scan. They are not assumed to be unique cloud resources.</span>
-              </div>
-              <span aria-live="polite">
-                {normalizedTopologySearch
-                  ? `${visibleTopologyTypeCounts.length.toLocaleString()} of ${topologyTypeCounts.length.toLocaleString()} types`
-                  : `${topologyTypeCounts.length.toLocaleString()} types returned`}
-              </span>
-            </div>
-            {topologyTypeCounts.length > 0 ? (
-              <>
-                <label className="coverage-topology-search">
-                  <span className="visually-hidden">Find Smartscape node types</span>
-                  <input
-                    type="search"
-                    value={topologySearchText}
-                    onChange={(event) => setTopologySearchText(event.target.value)}
-                    placeholder="Find a resource or Smartscape type"
-                    aria-label="Find Smartscape node types"
-                  />
-                </label>
-                {visibleTopologyTypeCounts.length > 0 ? (
-                  <div className="coverage-topology-type-list" role="list" aria-label={`${providerName} Smartscape node types`}>
-                    {visibleTopologyTypeCounts.map(({ nodeType, nodeCount }) => (
-                      <div key={nodeType} role="listitem" className="coverage-topology-type">
-                        <strong>{nodeCount.toLocaleString()}</strong>
-                        <span>{providerInventoryNodeTypeLabel(nodeType, nodeCount)}</span>
-                        <small>{nodeType}</small>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="coverage-topology-empty" role="status">
-                    <span>No Smartscape node types match “{topologySearchText.trim()}”.</span>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="coverage-topology-empty">
-                <HostsIcon />
-                <span>Dynatrace returned provider metadata on monitored hosts, but no provider-native node-type summary.</span>
-              </div>
-            )}
-          </div>
+          )}
           <div className="coverage-topology-boundary">
             <div>
               <strong>{coveredRows.length > 0 ? `${coveredRows.length.toLocaleString()} verified service link${coveredRows.length === 1 ? "" : "s"}` : `No ${providerName} service links found`}</strong>
