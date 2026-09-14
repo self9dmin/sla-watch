@@ -24,6 +24,7 @@ describe("provider configuration", () => {
 
   it("uses catalog display names and readable custom names", () => {
     expect(providerDisplayName("aws")).toBe("AWS");
+    expect(providerDisplayName("databricks")).toBe("Databricks");
     expect(providerDisplayName("cloudflare-enterprise")).toBe("Cloudflare-Enterprise");
   });
 

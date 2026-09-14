@@ -163,7 +163,10 @@ a { color: var(--sla-accent); }
 .provider-mark-monogram { color: var(--sla-accent-strong); background: var(--sla-accent-soft); box-shadow: none; font-size: 10px; font-weight: 800; letter-spacing: .02em; }
 .provider-choice-label { max-width: 100%; overflow: hidden; font-size: 8px; font-weight: 700; letter-spacing: .01em; line-height: 1; text-overflow: ellipsis; white-space: nowrap; }
 [data-app-theme="dark"] .provider-mark { border-color: transparent; background: transparent; box-shadow: none; }
-[data-app-theme="dark"] .provider-mark-aws img { filter: brightness(0) invert(1); }
+[data-app-theme="dark"] .provider-mark-aws img,
+[data-app-theme="dark"] .provider-mark-anthropic img,
+[data-app-theme="dark"] .provider-mark-elevenlabs img,
+[data-app-theme="dark"] .provider-mark-openai img { filter: brightness(0) invert(1); }
 [data-app-theme="dark"] .provider-mark-monogram { color: var(--sla-accent-strong); background: var(--sla-accent-soft); }
 .status-pill { display: inline-flex; align-items: center; width: fit-content; border-radius: 999px; padding: 4px 9px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .status-pill-neutral { color: var(--sla-muted); background: var(--sla-surface-subtle); }

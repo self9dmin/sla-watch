@@ -18,9 +18,10 @@ smartscapeNodes SERVICE
 `;
 
 export const SMARTSCAPE_PROVIDER_INVENTORY_QUERY = `
-smartscapeNodes {"AWS_*", "AZURE_*", "GCP_*", "OCI_*", "ORACLE_*"}, from:-7d, to:now()
-| fields node_type = type
-| summarize node_count = count(), by:{node_type}
+smartscapeNodes {"AWS_*", "AZURE_*", "GCP_*", "OCI_*", "ORACLE_*", "GENAI_PROVIDER", "DATABRICKS_*"}, from:-7d, to:now()
+| fields node_type = type,
+    provider_identity = if(type == "GENAI_PROVIDER", name, else: "")
+| summarize node_count = count(), by:{node_type, provider_identity}
 | sort node_count desc
 | limit ${PROVIDER_INVENTORY_RESULT_LIMIT}
 `;

@@ -430,8 +430,16 @@ export const CoverageWorkspace = ({
     providerInventory && providerInventory.computeResourceCount > 0
       ? { label: providerComputeNoun(providerSlug), value: providerInventory.computeResourceCount }
       : null,
+    providerInventory && providerInventory.providerIdentities.length > 0
+      ? { label: "Provider identities", value: providerInventory.providerIdentities.length }
+      : null,
     monitoredHostCount > 0
       ? { label: "Monitored hosts", value: monitoredHostCount }
+      : null,
+    providerInventory
+      && providerSlug === "databricks"
+      && providerInventory.nodeCount > 0
+      ? { label: "Topology nodes", value: providerInventory.nodeCount }
       : null,
     providerInventory && providerInventory.nodeTypes.length > 0
       ? { label: "Smartscape types", value: providerInventory.nodeTypes.length }

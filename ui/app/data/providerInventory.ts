@@ -1,3 +1,4 @@
+import { providerSlugFromSmartscapeIdentity } from "./providerIdentity";
 import { sortProviderSlugs } from "./providers";
 
 export type ProviderInventorySummary = {
@@ -8,6 +9,7 @@ export type ProviderInventorySummary = {
     nodeType: string;
     nodeCount: number;
   }>;
+  providerIdentities: string[];
   accountScopeCount: number;
   regionCount: number;
   availabilityZoneCount: number;
@@ -31,7 +33,7 @@ const providerFromInventoryRow = (row: Record<string, unknown>): string | undefi
   if (nodeType.startsWith("AZURE_")) return "azure";
   if (nodeType.startsWith("GCP_") || nodeType.startsWith("GOOGLE_")) return "gcp";
   if (nodeType.startsWith("OCI_") || nodeType.startsWith("ORACLE_")) return "oci";
-  return undefined;
+  return providerSlugFromSmartscapeIdentity(nodeType, row.provider_identity);
 };
 
 const isAvailabilityZoneType = (nodeType: string): boolean =>
@@ -103,6 +105,10 @@ const NODE_TYPE_LABELS: Record<string, readonly [string, string]> = {
   OCI_COMPUTE_INSTANCE: ["Compute instance", "Compute instances"],
   OCI_REGION: ["OCI region", "OCI regions"],
   OCI_TENANCY: ["OCI tenancy", "OCI tenancies"],
+  DATABRICKS_CLUSTER: ["Databricks cluster", "Databricks clusters"],
+  DATABRICKS_MODEL_SERVING_ENDPOINT: ["Model serving endpoint", "Model serving endpoints"],
+  DATABRICKS_WORKSPACE: ["Databricks workspace", "Databricks workspaces"],
+  GENAI_PROVIDER: ["AI provider identity", "AI provider identities"],
 };
 
 const fallbackNodeTypeLabel = (nodeType: string): string => nodeType
@@ -127,6 +133,7 @@ export const parseProviderInventory = (
     nodeCount: number;
     nodeTypes: Set<string>;
     nodeTypeCounts: Map<string, number>;
+    providerIdentities: Set<string>;
     accountScopeCount: number;
     regionCount: number;
     availabilityZoneCount: number;
@@ -137,6 +144,7 @@ export const parseProviderInventory = (
     const row = asRecord(value);
     const providerSlug = providerFromInventoryRow(row);
     const nodeType = optionalText(row.node_type)?.toUpperCase();
+    const providerIdentity = optionalText(row.provider_identity)?.toLowerCase();
     const nodeCount = positiveCount(row.node_count);
     if (!providerSlug || !nodeType || nodeCount === 0) return;
 
@@ -144,6 +152,7 @@ export const parseProviderInventory = (
       nodeCount: 0,
       nodeTypes: new Set<string>(),
       nodeTypeCounts: new Map<string, number>(),
+      providerIdentities: new Set<string>(),
       accountScopeCount: 0,
       regionCount: 0,
       availabilityZoneCount: 0,
@@ -152,6 +161,9 @@ export const parseProviderInventory = (
     summary.nodeCount += nodeCount;
     summary.nodeTypes.add(nodeType);
     summary.nodeTypeCounts.set(nodeType, (summary.nodeTypeCounts.get(nodeType) ?? 0) + nodeCount);
+    if (nodeType === "GENAI_PROVIDER" && providerIdentity) {
+      summary.providerIdentities.add(providerIdentity);
+    }
     if (isAccountScopeType(providerSlug, nodeType)) summary.accountScopeCount += nodeCount;
     if (isRegionType(providerSlug, nodeType)) summary.regionCount += nodeCount;
     if (isAvailabilityZoneType(nodeType)) summary.availabilityZoneCount += nodeCount;
@@ -171,6 +183,7 @@ export const parseProviderInventory = (
         nodeCount,
       })).sort((left, right) =>
         right.nodeCount - left.nodeCount || left.nodeType.localeCompare(right.nodeType)),
+      providerIdentities: sortUnique(summary.providerIdentities),
       accountScopeCount: summary.accountScopeCount,
       regionCount: summary.regionCount,
       availabilityZoneCount: summary.availabilityZoneCount,
@@ -198,6 +211,12 @@ export const providerInventoryDetail = (summary: ProviderInventorySummary): stri
         : summary.providerSlug === "azure"
           ? plural(summary.computeResourceCount, "VM")
           : plural(summary.computeResourceCount, "compute instance")
+      : undefined,
+    summary.providerIdentities.length > 0
+      ? plural(summary.providerIdentities.length, "provider identity", "provider identities")
+      : undefined,
+    summary.providerSlug === "databricks" && summary.nodeCount > 0
+      ? plural(summary.nodeCount, "topology node")
       : undefined,
     plural(summary.nodeTypes.length, "Smartscape type"),
   ].filter((value): value is string => Boolean(value));

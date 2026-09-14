@@ -5,6 +5,7 @@ export const PROVIDER_CATALOG = [
   { slug: "azure", name: "Azure", detail: "Microsoft Azure" },
   { slug: "gcp", name: "GCP", detail: "Google Cloud" },
   { slug: "oci", name: "OCI", detail: "Oracle Cloud Infrastructure" },
+  { slug: "databricks", name: "Databricks", detail: "Data and AI platform" },
   { slug: "openai", name: "OpenAI", detail: "AI platform and APIs" },
   { slug: "anthropic", name: "Anthropic", detail: "Claude platform and APIs" },
   { slug: "elevenlabs", name: "ElevenLabs", detail: "Voice AI platform and APIs" },

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Detects exact Smartscape GenAI provider identities and Databricks native topology without requiring tenant-specific provider setup.
+- Maps hosted AI identities to the contract owner, keeps direct OpenAI, Anthropic, and ElevenLabs identities distinct, and ignores model, framework, database-technology, and free-text vendor names.
+- Keeps provider presence separate from service coverage. Unknown or unlinked providers still require source metadata, a verified relationship, an enabled connection, or an operator-confirmed mapping.
+- Vendors the public `sla.directory` provider marks as local AppEngine assets without changing the directory service or adding a runtime image dependency.
+- Uses a bundled provider mark only when environment evidence enables that provider, with the existing monogram fallback for custom or unmatched slugs and a dark-mode treatment for supported monochrome marks.
+- Adds a repeatable, read-only import command that rejects active SVG content and external references before updating the checked-in asset pack.
+
 ## 0.0.68
 
 - Makes the detected Smartscape topology inventory easier to scan without adding another workflow.

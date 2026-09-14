@@ -50,9 +50,10 @@ describe("bounded inventory queries", () => {
   });
 
   it("summarizes recent provider-owned Smartscape inventory without loading raw cloud nodes", () => {
-    expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain('smartscapeNodes {"AWS_*", "AZURE_*", "GCP_*", "OCI_*", "ORACLE_*"}');
+    expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain('smartscapeNodes {"AWS_*", "AZURE_*", "GCP_*", "OCI_*", "ORACLE_*", "GENAI_PROVIDER", "DATABRICKS_*"}');
     expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain("from:-7d");
     expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain("fields node_type = type");
+    expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain('provider_identity = if(type == "GENAI_PROVIDER", name, else: "")');
     expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).toContain("summarize node_count = count()");
     expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).not.toContain("aws.account.id");
     expect(SMARTSCAPE_PROVIDER_INVENTORY_QUERY).not.toContain("azure.subscription");

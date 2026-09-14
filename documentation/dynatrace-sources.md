@@ -112,6 +112,15 @@ The official [dtctl repository](https://github.com/dynatrace-oss/dtctl) supplies
 - GCP resources use `GCP_*` node types derived from service APIs. Provider-resource traversals may also require wildcard edge selection.
 - OCI is not covered by a dedicated skill in the reviewed official collection. Use current Dynatrace documentation, tenant discovery, and conservative generic Smartscape rules. Do not copy AWS behavior into OCI.
 - A global `AWS_*`, `AZURE_*`, `GCP_*`, or OCI inventory query establishes provider presence only. It must not fan out that provider assignment to every service.
+- `GENAI_PROVIDER` is a preview, feature-flag-gated Smartscape type. Exact identities can establish provider presence, but the contract owner may be the hosting platform rather than the model creator. Map only reviewed identities and never infer from a `GENAI_MODEL` name.
+- A vendor-native node family such as `DATABRICKS_*` can establish provider presence after it is observed in the target environment and added to the reviewed adapter. An arbitrary vendor-looking prefix is not sufficient.
+
+## 2026-09-13 provider-identity verification
+
+1. The Playground AI Observability topology returned `GENAI_PROVIDER` identities `anthropic`, `aws.bedrock`, `azure.ai.openai`, `gcp.gemini`, and `gcp.gen_ai`. The adapter maps these exact identities to Anthropic, AWS, Azure, and GCP respectively. Model names remain ignored because the hosting platform owns the applicable service contract.
+2. A bounded seven-day Playground query returned 14 `DATABRICKS_*` nodes across clusters, model-serving endpoints, and one workspace. Databricks therefore has a reviewed native-family presence rule.
+3. The same environment returned no `GCP_*` or `OCI_*` native infrastructure nodes. Their absence did not override the exact GenAI provider identities or fabricate OCI from an Oracle database technology node.
+4. A bounded log probe found both structured Anthropic API telemetry and unrelated text matches. Free-text vendor mentions remain hints only and do not enable providers.
 
 ## 0.0.66 source verification
 
