@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.70
+
+- Replaces the dense Smartscape node-type grid with a compact provider topology inventory map organized by readable resource families.
+- Keeps every returned node type searchable and inspectable while explicitly avoiding invented dependency edges.
+- Removes the nested topology scrollbar and preserves a readable map-to-inspector layout across desktop and mobile sizes.
+
 ## 0.0.69
 
 - Detects exact Smartscape GenAI provider identities and Databricks native topology without requiring tenant-specific provider setup.
