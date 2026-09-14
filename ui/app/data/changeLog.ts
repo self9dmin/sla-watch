@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.70",
+    version: "0.0.71",
     label: "Current release",
+    summary: "Made detected topology the clear Coverage starting point.",
+    details: [
+      "Coverage now opens on Detected topology during normal app entry and provider switching.",
+      "Direct service-review links still open Service links so focused incident and evidence handoffs are preserved.",
+      "The redundant topology-footer action was removed because the visible Service links tab already provides that path.",
+    ],
+  },
+  {
+    version: "0.0.70",
+    label: "Previous release",
     summary: "Made detected provider topology visual and easier to review.",
     details: [
       "Coverage now groups returned Smartscape node types into a compact provider topology inventory map instead of a dense card grid.",
