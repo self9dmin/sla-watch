@@ -114,7 +114,7 @@ describe("contract override precedence", () => {
       location: "us-east-1",
     }, new Date("2026-09-10T12:00:00Z"));
 
-    expect(result.source).toBe("tenant override");
+    expect(result.source).toBe("custom terms");
     expect(result.availabilityTarget).toBe(99.97);
     expect(result.filingDeadlineDays).toBe(45);
     expect(result.maxCreditPercent).toBe(25);

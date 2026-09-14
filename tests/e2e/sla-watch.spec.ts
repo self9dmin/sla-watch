@@ -79,7 +79,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app
         .getByText(
-          /Checking coverage|Access incomplete|Inventory incomplete|Contract unavailable|Review needed|Coverage ready|Infrastructure detected|No service links/i,
+          /Checking coverage|Access incomplete|Inventory incomplete|Terms unavailable|Review needed|Coverage ready|Infrastructure detected|No SLA matches/i,
         )
         .first(),
     ).toBeVisible();
@@ -114,10 +114,10 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByText(/Visual grouping only, not a dependency graph/i),
     ).toBeVisible();
-    await expect(app.getByRole("button", { name: "Review service links" })).toHaveCount(0);
-    await coverageEvidenceViews.getByRole("button", { name: /^Service links/ }).click();
+    await expect(app.getByRole("button", { name: "Review SLA matches" })).toHaveCount(0);
+    await coverageEvidenceViews.getByRole("button", { name: /^SLA matches/ }).click();
     await expect(
-      app.getByRole("listbox", { name: "Provider coverage worklist" }),
+      app.getByRole("listbox", { name: "SLA match worklist" }),
     ).toBeVisible();
     await expect(
       app.getByRole("searchbox", { name: "Search provider coverage" }),
@@ -133,7 +133,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(coveredCoverage).toBeVisible();
     await expect(reviewCoverage).toBeVisible();
     await expect(
-      app.getByText(/A confirmed mapping is reused in Incidents/i),
+      app.getByText(/A confirmed SLA match is reused in Incidents/i),
     ).toHaveCount(0);
     await expect(
       app.getByText(/Dynatrace applies provider-native matches/i),
@@ -146,12 +146,12 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(app.getByRole("button", { name: "Add custom terms" })).toHaveCount(0);
     await expectNoPageScroll(app);
 
-    const providerServiceLinks = app
+    const providerSlaMatches = app
       .getByLabel("Coverage status")
       .locator(".overview-fact")
-      .filter({ hasText: /service links/i });
-    const linkedTotal = await providerServiceLinks.locator("strong").innerText();
-    const evaluatedDetail = await providerServiceLinks.locator("small").innerText();
+      .filter({ hasText: /SLA matches/i });
+    const linkedTotal = await providerSlaMatches.locator("strong").innerText();
+    const evaluatedDetail = await providerSlaMatches.locator("small").innerText();
     const evaluatedTotal = evaluatedDetail.match(/^(\d[\d,]*) environment service/);
     expect(evaluatedTotal).not.toBeNull();
     await expect(coveredCoverage.locator("strong")).toHaveText(linkedTotal);
@@ -164,7 +164,7 @@ test.describe("SLA Review deployed smoke", () => {
       app.getByText(/customer-observed availability for one Dynatrace service/i),
     ).toBeVisible();
     await expect(app.getByText("Last 30 days")).toBeVisible();
-    await expect(app.getByText(/sla\.directory|tenant override/i)).toBeVisible();
+    await expect(app.getByText(/Published terms|Custom terms/i)).toBeVisible();
 
     const createObjective = app.getByRole("button", { name: "Create objective" });
     if (await createObjective.count()) {
@@ -450,7 +450,7 @@ test.describe("SLA Review deployed smoke", () => {
       app.getByText("Separate from availability terms"),
     ).toBeVisible();
     await expect(
-      app.getByText(/Not credit-backed|Contractual response target/),
+      app.getByText(/Not credit-backed|SLA response target/),
     ).toBeVisible();
     await app.getByRole("tab", { name: "Published terms" }).click();
 
@@ -466,13 +466,13 @@ test.describe("SLA Review deployed smoke", () => {
       app.getByRole("link", { name: "Custom terms" }),
     ).toBeVisible();
 
-    const evidenceBoundary = app.getByRole("combobox", {
-      name: /Evidence boundary/i,
+    const appliesTo = app.getByRole("combobox", {
+      name: /Applies to/i,
     });
-    await evidenceBoundary.selectOption("service");
+    await appliesTo.selectOption("service");
     await expect(app.getByText("No target selected")).toBeVisible();
     const firstTarget = app
-      .getByRole("group", { name: "Dynatrace evidence targets" })
+      .getByRole("group", { name: "Dynatrace targets" })
       .getByRole("checkbox")
       .first();
     await firstTarget.check();

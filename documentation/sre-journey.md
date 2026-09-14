@@ -2,7 +2,7 @@
 
 ## Persona and job
 
-The primary user is an on-call SRE or platform engineer. When a monitored service degrades, they need to determine whether the affected service has a defensible provider boundary and which published or tenant-specific terms apply, without treating correlation as proof of provider fault.
+The primary user is an on-call SRE or platform engineer. When a monitored service degrades, they need to determine whether the affected service has a defensible SLA match and which published or custom terms apply, without treating correlation as proof of provider fault.
 
 The first useful moment is not completing setup. It is seeing every loaded service classified from current Dynatrace evidence, with covered services and genuine review work clearly separated.
 
@@ -11,9 +11,9 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 | Stage | Touchpoint | User action | Likely reaction | Main risk | Product response |
 | --- | --- | --- | --- | --- | --- |
 | Install and open | Dynatrace Apps | Open SLA Review | “Show me what this environment already knows.” | A wizard delays evidence and repeats automatic detection | Open directly in Coverage and start read-only detection |
-| Provider detection | Coverage status | Review detected providers and matched services | Confidence when the result reflects the environment | “Detected” could be mistaken for confirmed contract coverage | Label environment detection separately from provider terms, fault, and eligibility |
+| Provider detection | Coverage status | Review detected providers and SLA-matched services | Confidence when the result reflects the environment | “Detected” could be mistaken for a confirmed SLA match | Label environment detection separately from provider terms, fault, and eligibility |
 | Coverage review | Service coverage | See all loaded services, then focus Covered or Needs review | Complete context without hidden states | Large environments become an unbounded checklist | Default to All, keep visible filters, search, paging, and incomplete-inventory disclosure |
-| Review defaults | Settings | Choose the focused provider, tag convention, and evidence lookback | Consistent review behavior without duplicating provider setup | A stale focus could be mistaken for current evidence | Constrain the chooser to providers discovered from evidence, confirmed coverage, or enabled connections |
+| Review defaults | Settings | Choose the focused provider, tag convention, and evidence lookback | Consistent review behavior without duplicating provider setup | A stale focus could be mistaken for current evidence | Constrain the chooser to providers discovered from evidence, confirmed SLA matches, or enabled connections |
 | Incident connection | Settings | Optionally connect account-specific provider notices | Useful only when customer-scoped provider evidence is needed | Credentials and IAM setup interrupt first value | Ask for credentials only after the user chooses a provider connection |
 | Incident triage | Incidents | Review active and provider-relevant cases, inspect the root-cause and affected-service context, then choose Coverage, Evidence, native Problems, or a guarded bulk exclusion | Fewer review units without losing the source records | Same-vendor signals could be over-grouped or mistaken for a confirmed violation | Group only on provider service, effective terms scope, bounded time, and shared service or exact root cause; keep one audit record per Problem and reuse the Evidence state everywhere |
 | Evidence review | Evidence | Search or filter review cases, inspect readiness, customer telemetry, objective posture, terms, exclusions, and optional provider corroboration, then save Ready for follow-up, Needs evidence, or Excluded from provider follow-up | One bounded decision with every underlying signal retained, a portable artifact, and a clear stop | Provider silence could be mistaken for proof against customer impact, or readiness for submission | Keep provider corroboration supporting only, persist the same outcome per included Problem, surface mixed or unavailable state, and state that nothing is sent and the provider determines fault, eligibility, and credit |
@@ -31,7 +31,7 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 ## Critical checks
 
 - A fresh user reaches Coverage without making a configuration choice.
-- Automatic provider detection is never described as proof of contract coverage, fault, impact, or eligibility.
+- Automatic provider detection is never described as proof of an SLA match, fault, impact, or eligibility.
 - Global provider inventory and service-level attribution are shown as separate states. A detected cloud does not silently claim every service in the environment.
 - No provider credential is requested until an administrator deliberately opens Provider connections.
 - No access or upstream failure is converted into an empty or healthy state.

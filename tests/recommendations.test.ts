@@ -47,7 +47,7 @@ describe("buildSetupRecommendations", () => {
     expect(recommendations[0]).toMatchObject({
       id: "provider-label",
       priority: "high",
-      action: "Review service coverage",
+      action: "Review SLA matches",
       href: "/#service-coverage-list",
     });
     expect(recommendations[0].detail).toContain("Names alone are not enough");

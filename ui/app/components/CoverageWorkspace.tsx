@@ -107,7 +107,7 @@ export const CoverageWorkspace = ({
     focusedProblemId ? `/incidents?provider=${encodeURIComponent(providerSlug)}&problem=${encodeURIComponent(focusedProblemId)}` : "/incidents",
   );
   const assignmentDisplayName = (assignment: ProviderScopeAssignmentRecord): string =>
-    assignment.providerServiceId === "*" ? `${providerName} (provider-wide)` : assignment.providerServiceName;
+    assignment.providerServiceId === "*" ? `${providerName} default terms` : assignment.providerServiceName;
   const coverageRows = coverageModel.rows;
   const reviewRows = coverageModel.reviewRows;
   const coveredRows = coverageModel.coveredRows;
@@ -276,30 +276,30 @@ export const CoverageWorkspace = ({
       }
       setFeedback({
         tone: "positive",
-        message: `${value.providerServiceName} will be reused for incidents affecting ${value.serviceEntityName}.`,
+        message: `SLA match saved. ${value.providerServiceName} will be reused for incidents affecting ${value.serviceEntityName}.`,
       });
     } catch {
       setFeedback({
         tone: "warning",
-        message: "The mapping could not be saved. Check App Settings write access and try again.",
+        message: "The SLA match could not be saved. Check App Settings write access and try again.",
       });
     }
   };
 
   const removeAssignment = async () => {
     if (!selectedAssignment || scopeSettings.mutating || !window.confirm(
-      `Remove the confirmed ${assignmentDisplayName(selectedAssignment)} mapping for ${selectedAssignment.serviceEntityName}?`,
+      `Remove the confirmed SLA match between ${selectedAssignment.serviceEntityName} and ${assignmentDisplayName(selectedAssignment)}?`,
     )) return;
     try {
       await scopeSettings.deleteAssignment(selectedAssignment);
       setFeedback({
         tone: "neutral",
-        message: "The confirmed mapping was removed. Available evidence remains visible for another review.",
+        message: "The SLA match was removed. Available evidence remains visible for another review.",
       });
     } catch {
       setFeedback({
         tone: "warning",
-        message: "The mapping could not be removed. Check App Settings write access and try again.",
+        message: "The SLA match could not be removed. Check App Settings write access and try again.",
       });
     }
   };
@@ -314,7 +314,7 @@ export const CoverageWorkspace = ({
           <span className="scope-connector"><span aria-hidden="true" /><small>{formatSmartscapeRelationship(row.edge.relationship)}</small></span>
           <span className="scope-node"><HostsIcon /><span><small>{row.edge.targetType.replaceAll("_", " ")}</small><strong>{row.edge.targetName}</strong></span></span>
           <span className="scope-connector"><span aria-hidden="true" /><small>{row.evidenceCount > 1 ? `${row.evidenceCount} signals` : "Smartscape"}</small></span>
-          <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.observed ? "Observed" : row.ambiguous ? "Ambiguous" : row.problemCount > 0 ? `${row.problemCount} recent Problems` : row.candidate ? "Recommended" : "Needs review"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.observed ? row.candidate?.providerServiceName : row.ambiguous ? "Review service match" : row.candidate?.providerServiceName ?? "Select provider service"}</strong></span></span>
+          <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.observed ? "Observed" : row.ambiguous ? "Ambiguous" : row.problemCount > 0 ? `${row.problemCount} recent Problems` : row.candidate ? "Recommended" : "Needs review"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.observed ? row.candidate?.providerServiceName : row.ambiguous ? "Review SLA match" : row.candidate?.providerServiceName ?? "Select provider service"}</strong></span></span>
         </button>
       );
     }
@@ -324,8 +324,8 @@ export const CoverageWorkspace = ({
         <span className="scope-node"><ServicesIcon /><span><small>Service</small><strong>{row.service.name}</strong></span></span>
         <span className="scope-connector"><span aria-hidden="true" /><small>found in</small></span>
         <span className="scope-node coverage-source-node"><ServicesIcon /><span><small>Coverage source</small><strong>{row.sourceTag ? `${providerTagKey}:${providerSlug}` : row.conflicting ? "Different provider tag" : "Service inventory"}</strong></span></span>
-        <span className="scope-connector"><span aria-hidden="true" /><small>{assignment || row.sourceTag ? "No runtime" : `No ${providerName} link`}</small></span>
-        <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.conflicting ? "Different provider tag" : `No ${providerName} relationship`}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.conflicting ? row.values.join(", ") : "Not linked"}</strong></span></span>
+        <span className="scope-connector"><span aria-hidden="true" /><small>{assignment || row.sourceTag ? "No runtime" : `No ${providerName} match`}</small></span>
+        <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.conflicting ? "Different provider tag" : "No SLA match"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.conflicting ? row.values.join(", ") : "Not matched"}</strong></span></span>
       </button>
     );
   };
@@ -343,7 +343,7 @@ export const CoverageWorkspace = ({
       ? "warning"
       : "neutral";
   const stateLabel = selectedAssignment
-    ? "Confirmed mapping"
+    ? "Confirmed SLA match"
     : selectedSourceTag
       ? "Source tag"
       : selectionUsesObservedMatch
@@ -356,11 +356,11 @@ export const CoverageWorkspace = ({
           ? "Recommended match"
           : selectedRow?.kind === "service"
             ? selectedProviderService
-              ? "Manual selection"
-              : "Not linked"
+              ? "New SLA match"
+              : "No SLA match"
             : "Needs review";
   const stateTitle = selectedAssignment
-    ? `Confirmed provider service: ${assignmentDisplayName(selectedAssignment)}`
+    ? `Confirmed SLA match: ${assignmentDisplayName(selectedAssignment)}`
     : selectedSourceTag
       ? `Matched by ${providerTagKey}:${providerSlug}`
       : selectionUsesObservedMatch
@@ -382,7 +382,7 @@ export const CoverageWorkspace = ({
       : selectedSourceTag
         ? "The source-owned tag confirms the provider. SLA Review does not change it."
         : selectionUsesObservedMatch
-          ? `${selectedCandidate?.evidence}. SLA Review can use this provider-native topology without saving one mapping per service.`
+          ? `${selectedCandidate?.evidence}. SLA Review can use this provider-native topology without a manual confirmation.`
         : selectedAmbiguous
           ? "Dynatrace found more than one possible provider service. Select one only after reviewing the affected runtime paths."
         : selectedRow?.kind === "scope" && selectionMatchesCandidate
@@ -421,7 +421,7 @@ export const CoverageWorkspace = ({
           ><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
         </div>
       </div>
-      <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed mappings, and matching source tags identify the provider service. Incidents and Evidence then resolve the applicable terms automatically. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>
+      <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed SLA matches, and matching source tags identify the provider service. Incidents and Evidence then resolve the applicable terms automatically. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>
       {hasProviderTopology ? (
         <div className="coverage-evidence-tabs" role="group" aria-label="Coverage evidence views">
           <button type="button" className={evidenceView === "topology" ? "active" : ""} aria-pressed={evidenceView === "topology"} onClick={() => setEvidenceView("topology")}>
@@ -429,7 +429,7 @@ export const CoverageWorkspace = ({
             <strong>{providerInventory?.nodeTypes.length.toLocaleString() ?? "1"}</strong>
           </button>
           <button type="button" className={evidenceView === "services" ? "active" : ""} aria-pressed={evidenceView === "services"} onClick={() => setEvidenceView("services")}>
-            <span>Service links</span>
+            <span>SLA matches</span>
             <strong>{coveredRows.length.toLocaleString()}</strong>
           </button>
         </div>
@@ -440,7 +440,7 @@ export const CoverageWorkspace = ({
             <strong>Resolve coverage for {focusedProblemId}</strong>
             <span>
               {focusedServiceId
-                ? `Review ${services.find((service) => service.id === focusedServiceId)?.name ?? focusedServiceId}. Saving a mapping returns you to the same review.`
+                ? `Review ${services.find((service) => service.id === focusedServiceId)?.name ?? focusedServiceId}. Saving an SLA match returns you to the same review.`
                 : "Review the affected service, then return to the same incident."}
             </span>
           </div>
@@ -454,9 +454,9 @@ export const CoverageWorkspace = ({
         </div>
       ) : null}
       {error ? <div className="error-box compact-error">Smartscape topology is unavailable. Service inventory remains available for coverage review.</div> : null}
-      {scopeSettings.error ? <div className="error-box compact-error">Confirmed mappings are unavailable. Check App Settings read access.</div> : null}
+      {scopeSettings.error ? <div className="error-box compact-error">Saved SLA matches are unavailable. Check App Settings read access.</div> : null}
       {loading || scopeSettings.loading ? (
-        <div className="directory-loading" role="status"><strong>Loading provider coverage</strong><span>Reading provider topology, service inventory, and confirmed mappings.</span></div>
+        <div className="directory-loading" role="status"><strong>Loading provider coverage</strong><span>Reading provider topology, service inventory, and saved SLA matches.</span></div>
       ) : evidenceView === "topology" && hasProviderTopology ? (
         <section className="coverage-topology-view" aria-label={`${providerName} detected topology`}>
           {topologyTypeCounts.length > 0 ? (
@@ -475,17 +475,17 @@ export const CoverageWorkspace = ({
           )}
           <div className="coverage-topology-boundary">
             <div>
-              <strong>{coveredRows.length > 0 ? `${coveredRows.length.toLocaleString()} verified service link${coveredRows.length === 1 ? "" : "s"}` : `No ${providerName} service links found`}</strong>
+              <strong>{coveredRows.length > 0 ? `${coveredRows.length.toLocaleString()} verified SLA match${coveredRows.length === 1 ? "" : "es"}` : `No ${providerName} SLA matches found`}</strong>
               <span>{coveredRows.length > 0
-                ? `Service links are shown separately because provider inventory does not establish which Dynatrace service inherits ${providerName} terms.`
+                ? `SLA matches are shown separately because provider inventory does not establish which Dynatrace service inherits ${providerName} terms.`
                 : `${coverageRows.length.toLocaleString()} environment service${coverageRows.length === 1 ? " was" : "s were"} checked. None is attributed from provider presence alone.`}</span>
             </div>
           </div>
         </section>
       ) : !provider ? (
-        <div className="contract-empty"><strong>Provider terms are unavailable</strong><span>Load the selected provider before confirming service coverage.</span></div>
+        <div className="contract-empty"><strong>Provider terms are unavailable</strong><span>Load the selected provider before reviewing SLA matches.</span></div>
       ) : coverageRows.length === 0 ? (
-        <div className="contract-empty"><strong>No services returned</strong><span>Check service detection and entity access before assigning provider terms.</span></div>
+        <div className="contract-empty"><strong>No services returned</strong><span>Check service detection and entity access before creating an SLA match.</span></div>
       ) : (
         <div className="scope-map-layout" id="service-coverage-list">
           <div className="coverage-worklist">
@@ -510,17 +510,17 @@ export const CoverageWorkspace = ({
                 ))}
               </div>
             </div>
-            <div className="scope-map-list" role="listbox" aria-label="Provider coverage worklist">
+            <div className="scope-map-list" role="listbox" aria-label="SLA match worklist">
               {visibleRows.length > 0 ? (
                 <>
                   {renderGroup("Needs review", visibleReviewRows)}
                   {renderGroup("Covered", visibleCoveredRows)}
-                  {renderGroup(`Not linked to ${providerName}`, visibleUnscopedRows)}
+                  {renderGroup(`No ${providerName} SLA match`, visibleUnscopedRows)}
                 </>
               ) : (
                 <div className="coverage-list-empty">
                   <strong>{coverageFilter === "review" ? "No evidence-backed exceptions in the loaded inventory" : "No matching services"}</strong>
-                  <span>{inventory.incomplete ? "This is not a complete-coverage result because the inventory is bounded." : coverageFilter === "review" ? "Choose All to inspect covered services and services without a provider link." : "Change the view or search to review another service."}</span>
+                  <span>{inventory.incomplete ? "This is not a complete-coverage result because the inventory is bounded." : coverageFilter === "review" ? "Choose All to inspect covered services and services without an SLA match." : "Change the view or search to review another service."}</span>
                   {coverageFilter === "review" && coveredRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("covered")}>Inspect covered services</Button> : coverageFilter === "review" && coverageRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("all")}>View all loaded services</Button> : null}
                 </div>
               )}
@@ -533,12 +533,12 @@ export const CoverageWorkspace = ({
               </div>
             </div>
           </div>
-          <aside className="scope-detail" aria-label="Provider coverage for selected service">
+          <aside className="scope-detail" aria-label="SLA match for selected service">
             {selectedRow ? (
               <>
-                <label className="field-label">{selectedRow.kind === "service" && !selectedAssignment && !selectedSourceTag ? "Assign provider service" : "Provider service"}
+                <label className="field-label">{selectedRow.kind === "service" && !selectedAssignment && !selectedSourceTag ? "Match to provider service" : "Provider service"}
                   <select value={selectedProviderServiceId} onChange={(event) => { setSelectedProviderServiceId(event.target.value); setFeedback(undefined); }} disabled={selectedConflict}>
-                    {selectedRow.kind === "service" ? <><option value="">Choose a provider service</option><option value="*">{providerName} (provider-wide)</option></> : <option value="">Select a provider service</option>}
+                    {selectedRow.kind === "service" ? <><option value="">Choose a provider service</option><option value="*">{providerName} default terms</option></> : <option value="">Select a provider service</option>}
                     {provider.services.map((service, index) => <option key={`${service.id}:${service.name}:${index}`} value={service.id}>{service.name}</option>)}
                   </select>
                 </label>
@@ -554,8 +554,8 @@ export const CoverageWorkspace = ({
                 </div>
                 <div className="scope-detail-actions">
                   {selectedConflict ? <Link className="text-action" to="/settings/watch">Review matching rules</Link> : null}
-                  {showSaveAction ? <Button size="condensed" variant="emphasized" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void saveAssignment()}>{scopeSettings.mutating ? "Saving" : selectedAssignment ? "Update mapping" : selectionMatchesCandidate ? `Confirm ${selectedProviderService?.name}` : selectedRow.kind === "service" && selectedProviderService?.id === "*" ? "Confirm provider coverage" : `Use ${selectedProviderService?.name}`}</Button> : null}
-                  {selectedAssignment ? <Button size="condensed" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void removeAssignment()}>Remove mapping</Button> : null}
+                  {showSaveAction ? <Button size="condensed" variant="emphasized" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void saveAssignment()}>{scopeSettings.mutating ? "Saving" : selectedAssignment ? "Update SLA match" : selectionMatchesCandidate || (selectedRow.kind === "service" && selectedProviderService?.id === "*") ? "Confirm SLA match" : `Match ${selectedProviderService?.name}`}</Button> : null}
+                  {selectedAssignment ? <Button size="condensed" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void removeAssignment()}>Remove SLA match</Button> : null}
                 </div>
                 {feedback ? <div className={`scope-map-feedback scope-map-feedback-${feedback.tone}`} role={feedback.tone === "warning" ? "alert" : "status"}>{feedback.message}</div> : null}
                 {selectedCovered && selectedProviderService && selectedTerms ? (
@@ -573,8 +573,8 @@ export const CoverageWorkspace = ({
             ) : (
               <div className="scope-mapping-state">
                 <StatusPill tone="positive">No exceptions</StatusPill>
-                <strong>No provider match needs review</strong>
-                <span>Choose Covered to inspect automatic matches, or All to map a service without a service-level provider link.</span>
+                <strong>No SLA match needs review</strong>
+                <span>Choose Covered to inspect automatic SLA matches, or All to match a service without provider topology.</span>
               </div>
             )}
             <div className="coverage-detail-checks">

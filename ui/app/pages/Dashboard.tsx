@@ -464,13 +464,13 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const taggedProviderServices = coverageModel.taggedServiceCount;
   const evaluatedServiceCount = coverageModel.rows.length;
   const evaluatedServiceLabel = `${evaluatedServiceCount.toLocaleString()} environment service${evaluatedServiceCount === 1 ? "" : "s"} checked`;
-  const providerServiceLinkDetail = suggestedServiceCount > 0
-    ? `${evaluatedServiceLabel} · ${suggestedServiceCount.toLocaleString()} need review · ${unattributedServiceCount.toLocaleString()} not linked`
+  const providerSlaMatchDetail = suggestedServiceCount > 0
+    ? `${evaluatedServiceLabel} · ${suggestedServiceCount.toLocaleString()} need review · ${unattributedServiceCount.toLocaleString()} without an SLA match`
     : matchedProviderServices === 0
-      ? `${evaluatedServiceLabel}; none linked`
+      ? `${evaluatedServiceLabel}; none matched`
       : unattributedServiceCount > 0
-        ? `${evaluatedServiceLabel} · ${unattributedServiceCount.toLocaleString()} not linked`
-        : `${evaluatedServiceLabel}; all linked`;
+        ? `${evaluatedServiceLabel} · ${unattributedServiceCount.toLocaleString()} without an SLA match`
+        : `${evaluatedServiceLabel}; all matched`;
   const providerInfrastructureCandidate = matchedProviderServices === 0
     ? buildProviderInfrastructureCandidate({
         providerSlug: selectedProviderSlug,
@@ -504,7 +504,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
       ? "The recent Problem scope exceeded the bounded incident topology query"
       : null,
     scopeSettings.incomplete
-      ? `${scopeSettings.assignments.length.toLocaleString()} of ${scopeSettings.totalCount.toLocaleString()} saved mappings loaded`
+      ? `${scopeSettings.assignments.length.toLocaleString()} of ${scopeSettings.totalCount.toLocaleString()} saved SLA matches loaded`
       : null,
   ].filter((value): value is string => Boolean(value));
   const inventoryStatus: CoverageInventoryStatus = {
@@ -544,7 +544,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
       : telemetryError
         ? "Access incomplete"
         : !directoryData
-          ? "Contract unavailable"
+          ? "Terms unavailable"
           : inventoryStatus.incomplete || inventoryStatus.unverified
             ? "Inventory incomplete"
           : suggestedServiceCount > 0
@@ -553,7 +553,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 ? "Coverage ready"
               : providerInfrastructureCandidate
                 ? "Infrastructure detected"
-              : "No service links";
+              : "No SLA matches";
   const coverageTone: Tone =
     telemetryLoading || inventoryLoading || directoryLoading || providerHostContextQuery.isLoading || topologyQuery.isLoading || scopeSettings.loading
       ? "neutral"
@@ -613,7 +613,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
         <div className="hero-copy-block">
           <Heading level={1}>Provider review</Heading>
           <Paragraph className="hero-copy">
-            Review provider mapping, Dynatrace Problems, and filing windows for
+            Review provider coverage, Dynatrace Problems, and filing windows for
             this environment.
           </Paragraph>
         </div>
@@ -640,7 +640,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               <div>
                 <Heading level={2}>Coverage</Heading>
                 <Paragraph>
-                  Review what Dynatrace detected and which provider services are linked.
+                  Review detected topology and the SLA matches used for your services.
                 </Paragraph>
               </div>
               <StatusPill tone={coverageTone}>{coverageStatus}</StatusPill>
@@ -681,13 +681,13 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 }
               />
               <OverviewFact
-                label={`${providerName} service links`}
+                label={`${providerName} SLA matches`}
                 value={
                   servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "Checking"
                     : matchedProviderServices.toLocaleString()
                 }
-                detail={providerServiceLinkDetail}
+                detail={providerSlaMatchDetail}
                 tone={
                   servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "neutral"

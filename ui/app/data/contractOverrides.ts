@@ -208,7 +208,7 @@ export const resolveEffectiveContractTerms = (
       : terms.businessDays,
     maxCreditPercent: override.maxCreditPercent ?? terms.maxCreditPercent,
     claimMethod: override.claimMethod ?? terms.claimMethod,
-    source: "tenant override",
+    source: "custom terms",
     appliedOverrides: [...terms.appliedOverrides, override],
   }), baseline);
 };
@@ -216,17 +216,17 @@ export const resolveEffectiveContractTerms = (
 export const validateContractOverride = (value: ContractOverrideValue): string[] => {
   const errors: string[] = [];
   const scopeIds = getOverrideScopeIds(value);
-  if (!value.sourceReference.trim()) errors.push("Enter the contract or amendment reference used for this override.");
+  if (!value.sourceReference.trim()) errors.push("Enter the agreement reference used for these custom terms.");
   if (!value.effectiveFrom) errors.push("Choose the date when these terms take effect.");
   if (value.effectiveTo && value.effectiveTo < value.effectiveFrom) errors.push("The end date must be on or after the effective date.");
   if (
     value.availabilityTarget === null && value.filingDeadlineDays === null &&
     value.maxCreditPercent === null && !value.claimMethod?.trim()
-  ) errors.push("Override at least one operational term.");
+  ) errors.push("Change at least one operational term.");
   if (value.availabilityTarget !== null && value.availabilityTarget !== undefined && (value.availabilityTarget < 0 || value.availabilityTarget > 100)) errors.push("Availability must be between 0 and 100 percent.");
   if (value.maxCreditPercent !== null && value.maxCreditPercent !== undefined && (value.maxCreditPercent < 0 || value.maxCreditPercent > 100)) errors.push("Maximum credit must be between 0 and 100 percent.");
   if (value.filingDeadlineDays !== null && value.filingDeadlineDays !== undefined && (value.filingDeadlineDays < 0 || value.filingDeadlineDays > 365)) errors.push("The filing deadline must be between 0 and 365 days.");
-  if (value.scopeKind !== "provider" && scopeIds.length === 0) errors.push("Select at least one Dynatrace evidence target.");
-  if (scopeIds.length > 100) errors.push("Select no more than 100 Dynatrace evidence targets for one custom terms record.");
+  if (value.scopeKind !== "provider" && scopeIds.length === 0) errors.push("Select at least one Dynatrace target.");
+  if (scopeIds.length > 100) errors.push("Select no more than 100 Dynatrace targets for one custom terms record.");
   return errors;
 };

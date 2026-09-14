@@ -20,7 +20,7 @@ type ServiceObjectivePreviewProps = {
   providerName: string;
   providerServiceName: string;
   target: number | null;
-  termsSource: "sla.directory" | "tenant override";
+  termsSource: "sla.directory" | "custom terms";
 };
 
 type PreviewRecord = Record<string, unknown>;
@@ -36,6 +36,7 @@ export const ServiceObjectivePreview = ({
   target,
   termsSource,
 }: ServiceObjectivePreviewProps) => {
+  const termsSourceLabel = termsSource === "sla.directory" ? "Published terms" : "Custom terms";
   const [confirming, setConfirming] = useState(false);
   const [feedback, setFeedback] = useState<string>();
   const externalId = serviceClassicId
@@ -118,7 +119,7 @@ export const ServiceObjectivePreview = ({
               : percent(preview?.reliability ?? null)}</strong></div>
         <div><span>Target</span><strong>{percent(target)}</strong></div>
         <div><span>Evaluation</span><strong>{OBJECTIVE_EVALUATION_WINDOW === "now-30d" ? "Last 30 days" : OBJECTIVE_EVALUATION_WINDOW}</strong></div>
-        <div><span>Terms</span><strong>{termsSource}</strong></div>
+        <div><span>Terms</span><strong>{termsSourceLabel}</strong></div>
       </div>
       <p className="service-objective-note">
         {existing

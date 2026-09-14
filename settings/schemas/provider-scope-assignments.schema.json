@@ -2,10 +2,10 @@
   "$schema": "https://developer.dynatrace.com/docs-assets/schema_strict_apps.json",
   "dynatrace": "1",
   "schemaId": "provider-scope-assignments",
-  "version": "1.1.0",
-  "displayName": "Provider coverage assignments",
-  "description": "Operator-confirmed mappings between a Dynatrace service scope and provider terms.",
-  "documentation": "Smartscape evidence can suggest a service-to-runtime mapping. Services without a usable relationship can be confirmed directly. Assignments identify applicable provider terms and do not establish provider fault, impact, or credit eligibility.",
+  "version": "1.1.1",
+  "displayName": "SLA matches",
+  "description": "Operator-confirmed SLA matches between a Dynatrace service or runtime scope and provider terms.",
+  "documentation": "Smartscape evidence can suggest an SLA match. Services without a usable relationship can be confirmed directly. SLA matches identify applicable provider terms and do not establish provider fault, impact, or credit eligibility.",
   "multiObject": true,
   "maxObjects": 1000,
   "summaryPattern": "{serviceEntityName} · {providerServiceName}",
@@ -15,7 +15,7 @@
   "ownerBasedAccessControl": false,
   "properties": {
     "assignmentKey": {
-      "displayName": "Assignment key",
+      "displayName": "SLA match key",
       "type": "text",
       "default": "",
       "nullable": false,
@@ -83,7 +83,7 @@
       "nullable": true
     },
     "evidence": {
-      "displayName": "Confirmation evidence",
+      "displayName": "Match evidence",
       "type": "text",
       "default": "",
       "nullable": false,

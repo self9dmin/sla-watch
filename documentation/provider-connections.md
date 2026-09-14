@@ -7,7 +7,7 @@ An installed copy of SLA Review can keep multiple AWS accounts, Azure subscripti
 ## What works without a provider connection
 
 - Published terms load automatically from `sla.directory`. The user does not supply an API key or configure the `sla.directory` MCP server.
-- Coverage, Smartscape scope mapping, Performance, Incidents, Evidence, Directory, custom terms, and Dynatrace telemetry review remain available.
+- Coverage, Smartscape-backed SLA matching, Performance, Incidents, Evidence, Directory, custom terms, and Dynatrace telemetry review remain available.
 - Google Cloud and OCI can use clearly labeled public status sources. Those feeds are not project- or tenancy-specific.
 - AWS and Azure remain available for contracts and Dynatrace evidence, but account-specific provider notices require a configured connection.
 

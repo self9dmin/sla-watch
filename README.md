@@ -16,19 +16,28 @@ The exact evidence and remaining gaps are in [release acceptance](documentation/
 
 | Step | What it does |
 | --- | --- |
-| **Coverage** | Shows the provider topology Dynatrace actually found. A service is linked only by provider-native topology, a matching source tag, or an operator-confirmed mapping. Provider presence alone never assigns every service in the tenant. |
+| **Coverage** | Shows the provider topology Dynatrace actually found. An SLA match exists only through provider-native topology, a matching source tag, or operator confirmation. Provider presence alone never matches every service in the tenant. |
 | **Performance** | Shows customer-observed availability for app-managed objectives. A user with the right permission can explicitly create one native Dynatrace objective for one covered service. |
 | **Incidents** | Turns relevant Dynatrace Problems into a smaller review queue. Problems merge only when provider service, effective terms, time, and shared service or exact root cause support one case. A shared vendor by itself is not enough. |
 | **Evidence** | Carries the case forward with Problems, request telemetry, objectives, applicable terms, and optional provider reports. The SRE records **Ready for follow-up**, **Needs evidence**, or **Excluded from provider follow-up**, then can copy or download the review package. Nothing is submitted. |
-| **Directory** | Shows the public `sla.directory` record, service-level terms, support options, filing instructions, and tenant-owned custom terms. |
+| **Directory** | Shows published `sla.directory` terms, service-level coverage, support options, filing instructions, and environment-owned custom terms. |
 
 Evidence is the stopping point today. FinOps Agent is visible as a planned idea and remains disabled.
 
 Settings is not another required workflow. Administrators use it for optional provider connections, custom terms, the source-tag convention, the evidence window, and appearance.
 
+## Product language
+
+- A **provider service** is the provider product, such as Amazon RDS or Azure SQL Database.
+- An **SLA match** connects a Dynatrace service or runtime to the provider service whose terms may apply.
+- **Published terms** are the read-only `sla.directory` baseline.
+- **Custom terms** are environment-specific terms applied to an explicit Dynatrace scope and date range.
+
+An SLA match identifies applicable terms. It does not prove provider fault, contractual eligibility, or an approved credit.
+
 ## Provider support
 
-Provider detection comes from bounded Smartscape inventory, exact provider identities, monitored-host cloud context, service topology, source tags, saved Coverage mappings, or enabled connections. Standard Smartscape cloud families work across tenants. Exact GenAI identities are mapped to the contract owner, so Bedrock remains AWS, Azure OpenAI remains Azure, and Google-hosted GenAI remains GCP. Databricks native topology is also recognized. Unknown identities, model names, framework names, and plain-text log mentions do not enable a provider. Detection establishes that a provider exists in the environment. It does not establish that a specific service depends on that provider.
+Provider detection comes from bounded Smartscape inventory, exact provider identities, monitored-host cloud context, service topology, source tags, saved SLA matches, or enabled connections. Standard Smartscape cloud families work across tenants. Exact GenAI identities are mapped to the provider that owns the applicable SLA, so Bedrock remains AWS, Azure OpenAI remains Azure, and Google-hosted GenAI remains GCP. Databricks native topology is also recognized. Unknown identities, model names, framework names, and plain-text log mentions do not enable a provider. Detection establishes that a provider exists in the environment. It does not establish that a specific service depends on that provider.
 
 Provider marks are copied from the public `sla.directory` logo set and bundled locally with the app. The logo catalog never enables a provider by itself. If Dynatrace detects a provider without a bundled mark, the UI uses a generated monogram.
 
@@ -88,13 +97,13 @@ npx dt-app deploy --environment-url https://your-environment.apps.dynatrace.com/
 
 `app.config.json` contains a safe placeholder environment URL. You can also set `DT_APP_ENVIRONMENT_URL` in the shell or CI environment.
 
-The installed app opens directly in Coverage. Public terms do not require a credential. Configure a provider connection only when you want customer-scoped provider events, and follow the provider guide instead of placing a secret in the repository or app settings.
+The installed app opens directly in Coverage. Published terms do not require a credential. Configure a provider connection only when you want customer-scoped provider events, and follow the provider guide instead of placing a secret in the repository or app settings.
 
 ## Permissions and data
 
 The manifest requests read access to the Dynatrace data used by the review, plus narrow write access for shared app settings, user/app state, and an explicitly confirmed objective creation. It does not request entity-write, Problem-write, ticketing, or Credential Vault write access. The full scope map and deny behavior are in [permissions](documentation/permissions.md).
 
-Provider connection settings contain identifiers, not secrets. App Settings records are shared operational data and can be read by authenticated app users, so do not put credentials, private contract text, personal data, or unrelated incident details in them.
+Provider connection settings contain identifiers, not secrets. App Settings records are shared operational data and can be read by authenticated app users, so do not put credentials, confidential agreement text, personal data, or unrelated incident details in them.
 
 No secret is bundled with the app or stored in this repository.
 
