@@ -438,7 +438,7 @@ a { color: var(--sla-accent); }
 .coverage-evidence-tabs button:hover { color: var(--sla-text); background: var(--sla-surface-subtle); }
 .coverage-evidence-tabs button.active { color: var(--sla-text); background: var(--sla-accent-soft); box-shadow: inset 0 -2px 0 var(--sla-accent); }
 .coverage-evidence-tabs button strong { display: inline-grid; min-width: 19px; height: 19px; place-items: center; border-radius: 999px; padding: 0 5px; color: var(--sla-accent-strong); background: color-mix(in srgb, var(--sla-accent-soft) 74%, var(--sla-surface)); font-size: 9px; }
-.coverage-topology-view { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--sla-border); border-radius: 8px; background: var(--sla-surface-subtle); }
+.coverage-topology-view { container: coverage-topology / inline-size; display: flex; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--sla-border); border-radius: 8px; background: var(--sla-surface-subtle); }
 .coverage-topology-explorer { display: grid; flex: 1 1 auto; min-height: 0; grid-template-columns: minmax(230px, .42fr) minmax(0, 1fr); overflow: hidden; }
 .coverage-topology-inspector { display: flex; min-width: 0; min-height: 0; flex-direction: column; border-right: 1px solid var(--sla-border); padding: 10px 12px; overflow: hidden; background: var(--sla-surface); }
 .coverage-topology-search { display: block; width: 100%; margin-bottom: 8px; }
@@ -1053,8 +1053,6 @@ a { color: var(--sla-accent); }
   .performance-layout { grid-template-columns: 1fr; overflow-y: auto; }
   .performance-browser { min-height: 300px; border-right: 0; border-bottom: 1px solid var(--sla-border); }
   .performance-detail { overflow: visible; }
-  .coverage-topology-explorer { grid-template-columns: minmax(205px, .42fr) minmax(0, 1fr); }
-  .coverage-topology-family { width: 92px; padding: 6px 7px; }
 }
 @media (max-width: 680px) {
   .sla-main, .sla-main-watch { height: auto; min-height: calc(100vh - 49px); overflow: visible; padding: 16px 14px 40px; }
@@ -1070,11 +1068,6 @@ a { color: var(--sla-accent); }
   .coverage-list-footer, .coverage-inventory-warning, .coverage-review-context { align-items: flex-start; flex-direction: column; }
   .coverage-topology-boundary { position: static; align-items: flex-start; flex-direction: column; }
   .coverage-topology-view { overflow: visible; }
-  .coverage-topology-explorer { grid-template-columns: 1fr; overflow: visible; }
-  .coverage-topology-canvas { order: -1; min-height: 350px; border-bottom: 1px solid var(--sla-border); }
-  .coverage-topology-inspector { border-right: 0; }
-  .coverage-topology-search { width: 100%; }
-  .coverage-topology-search input { height: 40px; }
   .overview-status-panel { padding: 0 !important; }
   .overview-status-main { padding: 15px; }
   .overview-facts, .setup-panel .evidence-ladder, .settings-form-grid, .incident-detail-facts, .evidence-candidate-summary, .candidate-facts, .candidate-package-facts, .candidate-evidence-grid, .candidate-evidence-checklist { grid-template-columns: 1fr; }
@@ -1156,6 +1149,94 @@ a { color: var(--sla-accent); }
   .settings-rail-label { width: 100%; padding-bottom: 2px; }
   .settings-rail-note { display: none; }
   .settings-content { padding: 28px 16px 56px; }
+}
+
+/* The AppShell rail and split-screen panes can narrow this surface without
+   narrowing the viewport. Adapt the topology to its own available width. */
+@container coverage-topology (max-width: 980px) {
+  .coverage-topology-canvas {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: minmax(44px, auto);
+    align-content: center;
+    gap: 7px;
+    padding: 10px;
+    overflow-y: auto;
+    scrollbar-color: var(--sla-border) transparent;
+    scrollbar-width: thin;
+  }
+  .coverage-topology-spokes, .coverage-topology-satellite { display: none; }
+  .coverage-topology-provider-node {
+    position: static;
+    grid-row: 1;
+    grid-column: 1;
+    min-width: 0;
+    min-height: 44px;
+    flex-direction: row;
+    border-radius: 9px;
+    padding: 6px 8px;
+    transform: none;
+  }
+  .coverage-topology-provider-node .provider-mark { width: 27px; height: 24px; }
+  .coverage-topology-provider-node > strong { max-width: none; }
+  .coverage-topology-family {
+    position: static;
+    width: 100%;
+    min-height: 44px;
+    transform: none;
+  }
+  .coverage-topology-family:hover { transform: none; }
+  .coverage-topology-canvas-note {
+    position: static;
+    grid-row: 1;
+    grid-column: 2 / -1;
+    align-self: center;
+    max-width: none;
+    padding: 0 4px;
+    text-align: right;
+  }
+}
+
+@container coverage-topology (max-width: 760px) {
+  .coverage-topology-explorer {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+    scrollbar-color: var(--sla-border) transparent;
+    scrollbar-width: thin;
+  }
+  .coverage-topology-canvas {
+    order: -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-content: start;
+    min-height: auto;
+    overflow: visible;
+    border-bottom: 1px solid var(--sla-border);
+  }
+  .coverage-topology-inspector {
+    min-height: 148px;
+    border-right: 0;
+  }
+  .coverage-topology-search { width: 100%; }
+  .coverage-topology-search input { height: 40px; }
+}
+
+@container coverage-topology (max-width: 520px) {
+  .coverage-topology-canvas { grid-template-columns: 1fr; }
+  .coverage-topology-provider-node {
+    grid-row: 1;
+    grid-column: 1;
+    justify-content: flex-start;
+  }
+  .coverage-topology-canvas-note {
+    grid-row: 2;
+    grid-column: 1;
+    padding: 2px 0 4px;
+    text-align: left;
+  }
+  .coverage-topology-family { padding: 8px 10px; }
+  .coverage-topology-family strong { font-size: 10px; }
+  .coverage-topology-family small { font-size: 9px; }
+  .coverage-topology-search input { font-size: 16px; }
 }
 @media (max-height: 699px) and (min-width: 681px) {
   .sla-main-watch { height: auto; min-height: calc(100vh - 49px); overflow: visible; }
