@@ -1,6 +1,20 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.67`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.68`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.68 verified scenarios
+
+The `0.0.68` artifact from source commits `f146db6` and `1a85666` was built and deployed to the designated Dynatrace target environment with Node 24.19.0 on 2026-09-13, then exercised through the connected Chrome profile. The production smoke was read-only and changed only the selected application view and a temporary search value. It did not change provider connections, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.68` manifest, six AppEngine functions, and revised detected-topology workspace deployed successfully under the unchanged `my.sla` application ID | Supported-runtime deployment and connected Chrome smoke; source commits `f146db6` and `1a85666` |
+| Release gate | UI and API type checks, lint, 35 test suites with 193 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 83.97% statement coverage; zero production dependency vulnerabilities |
+| Topology inventory | Azure Coverage presented all 12 returned Smartscape node types as larger readable cards, including complete raw type identifiers, without a nested list scroller | Installed Azure Coverage DOM and visual smoke |
+| Topology search | The provider-scoped search matched both readable labels and raw node types; `network` reduced the live Azure inventory from 12 to 6 types and clearing the field restored the complete list | Installed Azure Coverage interaction smoke |
+| Layout behavior | The topology workspace used one vertical scrolling surface, kept the mapping handoff sticky, and had equal body client and scroll widths at the production viewport. A local 420-pixel viewport also had no horizontal overflow | Installed DOM style and width checks; local responsive Chrome smoke |
+| Installed version | The installed change log showed `0.0.68 Current release` and the detected-topology usability summary | Installed production change-log smoke |
+| Runtime quality | Coverage and the change log rendered without captured browser warnings or errors | Connected Chrome post-deploy smoke and browser diagnostics |
 
 ## 0.0.67 verified scenarios
 
