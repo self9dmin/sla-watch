@@ -1,6 +1,21 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.70`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.71`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.71 verified scenarios
+
+The `0.0.71` artifact from source commits `c2b4837` and `15fbe83` was built and deployed to the designated Dynatrace target environment with Node 24.19.0 on 2026-09-13, then exercised through the connected Chrome profile. The production smoke was read-only and did not change provider connections, credentials, mappings, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.71` manifest, six AppEngine functions, revised Coverage entry state, and simplified topology footer deployed successfully under the unchanged `my.sla` application ID | Supported-runtime deployment and connected Chrome smoke; source commits `c2b4837` and `15fbe83` |
+| Release gate | UI and API type checks, lint, 36 test suites with 199 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 84.61% statement coverage; zero production dependency vulnerabilities |
+| Coverage entry default | A hard reload of the bare production app URL opened AWS Coverage with `Detected topology 70` selected and `Service links 3` unselected | Installed production accessibility-tree and visual smoke |
+| Return behavior | Opening the change log and returning to Coverage again selected Detected topology instead of restoring Service links | Installed production navigation smoke |
+| Focused handoff boundary | Normal entry and provider changes choose topology, while a route carrying an exact service ID still chooses Service links so Coverage repair remains task-focused | Source review of the focused-service branch; the deployed smoke exercised normal entry |
+| Redundant action removal | The topology footer retained the verified-service-link summary but no longer exposed `Review service links` or `Map a service`; the visible Service links tab remains the single control | Installed production accessibility-tree and visual smoke |
+| Installed version | The installed change log showed `0.0.71 Current release` and all three entry-state and footer changes | Installed production change-log smoke |
+| Runtime quality | Coverage and the change log completed loading without a visible app error | Connected Chrome post-deploy smoke |
 
 ## 0.0.70 verified scenarios
 
