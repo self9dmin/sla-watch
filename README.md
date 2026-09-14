@@ -6,7 +6,7 @@ The app does not decide fault, label a case as an SLA violation, file a claim, o
 
 ## Project status
 
-SLA Review is a working custom Dynatrace AppEngine app under active development. Release 0.0.71 is deployed and smoke-tested in the project tenant. It is not yet a generally available Dynatrace Hub app.
+SLA Review is a working custom Dynatrace AppEngine app under active development. Release 0.0.72 is deployed and smoke-tested in the project tenant. It is not yet a generally available Dynatrace Hub app.
 
 The core Coverage, Performance, Incidents, Evidence, and Directory views have automated tests and target-tenant smoke evidence. The four cloud-provider adapters are implemented, tested with controlled responses, and deployed. Live least-privilege credential acceptance for every provider is still open, along with denied-permission and large-environment testing.
 
