@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.69",
+    version: "0.0.70",
     label: "Current release",
+    summary: "Made detected provider topology visual and easier to review.",
+    details: [
+      "Coverage now groups returned Smartscape node types into a compact provider topology inventory map instead of a dense card grid.",
+      "Every returned type remains searchable and inspectable, while the map explicitly avoids inventing dependency relationships.",
+      "The topology workspace no longer has its own narrow scrollbar and adapts into a clear map-then-inspector flow on small screens.",
+    ],
+  },
+  {
+    version: "0.0.69",
+    label: "Previous release",
     summary: "Expanded provider discovery without weakening attribution.",
     details: [
       "Exact Smartscape provider identities now recognize direct AI providers and map hosted services to the cloud provider that owns the contract.",
