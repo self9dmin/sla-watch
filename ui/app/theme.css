@@ -114,8 +114,8 @@ button { color: inherit; }
 a { color: var(--sla-accent); }
 ::selection { color: var(--sla-text); background: var(--sla-accent-soft); }
 *:focus-visible { outline: 2px solid var(--sla-accent); outline-offset: 2px; }
-.setup-checks::-webkit-scrollbar, .incident-tile-grid::-webkit-scrollbar, .incident-detail::-webkit-scrollbar, .candidate-queue-list::-webkit-scrollbar, .candidate-detail::-webkit-scrollbar, .published-service-list::-webkit-scrollbar, .contract-override-list::-webkit-scrollbar, .scope-map-list::-webkit-scrollbar, .contract-editor::-webkit-scrollbar, .performance-tile-grid::-webkit-scrollbar, .performance-detail::-webkit-scrollbar, .coverage-topology-view::-webkit-scrollbar { width: 8px; }
-.setup-checks::-webkit-scrollbar-thumb, .incident-tile-grid::-webkit-scrollbar-thumb, .incident-detail::-webkit-scrollbar-thumb, .candidate-queue-list::-webkit-scrollbar-thumb, .candidate-detail::-webkit-scrollbar-thumb, .published-service-list::-webkit-scrollbar-thumb, .contract-override-list::-webkit-scrollbar-thumb, .scope-map-list::-webkit-scrollbar-thumb, .contract-editor::-webkit-scrollbar-thumb, .performance-tile-grid::-webkit-scrollbar-thumb, .performance-detail::-webkit-scrollbar-thumb, .coverage-topology-view::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: var(--sla-border); background-clip: padding-box; }
+.setup-checks::-webkit-scrollbar, .incident-tile-grid::-webkit-scrollbar, .incident-detail::-webkit-scrollbar, .candidate-queue-list::-webkit-scrollbar, .candidate-detail::-webkit-scrollbar, .published-service-list::-webkit-scrollbar, .contract-override-list::-webkit-scrollbar, .scope-map-list::-webkit-scrollbar, .contract-editor::-webkit-scrollbar, .performance-tile-grid::-webkit-scrollbar, .performance-detail::-webkit-scrollbar { width: 8px; }
+.setup-checks::-webkit-scrollbar-thumb, .incident-tile-grid::-webkit-scrollbar-thumb, .incident-detail::-webkit-scrollbar-thumb, .candidate-queue-list::-webkit-scrollbar-thumb, .candidate-detail::-webkit-scrollbar-thumb, .published-service-list::-webkit-scrollbar-thumb, .contract-override-list::-webkit-scrollbar-thumb, .scope-map-list::-webkit-scrollbar-thumb, .contract-editor::-webkit-scrollbar-thumb, .performance-tile-grid::-webkit-scrollbar-thumb, .performance-detail::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: var(--sla-border); background-clip: padding-box; }
 
 .sla-theme-root { min-height: 100vh; background: var(--sla-bg); color: var(--sla-text); }
 .sla-app { min-height: 100vh; background: var(--sla-bg); }
@@ -438,35 +438,46 @@ a { color: var(--sla-accent); }
 .coverage-evidence-tabs button:hover { color: var(--sla-text); background: var(--sla-surface-subtle); }
 .coverage-evidence-tabs button.active { color: var(--sla-text); background: var(--sla-accent-soft); box-shadow: inset 0 -2px 0 var(--sla-accent); }
 .coverage-evidence-tabs button strong { display: inline-grid; min-width: 19px; height: 19px; place-items: center; border-radius: 999px; padding: 0 5px; color: var(--sla-accent-strong); background: color-mix(in srgb, var(--sla-accent-soft) 74%, var(--sla-surface)); font-size: 9px; }
-.coverage-topology-view { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow-x: hidden; overflow-y: auto; border: 1px solid var(--sla-border); border-radius: 8px; background: var(--sla-surface-subtle); scrollbar-color: var(--sla-border) transparent; scrollbar-width: thin; }
-.coverage-topology-heading { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-bottom: 1px solid var(--sla-border); background: var(--sla-surface); }
-.coverage-topology-heading > div:first-child { display: flex; min-width: 0; align-items: center; gap: 10px; }
-.coverage-topology-heading > div:first-child > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
-.coverage-topology-heading strong { color: var(--sla-text); font-size: 11px; }
-.coverage-topology-heading span:not(.status-pill) { color: var(--sla-muted); font-size: 9px; line-height: 1.4; }
-.coverage-topology-icon { display: inline-grid; flex: 0 0 32px; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: var(--sla-accent-strong); background: var(--sla-accent-soft); }
-.coverage-topology-icon svg { width: 20px; height: 20px; }
-.coverage-topology-facts { display: grid; flex: 0 0 auto; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--sla-border); background: var(--sla-surface); }
-.coverage-topology-facts > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; border-left: 1px solid var(--sla-border); padding: 10px 12px; }
-.coverage-topology-facts > div:first-child { border-left: 0; }
-.coverage-topology-facts strong { color: var(--sla-accent-strong); font-size: 17px; line-height: 1; }
-.coverage-topology-facts span { color: var(--sla-muted); font-size: 9px; }
-.coverage-topology-types { display: flex; flex: 0 0 auto; min-height: 0; flex-direction: column; padding: 14px 16px 16px; }
-.coverage-topology-types-heading { display: flex; flex: 0 0 auto; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-.coverage-topology-types-heading > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
-.coverage-topology-types-heading strong { color: var(--sla-text); font-size: 12px; }
-.coverage-topology-types-heading span { color: var(--sla-muted); font-size: 9px; line-height: 1.4; }
-.coverage-topology-types-heading > span { flex: 0 0 auto; padding-top: 2px; }
-.coverage-topology-search { display: block; width: min(100%, 520px); margin-bottom: 11px; }
-.coverage-topology-search input { width: 100%; height: 34px; border: 1px solid var(--sla-border); border-radius: 7px; padding: 5px 10px; color: var(--sla-text); background: var(--sla-surface); font-size: 10px; }
+.coverage-topology-view { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--sla-border); border-radius: 8px; background: var(--sla-surface-subtle); }
+.coverage-topology-explorer { display: grid; flex: 1 1 auto; min-height: 0; grid-template-columns: minmax(230px, .42fr) minmax(0, 1fr); overflow: hidden; }
+.coverage-topology-inspector { display: flex; min-width: 0; min-height: 0; flex-direction: column; border-right: 1px solid var(--sla-border); padding: 10px 12px; overflow: hidden; background: var(--sla-surface); }
+.coverage-topology-search { display: block; width: 100%; margin-bottom: 8px; }
+.coverage-topology-search input { width: 100%; height: 30px; border: 1px solid var(--sla-border); border-radius: 7px; padding: 4px 9px; color: var(--sla-text); background: var(--sla-surface); font-size: 9px; }
 .coverage-topology-search input::placeholder { color: var(--sla-faint); }
-.coverage-topology-type-list { display: grid; flex: 0 0 auto; min-height: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; gap: 9px; overflow: visible; }
-.coverage-topology-type { display: grid; min-width: 0; min-height: 58px; grid-template-columns: minmax(42px, auto) minmax(0, 1fr); column-gap: 11px; align-items: center; border: 1px solid var(--sla-border); border-radius: 8px; padding: 10px 12px; background: var(--sla-surface); }
-.coverage-topology-type > strong { grid-row: 1 / span 2; color: var(--sla-text); font-size: 18px; line-height: 1; font-variant-numeric: tabular-nums; }
-.coverage-topology-type > span { min-width: 0; color: var(--sla-text); font-size: 10px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
-.coverage-topology-type > small { min-width: 0; color: var(--sla-muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 8px; line-height: 1.35; overflow-wrap: anywhere; }
-.coverage-topology-empty { display: flex; flex: 1; min-height: 100px; align-items: center; justify-content: center; gap: 8px; padding: 18px; color: var(--sla-muted); font-size: 10px; text-align: center; }
+.coverage-topology-inspector-heading { display: flex; min-width: 0; align-items: center; gap: 8px; margin-bottom: 5px; }
+.coverage-topology-inspector-heading > div { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
+.coverage-topology-inspector-heading strong { overflow: hidden; color: var(--sla-text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.coverage-topology-inspector-heading span { color: var(--sla-muted); font-size: 8px; }
+.coverage-topology-family-swatch { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 3px; background: var(--topology-family, var(--sla-accent)); box-shadow: 0 3px 9px color-mix(in srgb, var(--topology-family, var(--sla-accent)) 32%, transparent); }
+.coverage-topology-type-list { display: grid; min-height: 0; align-content: start; gap: 3px; }
+.coverage-topology-type { display: flex; min-width: 0; min-height: 27px; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--sla-border-soft); padding: 3px 2px; }
+.coverage-topology-type > span { min-width: 0; }
+.coverage-topology-type > span > strong, .coverage-topology-type > span > small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coverage-topology-type > span > strong { color: var(--sla-text); font-size: 9px; line-height: 1.25; }
+.coverage-topology-type > span > small { margin-top: 1px; color: var(--sla-faint); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 7px; line-height: 1.3; }
+.coverage-topology-type > strong { flex: 0 0 auto; color: var(--sla-accent-strong); font-size: 11px; font-variant-numeric: tabular-nums; }
+.coverage-topology-inspector-note { margin: auto 0 0 !important; padding-top: 5px; color: var(--sla-muted); font-size: 7px !important; line-height: 1.35 !important; }
+.coverage-topology-empty { display: flex; flex: 1; min-height: 88px; align-items: center; justify-content: center; gap: 8px; padding: 18px; color: var(--sla-muted); font-size: 10px; text-align: center; }
 .coverage-topology-empty svg { width: 20px; height: 20px; }
+.coverage-topology-canvas { position: relative; min-width: 0; min-height: 0; overflow: hidden; isolation: isolate; background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--sla-accent-soft) 58%, transparent) 0, transparent 36%), radial-gradient(circle, color-mix(in srgb, var(--sla-border) 54%, transparent) .7px, transparent .8px); background-size: auto, 15px 15px; }
+.coverage-topology-spokes { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.coverage-topology-spokes line { stroke: color-mix(in srgb, var(--sla-accent) 40%, var(--sla-border)); stroke-width: .22; vector-effect: non-scaling-stroke; transition: opacity 140ms ease, stroke 140ms ease; }
+.coverage-topology-spokes line.muted { opacity: .1; }
+.coverage-topology-provider-node { position: absolute; z-index: 3; top: 50%; left: 50%; display: flex; min-width: 86px; min-height: 62px; align-items: center; justify-content: center; flex-direction: column; gap: 3px; border: 1px solid color-mix(in srgb, var(--sla-accent) 65%, var(--sla-border)); border-radius: 14px; padding: 7px 10px; color: var(--sla-text); background: var(--sla-surface); box-shadow: 0 12px 30px color-mix(in srgb, var(--sla-accent) 18%, transparent); transform: translate(-50%, -50%); }
+.coverage-topology-provider-node .provider-mark { width: 34px; height: 29px; }
+.coverage-topology-provider-node > strong { max-width: 92px; overflow: hidden; font-size: 9px; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.coverage-topology-family { position: absolute; z-index: 4; display: grid; width: 104px; min-height: 44px; grid-template-columns: 7px minmax(0, 1fr); column-gap: 6px; align-content: center; border: 1px solid var(--sla-border); border-radius: 9px; padding: 6px 8px; color: var(--sla-text); background: color-mix(in srgb, var(--sla-surface) 92%, transparent); box-shadow: 0 7px 20px rgba(5, 10, 20, .12); cursor: pointer; text-align: left; transform: translate(-50%, -50%); transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease, opacity 140ms ease, transform 140ms ease; }
+.coverage-topology-family:hover { border-color: color-mix(in srgb, var(--topology-family) 64%, var(--sla-border)); transform: translate(-50%, calc(-50% - 2px)); }
+.coverage-topology-family.active { border-color: var(--topology-family); background: color-mix(in srgb, var(--topology-family) 12%, var(--sla-surface)); box-shadow: 0 10px 28px color-mix(in srgb, var(--topology-family) 24%, transparent); }
+.coverage-topology-family.muted { opacity: .24; }
+.coverage-topology-family > span { grid-row: 1 / span 2; align-self: center; width: 7px; height: 7px; border-radius: 50%; background: var(--topology-family); box-shadow: 0 3px 8px color-mix(in srgb, var(--topology-family) 36%, transparent); }
+.coverage-topology-family strong, .coverage-topology-family small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coverage-topology-family strong { font-size: 8px; line-height: 1.2; }
+.coverage-topology-family small { color: var(--sla-muted); font-size: 7px; line-height: 1.2; }
+.coverage-topology-satellite { position: absolute; z-index: 2; border: 1px solid color-mix(in srgb, var(--topology-family) 72%, var(--sla-surface)); border-radius: 50%; background: var(--topology-family); box-shadow: 0 3px 8px color-mix(in srgb, var(--topology-family) 22%, transparent); pointer-events: auto; transform: translate(-50%, -50%); transition: opacity 140ms ease, transform 140ms ease; }
+.coverage-topology-satellite.muted { opacity: .08; }
+.coverage-topology-satellite.matched { opacity: .78; }
+.coverage-topology-canvas-note { position: absolute; z-index: 5; right: 10px; bottom: 8px; max-width: 260px; color: var(--sla-faint); font-size: 7px; line-height: 1.35; text-align: right; }
 .coverage-topology-boundary { position: sticky; bottom: 0; z-index: 2; display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--sla-border); padding: 9px 12px; background: var(--sla-surface); }
 .coverage-topology-boundary > div { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
 .coverage-topology-boundary strong { color: var(--sla-text); font-size: 10px; }
@@ -999,6 +1010,12 @@ a { color: var(--sla-accent); }
   .directory-primary-facts div:nth-child(n+5) { border-top: 1px solid var(--sla-border); }
   .performance-tile-grid { grid-template-columns: 1fr; }
 }
+@media (max-width: 1050px) and (min-width: 901px) {
+  .coverage-panel .coverage-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .coverage-panel .coverage-facts .overview-fact { border-top: 0; border-left: 1px solid var(--sla-border); padding: 11px 14px; }
+  .coverage-panel .coverage-facts .overview-fact:first-child { border-left: 0; padding-left: 0; }
+  .coverage-panel .coverage-facts .overview-fact:last-child { padding-right: 0; }
+}
 @media (max-width: 900px) {
   .hero-row { align-items: stretch; }
   .watch-toolbar { align-items: stretch; flex-direction: column-reverse; gap: 4px; }
@@ -1036,7 +1053,8 @@ a { color: var(--sla-accent); }
   .performance-layout { grid-template-columns: 1fr; overflow-y: auto; }
   .performance-browser { min-height: 300px; border-right: 0; border-bottom: 1px solid var(--sla-border); }
   .performance-detail { overflow: visible; }
-  .coverage-topology-type-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .coverage-topology-explorer { grid-template-columns: minmax(205px, .42fr) minmax(0, 1fr); }
+  .coverage-topology-family { width: 92px; padding: 6px 7px; }
 }
 @media (max-width: 680px) {
   .sla-main, .sla-main-watch { height: auto; min-height: calc(100vh - 49px); overflow: visible; padding: 16px 14px 40px; }
@@ -1050,12 +1068,11 @@ a { color: var(--sla-accent); }
   .coverage-filter-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .coverage-filter-tabs button { justify-content: center; }
   .coverage-list-footer, .coverage-inventory-warning, .coverage-review-context { align-items: flex-start; flex-direction: column; }
-  .coverage-topology-heading, .coverage-topology-boundary { align-items: flex-start; flex-direction: column; }
-  .coverage-topology-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .coverage-topology-facts > div:nth-child(3) { border-top: 1px solid var(--sla-border); border-left: 0; }
-  .coverage-topology-facts > div:nth-child(4) { border-top: 1px solid var(--sla-border); }
-  .coverage-topology-type-list { grid-template-columns: 1fr; }
-  .coverage-topology-types { padding: 12px; }
+  .coverage-topology-boundary { position: static; align-items: flex-start; flex-direction: column; }
+  .coverage-topology-view { overflow: visible; }
+  .coverage-topology-explorer { grid-template-columns: 1fr; overflow: visible; }
+  .coverage-topology-canvas { order: -1; min-height: 350px; border-bottom: 1px solid var(--sla-border); }
+  .coverage-topology-inspector { border-right: 0; }
   .coverage-topology-search { width: 100%; }
   .coverage-topology-search input { height: 40px; }
   .overview-status-panel { padding: 0 !important; }

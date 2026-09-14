@@ -112,6 +112,12 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByRole("list", { name: /Smartscape node types/ }),
     ).toBeVisible();
+    await expect(
+      app.getByLabel(/topology inventory map/i),
+    ).toBeVisible();
+    await expect(
+      app.getByText(/Visual grouping only, not a dependency graph/i),
+    ).toBeVisible();
     await coverageEvidenceViews.getByRole("button", { name: /^Service links/ }).click();
     await expect(
       app.getByRole("listbox", { name: "Provider coverage worklist" }),
