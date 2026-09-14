@@ -133,7 +133,7 @@ describe("parseDirectoryEnvelope", () => {
     expect(() => parseDirectoryEnvelope(malformed)).toThrow("invalid response");
   });
 
-  it("preserves provider contract and claim-planning fields", () => {
+  it("preserves published provider terms and claim-planning fields", () => {
     const parsed = parseDirectoryEnvelope(validEnvelope);
     expect(parsed.result.claim_process?.deadline_days).toBe(30);
     expect(parsed.result.default_credit_policy?.credit_tiers[0]).toEqual({

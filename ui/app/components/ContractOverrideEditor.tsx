@@ -77,7 +77,7 @@ const termsSummary = (value: ContractOverrideValue): string => {
 const scopeSummary = (value: ContractOverrideValue): string => {
   if (value.scopeKind === "provider") return value.scopeEntityName;
   const names = getOverrideScopeNames(value);
-  if (names.length <= 1) return names[0] ?? "No evidence target";
+  if (names.length <= 1) return names[0] ?? "No target";
   return `${names[0]} and ${names.length - 1} more`;
 };
 
@@ -210,7 +210,7 @@ export const ContractOverrideEditor = ({
     const next = { ...draft, overrideKey: createOverrideKey(draft) };
     const validationErrors = validateContractOverride(next);
     const duplicate = overrides.find((item) => sameOverrideIdentity(item, next) && item.objectId !== existing?.objectId);
-    if (duplicate) validationErrors.push("An override already exists for this provider service and scope. Edit that record instead.");
+    if (duplicate) validationErrors.push("Custom terms already exist for this provider service and scope. Edit that record instead.");
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
       return;
@@ -219,7 +219,7 @@ export const ContractOverrideEditor = ({
       await onSave(next, existing);
       onDismiss();
     } catch (error) {
-      setRequestError(error instanceof Error ? error.message : "Dynatrace did not save the override. Refresh and try again.");
+      setRequestError(error instanceof Error ? error.message : "Dynatrace did not save the custom terms. Refresh and try again.");
     }
   };
 
@@ -229,15 +229,15 @@ export const ContractOverrideEditor = ({
       await onDelete(existing);
       onDismiss();
     } catch (error) {
-      setRequestError(error instanceof Error ? error.message : "Dynatrace did not remove the override. Refresh and try again.");
+      setRequestError(error instanceof Error ? error.message : "Dynatrace did not remove the custom terms. Refresh and try again.");
     }
   };
 
   const footer = confirmDelete ? (
     <div className="contract-editor-footer contract-editor-footer-danger">
-      <span>This removes the tenant override. The public directory baseline remains available.</span>
+      <span>This removes the custom terms. Published terms remain available.</span>
       <div>
-        <Button disabled={saving} onClick={() => setConfirmDelete(false)}>Keep override</Button>
+        <Button disabled={saving} onClick={() => setConfirmDelete(false)}>Keep custom terms</Button>
         <Button className="danger-action" variant="emphasized" disabled={saving} onClick={() => void remove()}>{saving ? "Removing" : "Remove custom terms"}</Button>
       </div>
     </div>
@@ -254,14 +254,14 @@ export const ContractOverrideEditor = ({
   const editorBody = confirmDelete ? (
         <div className="contract-delete-confirmation">
           <strong>Remove {draft.providerServiceName} for {scopeSummary(draft)}?</strong>
-          <p>The app will fall back to the next matching tenant override, then to the public sla.directory record.</p>
+          <p>The app will fall back to the next matching custom terms record, then to the published terms from sla.directory.</p>
           {requestError ? <div className="error-box compact-error" role="alert">{requestError}</div> : null}
         </div>
       ) : (
         <form className="contract-editor" onSubmit={(event) => { event.preventDefault(); void save(); }}>
           <div className="contract-source-boundary">
-            <div><span>Public baseline</span><strong>{publishedTarget === null || publishedTarget === undefined ? "No availability target" : `${publishedTarget}% availability`}</strong></div>
-            <p>The public record is retained for comparison. These custom terms apply only to the explicit scope and effective dates below.</p>
+            <div><span>Published terms</span><strong>{publishedTarget === null || publishedTarget === undefined ? "No availability target" : `${publishedTarget}% availability`}</strong></div>
+            <p>Published terms remain available for comparison. These custom terms apply only to the explicit scope and effective dates below.</p>
           </div>
 
           <div className="contract-form-grid">
@@ -271,17 +271,17 @@ export const ContractOverrideEditor = ({
                 <option value="*">All provider services</option>
                 {provider.services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
               </select>
-              <small>Choose a directory service when the custom term is service-specific.</small>
+              <small>Choose a provider service when these terms are service-specific.</small>
             </label>
             <label className="field-label">
-              Evidence boundary
+              Applies to
               <select value={draft.scopeKind} onChange={(event) => selectScopeKind(event.target.value as ContractScopeKind)}>
-                <option value="provider">Provider-wide fallback</option>
+                <option value="provider">Provider default</option>
                 <option value="service">Selected Dynatrace services</option>
                 <option value="host">Selected hosts or runtimes</option>
                 <option value="location">Cloud region or datacenter</option>
               </select>
-              <small>Choose where these terms may be applied. More specific boundaries take precedence.</small>
+              <small>Choose which Dynatrace workloads can use these terms. More specific scopes take precedence.</small>
             </label>
           </div>
 
@@ -293,11 +293,11 @@ export const ContractOverrideEditor = ({
                   <span>{selectedScopeIds.length} selected</span>
                 </div>
                 <div>
-                  {scopeTargets.length > 6 ? <input aria-label="Filter evidence targets" type="search" value={scopeFilter} placeholder="Filter targets" onChange={(event) => setScopeFilter(event.target.value)} /> : null}
+                  {scopeTargets.length > 6 ? <input aria-label="Filter Dynatrace targets" type="search" value={scopeFilter} placeholder="Filter targets" onChange={(event) => setScopeFilter(event.target.value)} /> : null}
                   {visibleScopeTargets.length > 0 ? <Button size="condensed" onClick={toggleVisibleScopeTargets}>{allVisibleSelected ? "Clear visible" : "Select visible"}</Button> : null}
                 </div>
               </div>
-              <div className="contract-scope-options" role="group" aria-label="Dynatrace evidence targets">
+              <div className="contract-scope-options" role="group" aria-label="Dynatrace targets">
                 {visibleScopeTargets.length === 0 ? <div className="contract-scope-empty">{scopeTargets.length === 0 ? "No matching Dynatrace scope was returned." : "No targets match this filter."}</div> : null}
                 {visibleScopeTargets.map((target) => (
                   <label className={`contract-scope-option${selectedScopeIds.includes(target.id) ? " selected" : ""}${target.unavailable ? " unavailable" : ""}`} key={target.id}>
@@ -307,14 +307,14 @@ export const ContractOverrideEditor = ({
                 ))}
               </div>
               <div className="contract-evidence-boundary">
-                <div><span>Evidence assignment</span><strong>{selectedScopeIds.length === 0 ? "No target selected" : `${selectedScopeIds.length} exact ${selectedScopeIds.length === 1 ? "target" : "targets"}`}</strong></div>
-                <p>When a Problem includes a selected service, or Smartscape links an affected service to a selected host, runtime, or location, these terms become applicable. The assignment does not determine provider fault.</p>
+                <div><span>Applies to</span><strong>{selectedScopeIds.length === 0 ? "No target selected" : `${selectedScopeIds.length} exact ${selectedScopeIds.length === 1 ? "target" : "targets"}`}</strong></div>
+                <p>When a Problem includes a selected service, or Smartscape links an affected service to a selected host, runtime, or location, these terms become applicable. This scope does not determine provider fault.</p>
               </div>
             </section>
           ) : (
             <div className="contract-evidence-boundary contract-evidence-boundary-provider">
-              <div><span>Evidence assignment</span><strong>Provider-wide fallback</strong></div>
-              <p>These terms are not tied to a specific Dynatrace entity. They apply only after more specific host, location, and service assignments are considered.</p>
+              <div><span>Applies to</span><strong>Provider default</strong></div>
+              <p>These terms are not tied to a specific Dynatrace entity. They apply only after more specific host, location, and service scopes are considered.</p>
             </div>
           )}
 
@@ -335,14 +335,14 @@ export const ContractOverrideEditor = ({
             <div className="contract-form-grid">
               <label className="field-label">Effective from<input type="date" value={draft.effectiveFrom} onChange={(event) => patchDraft({ effectiveFrom: event.target.value })} /></label>
               <label className="field-label">Effective to (optional)<input type="date" value={draft.effectiveTo ?? ""} onChange={(event) => patchDraft({ effectiveTo: event.target.value || null })} /></label>
-              <label className="field-label">Contract or amendment reference<input type="text" value={draft.sourceReference} placeholder="Enterprise agreement 2026, section 4.2" onChange={(event) => patchDraft({ sourceReference: event.target.value })} /><small>Use a concise, verifiable reference. Do not paste contract text.</small></label>
-              <label className="field-label">Source URL (optional)<input type="url" value={draft.sourceUrl ?? ""} placeholder="https://internal.example/contract" onChange={(event) => patchDraft({ sourceUrl: event.target.value || null })} /></label>
+              <label className="field-label">Agreement reference<input type="text" value={draft.sourceReference} placeholder="Enterprise agreement 2026, section 4.2" onChange={(event) => patchDraft({ sourceReference: event.target.value })} /><small>Use a concise, verifiable reference. Do not paste confidential agreement text.</small></label>
+              <label className="field-label">Source URL (optional)<input type="url" value={draft.sourceUrl ?? ""} placeholder="https://internal.example/agreement" onChange={(event) => patchDraft({ sourceUrl: event.target.value || null })} /></label>
             </div>
             <label className="field-label contract-note-field">Operational note (optional)<textarea rows={2} value={draft.notes ?? ""} placeholder="Information an on-call engineer needs to apply this term" onChange={(event) => patchDraft({ notes: event.target.value || null })} /></label>
-            <label className="field-label contract-checkbox"><input type="checkbox" checked={draft.enabled} onChange={(event) => patchDraft({ enabled: event.target.checked })} /> Apply this override when it is in its effective date range</label>
+            <label className="field-label contract-checkbox"><input type="checkbox" checked={draft.enabled} onChange={(event) => patchDraft({ enabled: event.target.checked })} /> Apply these terms when they are in their effective date range</label>
           </fieldset>
 
-          <div className="contract-preview"><span>Effective change</span><strong>{termsSummary(draft)}</strong><small>All authenticated app users can read this shared setting. Do not store confidential text, credentials, or personal data.</small></div>
+          <div className="contract-preview"><span>Effective change</span><strong>{termsSummary(draft)}</strong><small>All authenticated app users can read this shared setting. Do not store confidential agreement text, credentials, or personal data.</small></div>
           {errors.length > 0 ? <div className="error-box compact-error" role="alert"><strong>Review the custom terms</strong><ul>{errors.map((error) => <li key={error}>{error}</li>)}</ul></div> : null}
           {requestError ? <div className="error-box compact-error" role="alert">{requestError}</div> : null}
         </form>

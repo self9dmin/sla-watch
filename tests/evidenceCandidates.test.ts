@@ -274,7 +274,7 @@ describe("evidence candidates", () => {
     })?.decisionKey).toBe("aws|p-1");
   });
 
-  it("requires a new review when the evidence boundary changes", () => {
+  it("requires a new review when the SLA match basis changes", () => {
     const [candidate] = buildEvidenceCandidates({
       provider,
       problems: [problem],

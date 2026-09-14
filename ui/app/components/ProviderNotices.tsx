@@ -67,7 +67,7 @@ const NoticeDetail = ({ notice, providerName, correlation }: { notice: ProviderN
       <span className="eyebrow">Affected provider components</span>
       <div>
         {notice.products.length > 0 ? notice.products.map((product) => (
-          <span className="provider-product" key={product.id} title={product.directoryServiceIds.length > 0 ? `Directory IDs: ${product.directoryServiceIds.join(", ")}` : "No explicit sla.directory mapping"}>
+          <span className="provider-product" key={product.id} title={product.directoryServiceIds.length > 0 ? `Directory IDs: ${product.directoryServiceIds.join(", ")}` : "No matching sla.directory service"}>
             {product.name}{product.directoryServiceIds.length > 0 ? <small>{product.directoryServiceIds.join(", ")}</small> : null}
           </span>
         )) : <span className="muted-inline">No product list was provided.</span>}
@@ -159,7 +159,7 @@ export const ProviderNotices = ({ providerSlug, lookbackHours, topology = [], em
           <Button as={Link} to="/settings/provider-connections" size="condensed">Review provider connections</Button>
         </div>
       ) : !source.loading && source.configuredSourceRequired ? (
-        <div className="provider-notices-empty"><strong>Connect an account-specific {source.providerName} source.</strong><span>{source.providerName} does not expose a credential-free public incident API used by this app. Add a read-only {source.connectionKind} connection to review provider-owned events. Dynatrace Problems and sla.directory terms remain available without it.</span><Button as={Link} to="/settings/provider-connections" size="condensed">Add {source.providerName} connection</Button></div>
+        <div className="provider-notices-empty"><strong>Connect an account-specific {source.providerName} source.</strong><span>{source.providerName} does not expose a credential-free public incident API used by this app. Add a read-only {source.connectionKind} connection to review provider-owned events. Dynatrace Problems and published terms remain available without it.</span><Button as={Link} to="/settings/provider-connections" size="condensed">Add {source.providerName} connection</Button></div>
       ) : !source.loading && source.error ? (
         <div className="error-box provider-notice-error"><strong>Provider evidence is unavailable.</strong><span>{source.error.message}</span><Button size="condensed" onClick={() => void source.refetch()}>Try again</Button></div>
       ) : source.loading || !response ? (

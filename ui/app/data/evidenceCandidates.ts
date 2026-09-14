@@ -260,7 +260,7 @@ export const buildEvidenceCandidates = ({
         id,
     );
     const mappingEvidence = mappingBasis === "confirmed-scope"
-      ? `${confirmed.length} operator-confirmed scope mapping${confirmed.length === 1 ? "" : "s"} overlap the affected services.`
+      ? `${confirmed.length} operator-confirmed SLA match${confirmed.length === 1 ? "" : "es"} overlap the affected services.`
       : mappingBasis === "provider-tag"
         ? `${tagged.length} affected service${tagged.length === 1 ? " has" : "s have"} the explicit ${providerLabelKey}:${providerSlug} tag.`
         : mappingBasis === "smartscape-observed"

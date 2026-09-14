@@ -138,7 +138,7 @@ const WatchSettings = () => {
       <div className="page-intro">
         <Text className="eyebrow">Settings · review</Text>
         <Heading level={1}>Review defaults.</Heading>
-        <Paragraph>Providers appear automatically from Dynatrace evidence, confirmed Coverage mappings, and enabled incident connections. Choose the focused view, tag convention, and evidence window.</Paragraph>
+        <Paragraph>Providers appear automatically from Dynatrace evidence, confirmed SLA matches, and enabled incident connections. Choose the focused view, tag convention, and evidence window.</Paragraph>
       </div>
       <div className="settings-form-grid">
         <label className="field-label">Active provider
@@ -165,8 +165,8 @@ const WatchSettings = () => {
           <small>{directoryChecking
             ? `Checking ${providerSlug}`
             : activeDirectory
-              ? `${activeDirectory.provider.name} public terms are available.`
-              : `The ${providerSlug} public record could not be loaded.`}</small>
+              ? `${activeDirectory.provider.name} published terms are available.`
+              : `The ${providerSlug} published terms could not be loaded.`}</small>
         </div>
         <span className={`connection-state ${directoryChecking ? "checking" : activeDirectory ? "connected" : "unavailable"}`}>
           {directoryChecking ? "Checking" : activeDirectory ? "Connected" : "Unavailable"}
@@ -177,7 +177,7 @@ const WatchSettings = () => {
         <div className="eyebrow">Matching rules</div>
         <div className="provider-rule-list">{enabledProviderSlugs.map((slug) => <code key={slug}>{providerLabelKey || "provider"}:{slug}</code>)}</div>
         <span>The app reads these source-owned tags and separately reports Smartscape candidates. Saving provider settings does not modify Dynatrace services.</span>
-        <NavLink className="text-action" to="/">Review service mapping in Coverage</NavLink>
+        <NavLink className="text-action" to="/">Review SLA matches in Coverage</NavLink>
       </div>
       <div className="settings-actions"><Button variant="emphasized" disabled={enabledProviderSlugs.length === 0 || !providerSlug.trim()} onClick={() => void save()}>Save provider settings</Button>{saved ? <SavedNote text="Provider settings saved" /> : null}</div>
     </section>
@@ -203,7 +203,7 @@ const connectionUseLabel = (providerSlug: ConnectedProvider): string => {
 };
 
 const disabledConnectionDetail = (providerSlug: ConnectedProvider): string => {
-  if (providerSlug === "aws" || providerSlug === "azure") return "When disabled, account-specific provider evidence is not read. Dynatrace evidence and sla.directory terms remain available.";
+  if (providerSlug === "aws" || providerSlug === "azure") return "When disabled, account-specific provider evidence is not read. Dynatrace evidence and published terms remain available.";
   return `When disabled, Evidence uses only the public ${providerSlug === "oci" ? "OCI regional" : "Google Cloud"} status source.`;
 };
 
@@ -601,12 +601,12 @@ const SlaOverrideSettings = () => {
         <Heading level={1}>{activeDirectory ? `Add ${activeDirectory.provider.name} custom terms.` : "Add custom terms."}</Heading>
         <Paragraph>Define operational terms for a provider service and an explicit Dynatrace scope. Published terms remain available as the comparison baseline.</Paragraph>
       </div>
-      {loading ? <div className="settings-callout" role="status"><strong>Loading contract scope</strong><span>Reading the provider record, service inventory, Smartscape topology, and tenant settings.</span></div> : null}
+      {loading ? <div className="settings-callout" role="status"><strong>Loading terms scope</strong><span>Reading published terms, service inventory, Smartscape topology, and shared settings.</span></div> : null}
       {!loading && !activeDirectory ? <div className="error-box"><strong>Provider terms are unavailable.</strong><span>Return to Review defaults, verify the active provider and API connection, then try again.</span></div> : null}
       {!loading && activeDirectory && initialValue ? (
         <>
           {!contractSettings.canWrite ? <div className="error-box compact-error">Your current role can review custom terms but cannot create them. Ask a Dynatrace administrator for app-settings write access.</div> : null}
-          {(serviceQuery.error || topologyQuery.error) ? <div className="settings-callout"><strong>Some Dynatrace scopes are unavailable</strong><span>You can still create a provider-level override. Service, host, and location choices require the corresponding entity or Smartscape read access.</span></div> : null}
+          {(serviceQuery.error || topologyQuery.error) ? <div className="settings-callout"><strong>Some Dynatrace scopes are unavailable</strong><span>You can still create provider-default custom terms. Service, host, and location choices require the corresponding entity or Smartscape read access.</span></div> : null}
           <ContractOverrideEditor
             presentation="page"
             provider={activeDirectory}
@@ -667,7 +667,7 @@ const IntroSettings = () => {
   );
 };
 
-const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">Review workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure review defaults, optional incident data, evidence boundaries, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Review defaults</span><strong>Choose the focused provider, source tag convention, and evidence window.</strong><span>Providers are discovered automatically and service assignments remain in Coverage.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Published terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">Custom terms</span><strong>Define tenant terms and evidence targets.</strong><span>Assign one terms record to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Walkthrough</span><strong>Tour the operating views.</strong><span>Coverage opens first. The walkthrough is optional and changes no workspace configuration.</span></NavLink></div></section>;
+const SettingsLanding = () => <section className="settings-page"><div className="page-intro"><Text className="eyebrow">Review workspace</Text><Heading level={1}>Workspace configuration</Heading><Paragraph>Configure review defaults, optional incident data, custom terms, and operator-facing display settings.</Paragraph></div><div className="settings-summary-grid"><NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Review defaults</span><strong>Choose the focused provider, source tag convention, and evidence window.</strong><span>Providers are discovered automatically and SLA matches remain in Coverage.</span></NavLink><NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Provider connections</span><strong>Connect optional provider incident data.</strong><span>Add multiple AWS accounts, Azure subscriptions, Google Cloud projects, or OCI tenancies. Published terms do not require a connection.</span></NavLink><NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">Custom terms</span><strong>Define environment-specific terms and where they apply.</strong><span>Apply one terms record to exact services, runtimes, or locations.</span></NavLink><NavLink to="/settings/appearance" className="settings-summary"><span className="eyebrow">Appearance</span><strong>Select system, light, or dark.</strong><span>Theme changes immediately and keeps status contrast intact.</span></NavLink><NavLink to="/settings/intro" className="settings-summary"><span className="eyebrow">Walkthrough</span><strong>Tour the operating views.</strong><span>Coverage opens first. The walkthrough is optional and changes no workspace configuration.</span></NavLink></div></section>;
 
 export const SettingsPage = () => {
   const { page = "watch" } = useParams();

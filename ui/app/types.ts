@@ -256,7 +256,7 @@ export type EffectiveContractTerms = {
   businessDays: boolean;
   maxCreditPercent: number | null;
   claimMethod: string | null;
-  source: "sla.directory" | "tenant override";
+  source: "sla.directory" | "custom terms";
   appliedOverrides: ContractOverrideRecord[];
 };
 

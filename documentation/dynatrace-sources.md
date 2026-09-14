@@ -32,7 +32,7 @@ Provider topology present
 These stages are not interchangeable:
 
 - Provider topology proves that Dynatrace observed provider infrastructure in the environment.
-- A service link requires an exact Smartscape relationship, an exact source-owned tag, or an operator confirmation.
+- An SLA match requires an exact Smartscape relationship, an exact source-owned tag, or an operator confirmation.
 - A Dynatrace Problem and service telemetry establish customer-observed impact, not provider fault.
 - A provider report is supporting evidence, not the arbiter of customer impact.
 - Contract applicability, fault, eligibility, and credit approval remain human and provider decisions.

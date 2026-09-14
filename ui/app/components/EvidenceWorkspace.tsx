@@ -130,7 +130,7 @@ const formatPercent = (value: number | null): string =>
 
 const formatMappingBasis = (candidate: EvidenceCandidate): string =>
   candidate.mappingBasis === "confirmed-scope"
-    ? "Confirmed scope"
+    ? "Confirmed SLA match"
     : candidate.mappingBasis === "provider-tag"
       ? "Provider tag"
       : candidate.mappingBasis === "smartscape-observed"
@@ -373,6 +373,7 @@ const CandidateDetail = ({
       serviceId,
     },
   ), [contractSettings.overrides, provider, providerServiceId, serviceId]);
+  const termsSourceLabel = terms.source === "sla.directory" ? "Published terms" : "Custom terms";
   const incidentPath = createIncidentReviewPath({
     providerSlug: provider.provider.slug,
     problemId: candidate.problem.id,
@@ -654,7 +655,7 @@ const CandidateDetail = ({
           <div className="ready">
             <dt>Terms</dt>
             <dd>Available</dd>
-            <small>{terms.source}</small>
+            <small>{termsSourceLabel}</small>
           </div>
           <div className="optional">
             <dt>Provider corroboration <span>Optional</span></dt>
@@ -707,7 +708,7 @@ const CandidateDetail = ({
                 ? "Needs evidence"
                 : "Excluded from provider follow-up"}</strong>
             <span>{currentDecision.status === "validated"
-              ? `Review is complete for ${reviewCase.problems.length} Problem${reviewCase.problems.length === 1 ? "" : "s"}. A contract owner can use the evidence review for provider follow-up.`
+              ? `Review is complete for ${reviewCase.problems.length} Problem${reviewCase.problems.length === 1 ? "" : "s"}. The provider agreement owner can use the evidence review for follow-up.`
               : currentDecision.status === "not-ready"
                 ? "The case remains open with its confirmed items and note."
                 : `${reviewCase.problems.length} Problem${reviewCase.problems.length === 1 ? " remains" : "s remain"} in Dynatrace and will not appear as provider follow-up work.`}</span>
@@ -731,7 +732,7 @@ const CandidateDetail = ({
                 onChange={(event) => setNote(event.target.value)}
                 rows={2}
                 maxLength={MAX_EVIDENCE_DECISION_NOTE_LENGTH}
-                placeholder="Add a concise operational reason. Do not paste confidential contract text."
+                placeholder="Add a concise operational reason. Do not paste confidential agreement text."
                 disabled={!settings.canWrite || settings.mutating}
               />
             </label>
@@ -864,8 +865,8 @@ const CandidateDetail = ({
             </div>
             <dl className="candidate-package-facts">
               <div><dt>Observed window (UTC)</dt><dd>{formatUtcDateTime(reviewCase.startedAt)} to {reviewCase.endedAt ? formatUtcDateTime(reviewCase.endedAt) : "Ongoing"}</dd></div>
-              <div><dt>Coverage basis</dt><dd>{formatMappingBasis(candidate)}</dd></div>
-              <div><dt>Terms source</dt><dd>{terms.source}</dd></div>
+              <div><dt>SLA match basis</dt><dd>{formatMappingBasis(candidate)}</dd></div>
+              <div><dt>Terms source</dt><dd>{termsSourceLabel}</dd></div>
               <div><dt>Filing window</dt><dd>{terms.filingDeadlineDays === null ? "Not published" : `${terms.filingDeadlineDays} ${terms.businessDays ? "business" : "calendar"} days`}</dd></div>
               <div><dt>Claim method</dt><dd>{terms.claimMethod ?? "Not published"}</dd></div>
               <div><dt>Maximum credit</dt><dd>{formatPercent(terms.maxCreditPercent)}</dd></div>

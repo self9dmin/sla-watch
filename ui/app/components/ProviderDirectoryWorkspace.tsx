@@ -187,7 +187,7 @@ const overrideTerms = (override: ContractOverrideRecord): string =>
     .join(" · ") || "No operational value";
 
 const overrideScopeSummary = (override: ContractOverrideRecord): string => {
-  if (override.scopeKind === "provider") return "Provider-wide fallback";
+  if (override.scopeKind === "provider") return "Provider default";
   const names = getOverrideScopeNames(override);
   const kind =
     override.scopeKind === "service"
@@ -309,7 +309,7 @@ export const ProviderDirectoryWorkspace = ({
     return (
       <div className="directory-loading" role="status">
         <strong>Loading vendor terms</strong>
-        <span>Reading the public record and tenant settings.</span>
+        <span>Reading published terms and shared settings.</span>
       </div>
     );
   if (!directory)
@@ -345,8 +345,8 @@ export const ProviderDirectoryWorkspace = ({
         <div>
           <Heading level={2}>{provider.name} terms</Heading>
           <Paragraph>
-            Public terms from sla.directory, service-level coverage, support
-            options, and tenant-specific overrides.
+            Published terms from sla.directory, service-level coverage, support
+            options, and custom terms for this environment.
           </Paragraph>
         </div>
         <div className="directory-heading-status">
@@ -667,7 +667,7 @@ export const ProviderDirectoryWorkspace = ({
                   ) : null}
                   <p className="directory-provenance">
                     API generated {directory.generatedAt}. The app does not
-                    alter this public record.
+                    change these published terms.
                   </p>
                 </section>
               </div>
@@ -806,7 +806,7 @@ export const ProviderDirectoryWorkspace = ({
                           }}
                         >
                           {overrideCount > 0
-                            ? `Review ${overrideCount} override${overrideCount === 1 ? "" : "s"}`
+                            ? `Review ${overrideCount} custom term${overrideCount === 1 ? "" : "s"}`
                             : "Add custom terms"}
                         </button>
                       </div>
@@ -841,7 +841,7 @@ export const ProviderDirectoryWorkspace = ({
                 tone={support?.responseIsSla ? "positive" : "neutral"}
               >
                 {support?.responseIsSla
-                  ? "Contractual response target"
+                  ? "SLA response target"
                   : "Not credit-backed"}
               </StatusPill>
             </div>
@@ -989,7 +989,7 @@ export const ProviderDirectoryWorkspace = ({
               <div>
                 <strong>Custom terms</strong>
                 <span>
-                  Shared in this environment. Public records remain unchanged.
+                  Shared in this environment. Published terms remain unchanged.
                 </span>
               </div>
               {providerOverrides.length > 0 ? (
@@ -1007,13 +1007,13 @@ export const ProviderDirectoryWorkspace = ({
             </div>
             {!contractSettings.canRead || contractSettings.error ? (
               <div className="error-box compact-error">
-                Contract settings are unavailable for this user. Ask a Dynatrace
+                Custom terms are unavailable for this user. Ask a Dynatrace
                 administrator for app-settings read access.
               </div>
             ) : null}
             {!contractSettings.loading && !contractSettings.canWrite ? (
               <div className="settings-permission-note">
-                You can review overrides, but your role cannot change them.
+                You can review custom terms, but your role cannot change them.
               </div>
             ) : null}
             <div className="contract-security-note">
@@ -1021,7 +1021,7 @@ export const ProviderDirectoryWorkspace = ({
               <span>
                 Store operational values and a reference only. All authenticated
                 app users can read these settings, so do not paste
-                confidential contract text or credentials.
+                confidential agreement text or credentials.
               </span>
             </div>
             {contractSettings.loading ? (
@@ -1031,10 +1031,10 @@ export const ProviderDirectoryWorkspace = ({
               </div>
             ) : providerOverrides.length === 0 ? (
               <div className="contract-empty">
-                <strong>No tenant overrides for {provider.name}</strong>
+                <strong>No custom terms for {provider.name}</strong>
                 <span>
-                  Until an override is added, the app uses the public
-                  directory record.
+                  Until custom terms are added, the app uses the published
+                  directory terms.
                 </span>
                 <Button
                   size="condensed"
@@ -1073,7 +1073,7 @@ export const ProviderDirectoryWorkspace = ({
                         </span>
                       </div>
                       <div className="contract-override-source">
-                        <span>Source</span>
+                        <span>Agreement reference</span>
                         {sourceUrl ? (
                           <a href={sourceUrl} target="_blank" rel="noreferrer">
                             {override.sourceReference}

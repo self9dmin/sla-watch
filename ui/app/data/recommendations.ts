@@ -71,10 +71,10 @@ export const buildSetupRecommendations = ({
     add(recommendations, {
       id: "directory-unavailable",
       priority: "high",
-      title: "Reconnect the provider contract",
-      detail: "The app cannot compare Dynatrace evidence with a contractual target until the selected sla.directory record is available.",
-      evidence: directoryError?.message ?? "No provider contract response is available yet.",
-      action: "Review the provider connection",
+      title: "Restore provider terms",
+      detail: "The app cannot compare Dynatrace evidence with published or custom terms until the selected sla.directory record is available.",
+      evidence: directoryError?.message ?? "No provider terms response is available yet.",
+      action: "Review app access",
       href: "/settings/watch",
     });
   }
@@ -131,8 +131,8 @@ export const buildSetupRecommendations = ({
         : `Confirm the services that depend on ${directoryData.provider.name} in Coverage. Names alone are not enough for a provider review.`,
       evidence: providerCandidateServices > 0
         ? `${providerCandidateServices} topology candidate${providerCandidateServices === 1 ? "" : "s"}; ${services.length - providerCandidateServices} service${services.length - providerCandidateServices === 1 ? " has" : "s have"} no matching ${directoryData.provider.name} runtime evidence.`
-        : `${services.length} service${services.length === 1 ? "" : "s"} returned, but none has confirmed coverage or a matching source tag.`,
-      action: "Review service coverage",
+        : `${services.length} service${services.length === 1 ? "" : "s"} returned, but none has an SLA match or a matching source tag.`,
+      action: "Review SLA matches",
       href: "/#service-coverage-list",
     });
   } else if (directoryData && providerLabels.length > 0 && matchedProviderServices === 0) {
@@ -141,7 +141,7 @@ export const buildSetupRecommendations = ({
       priority: "high",
       title: "Resolve source tags to the selected provider",
       detail: `Dynatrace has source-owned provider tags, but none resolve to ${directoryData.provider.name}. Confirm the intended provider before review.`,
-      evidence: `Detected tags: ${providerLabels.slice(0, 3).join(", ")}. Selected contract: ${directoryData.provider.name}.`,
+      evidence: `Detected tags: ${providerLabels.slice(0, 3).join(", ")}. Selected provider: ${directoryData.provider.name}.`,
       action: "Review matching rules",
       href: "/settings/watch",
     });
@@ -150,8 +150,8 @@ export const buildSetupRecommendations = ({
       id: "provider-tag-reuse",
       priority: "low",
       title: "Reuse coverage outside SLA Review",
-      detail: `The confirmed app mapping is sufficient here. If other Dynatrace features need the same boundary, maintain ${providerLabelKey}:${selectedProviderSlug} in the service's telemetry or cloud metadata source.`,
-      evidence: `${matchedProviderServices} service${matchedProviderServices === 1 ? " is" : "s are"} mapped without an explicit provider tag.`,
+      detail: `The confirmed SLA match is sufficient here. If other Dynatrace features need the same scope, maintain ${providerLabelKey}:${selectedProviderSlug} in the service's telemetry or cloud metadata source.`,
+      evidence: `${matchedProviderServices} service${matchedProviderServices === 1 ? " has" : "s have"} an SLA match without an explicit provider tag.`,
       action: "Review matching rules",
       href: "/settings/watch",
     });
@@ -174,7 +174,7 @@ export const buildSetupRecommendations = ({
       id: "service-context",
       priority: "low",
       title: "Move environment and region out of service names",
-      detail: "Keep service.name stable and put deployment context in tags or primary fields. This makes provider mapping and SLO scope resilient as environments multiply.",
+      detail: "Keep service.name stable and put deployment context in tags or primary fields. This keeps SLA matches and objective scopes resilient as environments multiply.",
       evidence: "At least one returned service name appears to encode an environment or region.",
       action: "Review service naming",
     });
@@ -194,8 +194,8 @@ export const buildSetupRecommendations = ({
       id: "slo-coverage",
       priority: "low",
       title: "Review native SLO coverage next",
-      detail: `The ${directoryData.provider.name} boundary is identifiable. Use a Dynatrace SLO for the customer-facing service to track the error budget, then compare that evidence with the provider contract.`,
-      evidence: `${matchedProviderServices} service${matchedProviderServices === 1 ? "" : "s"} match the selected contract${activeProblems > 0 ? ` and ${activeProblems} active Problem${activeProblems === 1 ? "" : "s"} need review` : ""}.`,
+      detail: `The ${directoryData.provider.name} scope is identifiable. Use a Dynatrace objective for the customer-facing service to track the error budget, then compare that evidence with the provider terms.`,
+      evidence: `${matchedProviderServices} service${matchedProviderServices === 1 ? "" : "s"} match the selected SLA terms${activeProblems > 0 ? ` and ${activeProblems} active Problem${activeProblems === 1 ? "" : "s"} need review` : ""}.`,
       action: "Open the SLO workflow in Dynatrace",
     });
   }

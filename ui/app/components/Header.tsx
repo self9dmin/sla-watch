@@ -179,7 +179,7 @@ export const Header = ({
             </button>
           </div>
           <p>
-            Use Coverage to confirm the provider boundary, Performance to track
+            Use Coverage to review detected topology and SLA matches, Performance to track
             customer objectives, Incidents to inspect Dynatrace Problems, and
             Evidence to complete a human review or inspect optional provider corroboration.
             FinOps Agent is planned and is not available in this release.
@@ -220,7 +220,7 @@ export const Header = ({
             <h3>5. Review provider terms</h3>
             <p>
               Directory separates availability terms, service-level coverage,
-              support options, and tenant overrides for the active provider.
+              support options, and custom terms for the active provider.
             </p>
           </section>
           <section>

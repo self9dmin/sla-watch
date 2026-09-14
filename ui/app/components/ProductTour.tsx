@@ -11,8 +11,8 @@ type TourStep = { target: string; title: string; body: string };
 const STEPS: TourStep[] = [
   {
     target: '[data-tour="coverage"]',
-    title: "Confirm provider coverage",
-    body: "Coverage is the starting point. Smartscape recommendations and services without runtime context share one review list.",
+    title: "Review SLA matches",
+    body: "Coverage is the starting point. Review what Dynatrace found, then confirm only the SLA matches that need a decision.",
   },
   {
     target: '[data-tour="performance"]',
@@ -27,7 +27,7 @@ const STEPS: TourStep[] = [
   {
     target: '[data-tour="directory"]',
     title: "Open provider records",
-    body: "Directory holds the active provider's published terms, service coverage, claim requirements, support options, and tenant overrides.",
+    body: "Directory holds the active provider's published terms, service coverage, claim requirements, support options, and custom terms.",
   },
   {
     target: '[data-tour="settings"]',

@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.72",
+    version: "0.0.73",
     label: "Current release",
+    summary: "Made SLA matching and provider terms use one clear vocabulary.",
+    details: [
+      "Coverage now calls workload-to-provider relationships SLA matches across metrics, states, actions, guidance, and Evidence.",
+      "Settings and Directory consistently separate Published terms from Custom terms and use Applies to for their Dynatrace scope.",
+      "Existing App Settings records remain compatible because stored schema and field identifiers did not change.",
+    ],
+  },
+  {
+    version: "0.0.72",
+    label: "Previous release",
     summary: "Made detected topology respond to the space AppShell actually provides.",
     details: [
       "Wide Coverage views keep the radial topology map, while constrained AppShell views switch to a collision-free resource-family layout.",

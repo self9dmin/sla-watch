@@ -2,10 +2,10 @@
   "$schema": "https://developer.dynatrace.com/docs-assets/schema_strict_apps.json",
   "dynatrace": "1",
   "schemaId": "evidence-decisions",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "displayName": "Evidence review decisions",
   "description": "Human package-ready, not-ready, or not-provider-related decisions for review candidates discovered from Dynatrace evidence.",
-  "documentation": "A package-ready decision approves operational follow-up only. It does not establish provider fault, SLA eligibility, a service credit, or claim submission. Store concise operational notes only. Do not include credentials, confidential contract text, or personal data.",
+  "documentation": "A package-ready decision approves operational follow-up only. It does not establish provider fault, SLA eligibility, a service credit, or claim submission. Store concise operational notes only. Do not include credentials, confidential agreement text, or personal data.",
   "multiObject": true,
   "maxObjects": 1000,
   "summaryPattern": "{problemId} · {status}",
@@ -25,9 +25,9 @@
     },
     "MappingBasis": {
       "type": "enum",
-      "displayName": "Provider mapping basis",
+      "displayName": "SLA match basis",
       "items": [
-        { "value": "confirmed-scope", "displayName": "Confirmed scope" },
+        { "value": "confirmed-scope", "displayName": "Confirmed SLA match" },
         { "value": "provider-tag", "displayName": "Provider tag" },
         { "value": "smartscape-observed", "displayName": "Observed Smartscape topology" },
         { "value": "smartscape-candidate", "displayName": "Smartscape candidate" }
@@ -133,13 +133,13 @@
       "maxObjects": 50
     },
     "mappingBasis": {
-      "displayName": "Provider mapping basis",
+      "displayName": "SLA match basis",
       "type": { "$ref": "#/enums/MappingBasis" },
       "default": "smartscape-candidate",
       "nullable": false
     },
     "mappingEvidence": {
-      "displayName": "Mapping evidence",
+      "displayName": "SLA match evidence",
       "type": "text",
       "default": "",
       "nullable": false,
