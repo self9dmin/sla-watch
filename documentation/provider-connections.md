@@ -29,12 +29,14 @@ See the Dynatrace guidance for [Credential Vault](https://docs.dynatrace.com/doc
 
 | Provider source | One connection represents | Provider prerequisite | Credential Vault Token value | Required outbound hosts | Behavior without a connection |
 | --- | --- | --- | --- | --- | --- |
-| AWS Health | One 12-digit AWS account | An eligible AWS Health API support plan and `health:DescribeEvents`, `health:DescribeEventDetails`, `health:DescribeAffectedEntities` | JSON containing `accessKeyId`, `secretAccessKey`, and optional `sessionToken` | `sts.us-east-1.amazonaws.com`, `health.us-east-1.amazonaws.com` | No AWS provider notices; published terms and Dynatrace evidence remain available |
+| AWS Health | One 12-digit AWS account | An eligible AWS Health API support plan; a dedicated role with `health:DescribeEvents`, `health:DescribeEventDetails`, and `health:DescribeAffectedEntities`; and a base identity allowed to call `sts:AssumeRole` on that role | JSON containing the base identity's `accessKeyId`, `secretAccessKey`, and optional `sessionToken`; the non-secret role ARN is entered separately | `sts.us-east-1.amazonaws.com`, `health.us-east-1.amazonaws.com` | No AWS provider notices; published terms and Dynatrace evidence remain available |
 | Azure Service Health | One Azure subscription | A dedicated Microsoft Entra service principal with `Microsoft.ResourceHealth/events/read` on that subscription | JSON containing `tenantId`, `clientId`, and `clientSecret` | `login.microsoftonline.com`, `management.azure.com` | No Azure provider notices; published terms and Dynatrace evidence remain available |
 | Google Cloud Personalized Service Health | One Google Cloud project | Enable `servicehealth.googleapis.com`; grant `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer` | The service account JSON key | `oauth2.googleapis.com`, `servicehealth.googleapis.com` | Public Google Cloud status remains available and is labeled non-project-specific |
 | OCI Announcements | One commercial OCI tenancy and region | A dedicated API user in a group granted `Allow group AnnouncementListers to inspect announcements in tenancy` | JSON containing `userOcid`, `fingerprint`, and unencrypted RSA `privateKey` | Exact `announcements.<region>.oraclecloud.com` hostname | Public OCI regional status remains available and is labeled non-tenancy-specific |
 
-AWS currently requires Business Support+, Enterprise Support, or Unified Operations for AWS Health API access. AWS recommends temporary credentials where practical. If temporary credentials are used, the Credential Vault value must be refreshed before they expire. The app retrieves bounded affected-entity pages for the newest account-specific events and attempts an exact identifier match against the current Smartscape runtime inventory. It rejects account or region conflicts and never treats account or region overlap alone as local impact. See the [AWS Health API reference](https://docs.aws.amazon.com/health/latest/APIReference/Welcome.html) and [DescribeAffectedEntities](https://docs.aws.amazon.com/health/latest/APIReference/API_DescribeAffectedEntities.html).
+AWS currently requires Business Support+, Enterprise Support, or Unified Operations for AWS Health API access. The recommended connection stores a dedicated base signing credential in Credential Vault and a non-secret Health role ARN in App Settings. On every request, SLA Review calls STS `AssumeRole`, keeps the one-hour session only in function memory, verifies the resulting account with `GetCallerIdentity`, and signs the Health requests with that session. The role trust policy should name the base principal when practical. If it trusts the whole account, the base identity still needs an explicit `sts:AssumeRole` permission, but the trust boundary is broader. A direct credential with the three Health actions remains supported for existing connections when the role ARN is blank.
+
+The base credential must remain valid long enough for normal use. Vaulting a one-hour STS session does not create automatic renewal and will fail after it expires. The automatic refresh applies to the temporary credential obtained by assuming the configured role. The app retrieves bounded affected-entity pages for the newest account-specific events and attempts an exact identifier match against the current Smartscape runtime inventory. It rejects account or region conflicts and never treats account or region overlap alone as local impact. See the [AWS Health API reference](https://docs.aws.amazon.com/health/latest/APIReference/Welcome.html), [AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html), and [DescribeAffectedEntities](https://docs.aws.amazon.com/health/latest/APIReference/API_DescribeAffectedEntities.html).
 
 Azure Service Health is read through the subscription-scoped Resource Health events endpoint. See the [Azure events API](https://learn.microsoft.com/en-us/rest/api/resourcehealth/events/list-by-subscription-id?view=rest-resourcehealth-2025-05-01).
 
@@ -50,14 +52,14 @@ OCI Announcements are retained by Oracle for 90 days. The app reads summary anno
 4. Open **SLA Review > Settings > Provider connections**.
 5. Select AWS, Microsoft Azure, Google Cloud, or OCI.
 6. Select **Add a new account**, **subscription**, **project**, or **tenancy**.
-7. Enter an operator-facing name, the exact provider scope identifier, the OCI region when applicable, and the Credential Vault record ID. Never paste the secret into app settings.
+7. Enter an operator-facing name, the exact provider scope identifier, the AWS Health role ARN or OCI region when applicable, and the Credential Vault record ID. Never paste the secret into app settings.
 8. Select **Test connection**. The app validates the identifier, Credential Vault access, provider authentication, and provider scope. A failed test is not saved as a usable connection.
 9. After the test reports **Connection verified**, select **Save connection**.
 10. Open **Evidence** and select the saved source when more than one source exists.
 
 Repeat the process for every required account scope. Adding a second account, subscription, project, or tenancy does not replace the first.
 
-For live acceptance, prefer a disposable least-privilege identity with temporary credentials. After testing, remove the app connection, delete the Credential Vault record, and revoke or delete the provider credential. The app cannot perform those cleanup steps on the administrator's behalf.
+For live acceptance, use a dedicated, revocable least-privilege identity. For AWS, do not place the one-hour assumed-role response in Credential Vault. Store the base credential and let the app obtain and discard a fresh role session. After a disposable test, remove the app connection, delete the Credential Vault record, and revoke or delete the provider credential. The app cannot perform those cleanup steps on the administrator's behalf.
 
 ## Interpreting the result
 
@@ -68,7 +70,7 @@ For live acceptance, prefer a disposable least-privilege identity with temporary
 
 ## Change or remove a connection
 
-- Editing the provider scope, OCI region, or Credential Vault ID requires a new successful test before the update can be saved.
+- Editing the provider scope, AWS role ARN, OCI region, or Credential Vault ID requires a new successful test before the update can be saved.
 - Renaming a connection or disabling its use does not change the provider credential.
 - Removing the app connection deletes only its non-secret metadata. It does not delete the Credential Vault record or revoke the cloud identity.
 - To retire access completely, remove the connection, revoke or delete the provider-side key or secret, and delete the Credential Vault record according to the tenant's credential lifecycle.

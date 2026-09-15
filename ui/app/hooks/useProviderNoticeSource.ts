@@ -66,9 +66,10 @@ export const useProviderNoticeSource = (
 
   const awsRequest = useMemo(() => ({
     accountId: connection?.accountId,
+    roleArn: connection?.roleArn,
     credentialId: connection?.credentialId,
     lookbackHours,
-  }), [connection?.accountId, connection?.credentialId, lookbackHours]);
+  }), [connection?.accountId, connection?.credentialId, connection?.roleArn, lookbackHours]);
   const azureRequest = useMemo(() => ({
     subscriptionId: connection?.subscriptionId,
     credentialId: connection?.credentialId,

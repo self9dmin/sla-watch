@@ -55,13 +55,13 @@ Evidence is the stopping point in the current product. A saved review can be cop
 
 Provider connections are optional and read-only. Before adding one:
 
-1. Create a dedicated least-privilege identity in the provider account.
+1. Create a dedicated least-privilege identity in the provider account. For AWS, prefer a base identity that can assume a dedicated Health read role.
 2. Put the secret in Dynatrace Credential Vault. Do not paste the secret into SLA Review, App Settings, a dashboard, a notebook, or the repository.
 3. Allow only the adapter's documented outbound hosts under External requests.
 4. Open **Settings > Provider connections**, choose the provider and customer scope, select the Credential Vault record, then run **Test connection**.
 5. Save only after the test confirms the provider identity and requested scope.
 
-AWS Health account events require an eligible AWS support plan. Azure, Google Cloud, and OCI have their own IAM and API prerequisites. Use the [Provider connection guide](provider-connections.md) for the exact requirements and removal steps.
+AWS Health account events require an eligible AWS support plan. For the recommended AWS setup, enter the Health role ARN and vault only the base signing credential. The base identity needs `sts:AssumeRole` on that role; the role owns the three Health read actions. SLA Review obtains a fresh one-hour role session for each request and never stores that session. Azure, Google Cloud, and OCI have their own IAM and API prerequisites. Use the [Provider connection guide](provider-connections.md) for the exact requirements and removal steps.
 
 ## Safe operating boundary
 

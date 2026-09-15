@@ -6,7 +6,7 @@ The app does not decide fault, label a case as an SLA violation, file a claim, o
 
 ## Project status
 
-SLA Review is a working custom Dynatrace AppEngine app under active development. Release 0.0.74 is deployed and smoke-tested in the project tenant. It is not yet a generally available Dynatrace Hub app.
+SLA Review is a working custom Dynatrace AppEngine app under active development. Release 0.0.76 is deployed and smoke-tested in the designated Dynatrace environment. It is not yet a generally available Dynatrace Hub app.
 
 The core Coverage, Performance, Incidents, Evidence, and Directory views have automated tests and target-tenant smoke evidence. The four cloud-provider adapters are implemented, tested with controlled responses, and deployed. Live least-privilege credential acceptance for every provider is still open, along with denied-permission and large-environment testing.
 
@@ -48,7 +48,7 @@ Provider marks are copied from the public `sla.directory` logo set and bundled l
 | GCP | Project-specific Personalized Service Health | Google Cloud public status |
 | OCI | Tenancy-specific OCI Announcements | OCI regional public status |
 
-Connections are optional and read-only. An administrator can add more than one account, subscription, project, or tenancy. Secrets stay in Dynatrace Credential Vault; the app stores only the credential record ID and the provider scope. A new or changed private connection must pass **Test connection** before it can be saved.
+Connections are optional and read-only. An administrator can add more than one account, subscription, project, or tenancy. Secrets stay in Dynatrace Credential Vault; the app stores only the credential record ID, provider scope, and an optional non-secret AWS role ARN. For AWS, the recommended path is a base credential that can assume a dedicated Health read role. The resulting one-hour role credentials exist only in memory for the request. A new or changed private connection must pass **Test connection** before it can be saved.
 
 Public-only adapters also exist for OpenAI, Anthropic, and ElevenLabs. Those feeds are non-customer-specific supporting signals. They do not prove local impact or provider fault.
 
