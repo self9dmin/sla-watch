@@ -53,6 +53,7 @@ export const supportsProviderConnection = (providerSlug: string): providerSlug i
 
 const PROJECT_ID_PATTERN = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const AWS_ACCOUNT_ID_PATTERN = /^\d{12}$/;
+const AWS_ROLE_ARN_PATTERN = /^arn:aws:iam::(\d{12}):role\/[A-Za-z0-9+=,.@_/-]{1,512}$/;
 const AZURE_SUBSCRIPTION_ID_PATTERN = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
 const TENANCY_OCID_PATTERN = /^ocid1\.tenancy\.oc1\.[a-z0-9-]*\.[a-z0-9]+$/i;
 const OCI_REGION_PATTERN = /^[a-z]{2}-[a-z0-9-]+-\d+$/;
@@ -74,11 +75,12 @@ export const providerConnectionScopeId = (value: Pick<ProviderConnectionValue, "
 export const providerConnectionScopeLabel = (value: Pick<ProviderConnectionValue, "providerSlug" | "accountId" | "subscriptionId" | "projectId" | "tenancyId" | "region">): string =>
   value.providerSlug === "oci" ? `${value.tenancyId} · ${value.region}` : providerConnectionScopeId(value);
 
-export const providerConnectionVerificationKey = (value: Pick<ProviderConnectionValue, "providerSlug" | "accountId" | "subscriptionId" | "projectId" | "tenancyId" | "region" | "credentialId">): string =>
+export const providerConnectionVerificationKey = (value: Pick<ProviderConnectionValue, "providerSlug" | "accountId" | "roleArn" | "subscriptionId" | "projectId" | "tenancyId" | "region" | "credentialId">): string =>
   [
     value.providerSlug.trim().toLowerCase(),
     providerConnectionScopeId(value).trim().toLowerCase(),
     value.providerSlug === "oci" ? value.region.trim().toLowerCase() : "",
+    value.providerSlug === "aws" ? value.roleArn.trim() : "",
     value.credentialId.trim().toUpperCase(),
   ].join("|");
 
@@ -88,6 +90,7 @@ export const normalizeProviderConnection = (value: unknown): ProviderConnectionV
   const providerSlug = requiredText(row.providerSlug)?.toLowerCase();
   const displayName = requiredText(row.displayName);
   const accountId = requiredText(row.accountId) ?? "";
+  const roleArn = requiredText(row.roleArn) ?? "";
   const subscriptionId = requiredText(row.subscriptionId)?.toLowerCase() ?? "";
   const projectId = requiredText(row.projectId)?.toLowerCase() ?? "";
   const tenancyId = requiredText(row.tenancyId) ?? "";
@@ -101,6 +104,7 @@ export const normalizeProviderConnection = (value: unknown): ProviderConnectionV
     providerSlug,
     displayName,
     accountId,
+    roleArn,
     subscriptionId,
     projectId,
     tenancyId,
@@ -114,6 +118,11 @@ export const validateProviderConnection = (value: ProviderConnectionValue): stri
   const errors: string[] = [];
   if (value.providerSlug === "aws") {
     if (!AWS_ACCOUNT_ID_PATTERN.test(value.accountId)) errors.push("Enter a valid 12-digit AWS account ID.");
+    if (value.roleArn) {
+      const roleMatch = AWS_ROLE_ARN_PATTERN.exec(value.roleArn);
+      if (!roleMatch) errors.push("Enter a valid commercial AWS IAM role ARN.");
+      else if (roleMatch[1] !== value.accountId) errors.push("The AWS role ARN must belong to the configured AWS account.");
+    }
   } else if (value.providerSlug === "azure") {
     if (!AZURE_SUBSCRIPTION_ID_PATTERN.test(value.subscriptionId)) errors.push("Enter a valid Azure subscription ID.");
   } else if (value.providerSlug === "gcp") {

@@ -13,6 +13,7 @@ describe("provider connection settings", () => {
     providerSlug: "gcp",
     displayName: "Production Google Cloud",
     accountId: "",
+    roleArn: "",
     subscriptionId: "",
     projectId: "example-project-123",
     tenancyId: "",
@@ -43,7 +44,7 @@ describe("provider connection settings", () => {
 
   it("requires a new connection test when provider access fields change", () => {
     const renamed = { ...valid, displayName: "Renamed", enabled: false };
-    expect(providerConnectionVerificationKey(valid)).toBe("gcp|example-project-123||CREDENTIALS_VAULT-0123456789ABCDEF");
+    expect(providerConnectionVerificationKey(valid)).toBe("gcp|example-project-123|||CREDENTIALS_VAULT-0123456789ABCDEF");
     expect(providerConnectionVerificationKey(renamed)).toBe(providerConnectionVerificationKey(valid));
     expect(providerConnectionVerificationKey({ ...valid, credentialId: "credentials_vault-fedcba9876543210" })).not.toBe(
       providerConnectionVerificationKey(valid),
@@ -65,6 +66,7 @@ describe("provider connection settings", () => {
       providerSlug: "oci",
       displayName: "Production OCI",
       accountId: "",
+      roleArn: "",
       subscriptionId: "",
       projectId: "",
       tenancyId: "ocid1.tenancy.oc1..aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -80,6 +82,7 @@ describe("provider connection settings", () => {
       providerSlug: "AWS",
       displayName: "Production AWS",
       accountId: "123456789012",
+      roleArn: "",
       credentialId: "credentials_vault-0123456789abcdef",
       enabled: true,
     });
@@ -89,6 +92,7 @@ describe("provider connection settings", () => {
       providerSlug: "aws",
       displayName: "Production AWS",
       accountId: "123456789012",
+      roleArn: "",
       subscriptionId: "",
       projectId: "",
       tenancyId: "",
@@ -97,6 +101,25 @@ describe("provider connection settings", () => {
       enabled: true,
     });
     expect(validateProviderConnection(connection!)).toEqual([]);
+  });
+
+  it("normalizes an AWS role and requires it to match the configured account", () => {
+    const connection = normalizeProviderConnection({
+      providerSlug: "AWS",
+      displayName: "Production AWS",
+      accountId: "123456789012",
+      roleArn: "arn:aws:iam::123456789012:role/platform/SLAReviewHealthRole",
+      credentialId: "credentials_vault-0123456789abcdef",
+      enabled: true,
+    });
+
+    expect(connection?.roleArn).toBe("arn:aws:iam::123456789012:role/platform/SLAReviewHealthRole");
+    expect(validateProviderConnection(connection!)).toEqual([]);
+    expect(providerConnectionVerificationKey(connection!)).toContain("arn:aws:iam::123456789012:role/platform/SLAReviewHealthRole");
+    expect(validateProviderConnection({
+      ...connection!,
+      roleArn: "arn:aws:iam::210987654321:role/SLAReviewHealthRole",
+    })).toEqual(["The AWS role ARN must belong to the configured AWS account."]);
   });
 
   it("normalizes and validates an Azure subscription connection", () => {
@@ -113,6 +136,7 @@ describe("provider connection settings", () => {
       providerSlug: "azure",
       displayName: "Production Azure",
       accountId: "",
+      roleArn: "",
       subscriptionId: "abcdef12-3456-7890-abcd-ef1234567890",
       projectId: "",
       tenancyId: "",

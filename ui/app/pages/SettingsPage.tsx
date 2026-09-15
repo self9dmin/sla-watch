@@ -212,6 +212,7 @@ const emptyProviderConnection = (providerSlug: ConnectedProvider): ProviderConne
   providerSlug,
   displayName: connectionDefaultName(providerSlug),
   accountId: "",
+  roleArn: "",
   subscriptionId: "",
   projectId: "",
   tenancyId: "",
@@ -252,9 +253,10 @@ const ProviderConnectionsSettings = () => {
   }), [draft.credentialId, draft.region, draft.tenancyId]);
   const awsTestRequest = useMemo(() => ({
     accountId: draft.accountId.trim(),
+    roleArn: draft.roleArn.trim(),
     credentialId: draft.credentialId.trim().toUpperCase(),
     lookbackHours: 24,
-  }), [draft.accountId, draft.credentialId]);
+  }), [draft.accountId, draft.credentialId, draft.roleArn]);
   const azureTestRequest = useMemo(() => ({
     subscriptionId: draft.subscriptionId.trim().toLowerCase(),
     credentialId: draft.credentialId.trim().toUpperCase(),
@@ -327,6 +329,7 @@ const ProviderConnectionsSettings = () => {
     providerSlug: connectionProvider,
     displayName: draft.displayName.trim() || connectionDefaultName(connectionProvider),
     accountId: draft.accountId.trim(),
+    roleArn: draft.roleArn.trim(),
     subscriptionId: draft.subscriptionId.trim().toLowerCase(),
     projectId: draft.projectId.trim().toLowerCase(),
     tenancyId: draft.tenancyId.trim().toLowerCase(),
@@ -403,7 +406,7 @@ const ProviderConnectionsSettings = () => {
         <span className="connection-state connected">{providerConnections.connections.filter((item) => CONNECTED_PROVIDER_OPTIONS.some((provider) => provider.slug === item.providerSlug)).length} saved</span>
       </div>
 
-      <div className="provider-connection-prerequisite"><strong>Before you connect</strong><span>Allow the listed provider hosts under Dynatrace Settings &gt; General &gt; External requests. Create a Token in Credential Vault with AppEngine scope, access limited to SLA Review, and access for the administrators who will test it. Paste only the credential ID below. For live acceptance, prefer disposable credentials and remove both the provider credential and vault record afterward.</span></div>
+      <div className="provider-connection-prerequisite"><strong>Before you connect</strong><span>Allow the listed provider hosts under Dynatrace Settings &gt; General &gt; External requests. Create a Token in Credential Vault with AppEngine scope, access limited to SLA Review, and access for the administrators who will test it. Paste only the credential ID below. Use a dedicated, revocable provider credential and rotate it through your normal credential process.</span></div>
 
       <div className="provider-connection-switcher">
         <label className="field-label">Connection type
@@ -423,8 +426,8 @@ const ProviderConnectionsSettings = () => {
       {connectionProvider === "aws" ? (
         <ol className="provider-connection-steps" aria-label="AWS connection requirements">
           <li><span>1</span><div><strong>Confirm AWS Health API access</strong><small>The account needs Business Support+, Enterprise Support, or Unified Operations.</small></div></li>
-          <li><span>2</span><div><strong>Grant three read actions</strong><small>Use a dedicated identity with <code>health:DescribeEvents</code>, <code>health:DescribeEventDetails</code>, and <code>health:DescribeAffectedEntities</code>.</small></div></li>
-          <li><span>3</span><div><strong>Vault the signing JSON</strong><small>Store <code>accessKeyId</code>, <code>secretAccessKey</code>, and optional <code>sessionToken</code>. Allow <code>sts.us-east-1.amazonaws.com</code> and <code>health.us-east-1.amazonaws.com</code>.</small></div></li>
+          <li><span>2</span><div><strong>Create a read-only Health role</strong><small>Grant the role <code>health:DescribeEvents</code>, <code>health:DescribeEventDetails</code>, and <code>health:DescribeAffectedEntities</code>. Grant the base identity only <code>sts:AssumeRole</code> on that role.</small></div></li>
+          <li><span>3</span><div><strong>Vault the base signing credential</strong><small>Store its <code>accessKeyId</code>, <code>secretAccessKey</code>, and optional <code>sessionToken</code>. SLA Review assumes the role on each request. Allow <code>sts.us-east-1.amazonaws.com</code> and <code>health.us-east-1.amazonaws.com</code>.</small></div></li>
         </ol>
       ) : connectionProvider === "azure" ? (
         <ol className="provider-connection-steps" aria-label="Azure connection requirements">
@@ -453,7 +456,7 @@ const ProviderConnectionsSettings = () => {
         </label>
         {connectionProvider === "aws" ? <label className="field-label">AWS account ID
           <input value={draft.accountId} onChange={(event) => updateDraft({ accountId: event.target.value.replace(/\D/g, "") })} placeholder="123456789012" autoComplete="off" inputMode="numeric" maxLength={12} pattern="[0-9]{12}" required />
-          <small>STS verifies that the vaulted credential belongs to this account.</small>
+          <small>STS verifies the assumed role or direct credential against this account.</small>
         </label> : connectionProvider === "azure" ? <label className="field-label">Azure subscription ID
           <input value={draft.subscriptionId} onChange={(event) => updateDraft({ subscriptionId: event.target.value.toLowerCase().replace(/[^a-f0-9-]/g, "") })} placeholder="00000000-0000-0000-0000-000000000000" autoComplete="off" spellCheck={false} maxLength={36} required />
           <small>Service Health events are scoped to this subscription.</small>
@@ -470,10 +473,14 @@ const ProviderConnectionsSettings = () => {
           <input value={draft.projectId} onChange={(event) => updateDraft({ projectId: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} placeholder="example-project-123" autoComplete="off" maxLength={30} pattern="[a-z][a-z0-9-]{4,28}[a-z0-9]" required />
           <small>The API returns events relevant to this project.</small>
         </label>}
+        {connectionProvider === "aws" ? <label className="field-label provider-credential-field">AWS Health role ARN
+          <input value={draft.roleArn} onChange={(event) => updateDraft({ roleArn: event.target.value.trim() })} placeholder="arn:aws:iam::<account-id>:role/SLAReviewHealthRole" autoComplete="off" spellCheck={false} maxLength={560} />
+          <small>Recommended. SLA Review assumes this role for every Health read. Leave it blank only when the vaulted identity already has the three Health read actions.</small>
+        </label> : null}
         <label className={`field-label${connectionProvider !== "oci" ? " provider-credential-field" : ""}`}>Dynatrace Credential Vault ID
           <input value={draft.credentialId} onChange={(event) => updateDraft({ credentialId: event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "") })} placeholder="Paste the full credential ID" autoComplete="off" spellCheck={false} maxLength={34} pattern="CREDENTIALS_VAULT-[A-Fa-f0-9]{16}" required />
           <small>{connectionProvider === "aws"
-            ? <>The Token value must be JSON with <code>accessKeyId</code>, <code>secretAccessKey</code>, and an optional <code>sessionToken</code>. Enter only its credential ID here.</>
+            ? <>The Token value must be JSON with <code>accessKeyId</code>, <code>secretAccessKey</code>, and an optional <code>sessionToken</code>. With a role ARN, this base identity needs only <code>sts:AssumeRole</code>; temporary role credentials stay in memory.</>
             : connectionProvider === "azure"
               ? <>The Token value must be JSON with <code>tenantId</code>, <code>clientId</code>, and <code>clientSecret</code>. Enter only its credential ID here.</>
               : connectionProvider === "oci"

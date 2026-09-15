@@ -104,6 +104,7 @@ export type ProviderConnectionValue = {
   providerSlug: string;
   displayName: string;
   accountId: string;
+  roleArn: string;
   subscriptionId: string;
   projectId: string;
   tenancyId: string;

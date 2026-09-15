@@ -7,8 +7,28 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.74",
+    version: "0.0.76",
     label: "Current release",
+    summary: "Finished the AWS role connection and its setup experience.",
+    details: [
+      "AWS Health role assumption, account verification, and request-local temporary credentials remain the recommended connection path.",
+      "Provider setup requirements now stack into readable rows when AppShell, split-screen, or a narrow browser leaves less room.",
+      "The underlying provider connection remains optional and the existing direct AWS credential path stays compatible.",
+    ],
+  },
+  {
+    version: "0.0.75",
+    label: "Previous release",
+    summary: "Made AWS Health access durable without storing assumed-role sessions.",
+    details: [
+      "AWS connections can now assume a dedicated Health read role from a base credential stored in Dynatrace Credential Vault.",
+      "The one-hour AWS role session stays in AppEngine function memory and is renewed on every request instead of being copied into Credential Vault.",
+      "Connection tests now validate the role account, role assumption, effective AWS account, support access, and Health read permissions as separate boundaries.",
+    ],
+  },
+  {
+    version: "0.0.74",
+    label: "Previous release",
     summary: "Made first use and optional configuration easier to understand.",
     details: [
       "Settings now opens with concise Getting started guidance that separates the core SRE review from optional administrator configuration.",

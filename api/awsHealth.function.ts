@@ -6,6 +6,7 @@ import { mapAwsServiceToDirectoryIds } from "./awsNoticeMappings";
 
 type RequestPayload = {
   accountId?: string;
+  roleArn?: string;
   credentialId?: string;
   lookbackHours?: number;
 };
@@ -63,6 +64,7 @@ const MAX_AFFECTED_ENTITY_EVENTS = 20;
 const MAX_AFFECTED_ENTITY_PAGES = 2;
 const MAX_AFFECTED_RESOURCES = 200;
 const ACCOUNT_ID_PATTERN = /^\d{12}$/;
+const ROLE_ARN_PATTERN = /^arn:aws:iam::(\d{12}):role\/[A-Za-z0-9+=,.@_/-]{1,512}$/;
 const ACCESS_KEY_ID_PATTERN = /^[A-Z0-9]{16,128}$/;
 const CREDENTIAL_ID_PATTERN = /^CREDENTIALS_VAULT-[A-F0-9]{16}$/i;
 
@@ -76,11 +78,17 @@ const compactText = (value: unknown, fallback: string): string => {
 
 const parseRequest = (payload: RequestPayload | undefined) => {
   const accountId = optionalText(payload?.accountId);
+  const roleArn = optionalText(payload?.roleArn);
   const credentialId = optionalText(payload?.credentialId)?.toUpperCase();
   if (!accountId || !ACCOUNT_ID_PATTERN.test(accountId)) throw new Error("Enter a valid 12-digit AWS account ID.");
+  if (roleArn) {
+    const roleMatch = ROLE_ARN_PATTERN.exec(roleArn);
+    if (!roleMatch) throw new Error("Enter a valid commercial AWS IAM role ARN.");
+    if (roleMatch[1] !== accountId) throw new Error("The AWS role ARN must belong to the configured AWS account.");
+  }
   if (!credentialId || !CREDENTIAL_ID_PATTERN.test(credentialId)) throw new Error("Enter the full Dynatrace Credential Vault ID shown in Credential Vault.");
   const requestedLookback = typeof payload?.lookbackHours === "number" && Number.isFinite(payload.lookbackHours) ? payload.lookbackHours : 168;
-  return { accountId, credentialId, lookbackHours: Math.min(2_160, Math.max(1, Math.round(requestedLookback))) };
+  return { accountId, roleArn, credentialId, lookbackHours: Math.min(2_160, Math.max(1, Math.round(requestedLookback))) };
 };
 
 const parseSigningCredential = (value: string): AwsSigningCredential => {
@@ -174,6 +182,57 @@ const signedPost = async (request: AwsRequest, credential: AwsSigningCredential,
   return fetchWithTimeout(`https://${request.host}/`, { method: "POST", headers, body: request.body });
 };
 
+const xmlValue = (xml: string, tag: string): string | undefined => {
+  const value = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`).exec(xml)?.[1];
+  return optionalText(value);
+};
+
+const assumeRoleResponseError = (status: number, xml: string): Error => {
+  const code = xmlValue(xml, "Code") ?? "";
+  if (status === 401 || code === "InvalidClientTokenId" || code === "SignatureDoesNotMatch") {
+    return new Error("AWS STS rejected the vaulted base credential. Verify its access key, secret, optional session token, and the tenant clock.");
+  }
+  if (status === 403 || code === "AccessDenied" || code === "AccessDeniedException") {
+    return new Error("AWS denied sts:AssumeRole. Grant the vaulted base identity sts:AssumeRole on the configured role and ensure that role trusts the base identity.");
+  }
+  return new Error(`AWS STS could not assume the configured role (HTTP ${status}${code ? `, ${code}` : ""}).`);
+};
+
+const assumeAwsRole = async (
+  roleArn: string,
+  baseCredential: AwsSigningCredential,
+  now: Date,
+): Promise<AwsSigningCredential> => {
+  const body = new URLSearchParams({
+    Action: "AssumeRole",
+    Version: "2011-06-15",
+    RoleArn: roleArn,
+    RoleSessionName: "sla-review-appengine",
+    DurationSeconds: "3600",
+  }).toString();
+  const response = await signedPost({
+    host: STS_HOST,
+    region: HEALTH_REGION,
+    service: "sts",
+    contentType: "application/x-www-form-urlencoded; charset=utf-8",
+    body,
+  }, baseCredential, now);
+  const xml = await response.text();
+  if (!response.ok) throw assumeRoleResponseError(response.status, xml);
+
+  const accessKeyId = xmlValue(xml, "AccessKeyId")?.toUpperCase();
+  const secretAccessKey = xmlValue(xml, "SecretAccessKey");
+  const sessionToken = xmlValue(xml, "SessionToken");
+  const expiration = xmlValue(xml, "Expiration");
+  if (!accessKeyId || !ACCESS_KEY_ID_PATTERN.test(accessKeyId) || !secretAccessKey || secretAccessKey.length < 20 || !sessionToken) {
+    throw new Error("AWS STS returned an invalid AssumeRole credential response.");
+  }
+  const expiresAt = expiration ? Date.parse(expiration) : Number.NaN;
+  if (!Number.isFinite(expiresAt) || expiresAt <= now.getTime()) throw new Error("AWS STS returned an expired or invalid AssumeRole session.");
+  if (sessionToken.length > 8_192) throw new Error("AWS STS returned an invalid AssumeRole session token.");
+  return { accessKeyId, secretAccessKey, sessionToken };
+};
+
 const verifyAwsAccount = async (accountId: string, credential: AwsSigningCredential, now: Date): Promise<void> => {
   const body = new URLSearchParams({ Action: "GetCallerIdentity", Version: "2011-06-15" }).toString();
   const response = await signedPost({
@@ -187,7 +246,7 @@ const verifyAwsAccount = async (accountId: string, credential: AwsSigningCredent
   const xml = await response.text();
   const returnedAccount = /<Account>(\d{12})<\/Account>/.exec(xml)?.[1];
   if (!returnedAccount) throw new Error("AWS STS returned an invalid account identity response.");
-  if (returnedAccount !== accountId) throw new Error(`The vaulted AWS credential belongs to account ${returnedAccount}, not the configured account.`);
+  if (returnedAccount !== accountId) throw new Error(`The AWS identity belongs to account ${returnedAccount}, not the configured account.`);
 };
 
 const healthRequest = async (target: string, body: string, credential: AwsSigningCredential, now: Date): Promise<Response> => signedPost({
@@ -209,7 +268,7 @@ const healthResponseError = async (response: Response): Promise<Error> => {
   }
   if (code === "SubscriptionRequiredException") return new Error("AWS Health API access requires Business Support+, Enterprise Support, or Unified Operations for this account.");
   if (response.status === 401) return new Error("AWS rejected the signing credential or request signature.");
-  if (response.status === 403) return new Error("AWS denied Health access. Grant health:DescribeEvents, health:DescribeEventDetails, and health:DescribeAffectedEntities to the dedicated identity.");
+  if (response.status === 403) return new Error("AWS denied Health access. Grant health:DescribeEvents, health:DescribeEventDetails, and health:DescribeAffectedEntities to the configured role or direct identity.");
   if (response.status === 429) return new Error("AWS Health throttled this request. Try again after the provider retry interval.");
   return new Error(`AWS Health returned HTTP ${response.status}${code ? ` (${code})` : ""}.`);
 };
@@ -359,8 +418,11 @@ const eventDescriptions = async (arns: string[], credential: AwsSigningCredentia
 
 export default async function (payload: RequestPayload = {}) {
   const request = parseRequest(payload);
-  const credential = await readCredential(request.credentialId);
   const now = new Date();
+  const baseCredential = await readCredential(request.credentialId);
+  const credential = request.roleArn
+    ? await assumeAwsRole(request.roleArn, baseCredential, now)
+    : baseCredential;
   await verifyAwsAccount(request.accountId, credential, now);
   const since = Math.floor((now.getTime() - request.lookbackHours * 60 * 60 * 1_000) / 1_000);
   const response = await healthRequest("DescribeEvents", JSON.stringify({ filter: { lastUpdatedTimes: [{ from: since }] }, maxResults: MAX_NOTICES, locale: "en" }), credential, now);
@@ -378,7 +440,7 @@ export default async function (payload: RequestPayload = {}) {
     source: "personalized" as const,
     connectionState: "connected" as const,
     scopeLabel: request.accountId,
-    message: `AWS returned ${notices.length} account-specific Health event${notices.length === 1 ? "" : "s"} in the selected window.`,
+    message: `${request.roleArn ? "AWS role assumption succeeded. " : ""}AWS returned ${notices.length} account-specific Health event${notices.length === 1 ? "" : "s"} in the selected window.`,
     warning: "AWS Health account events are provider-owned evidence. They do not prove local Dynatrace impact, provider fault, or service credit eligibility.",
     notices,
   };

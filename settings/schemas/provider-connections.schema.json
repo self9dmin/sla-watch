@@ -2,14 +2,14 @@
   "$schema": "https://developer.dynatrace.com/docs-assets/schema_strict_apps.json",
   "dynatrace": "1",
   "schemaId": "provider-connections",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "displayName": "Provider incident connections",
   "description": "Optional provider API connections used to read customer-scoped service health notices.",
   "documentation": "Store only non-secret provider scope fields and the ID of an AppEngine-scoped Dynatrace Credential Vault entry. Provider secrets must remain in Credential Vault and must never be copied into this setting.",
   "multiObject": true,
   "maxObjects": 20,
   "summaryPattern": "{displayName} · {providerSlug}",
-  "searchPattern": "{providerSlug} {displayName} {accountId} {subscriptionId} {projectId} {tenancyId} {region}",
+  "searchPattern": "{providerSlug} {displayName} {accountId} {roleArn} {subscriptionId} {projectId} {tenancyId} {region}",
   "ordered": false,
   "maturity": "GENERAL_AVAILABILITY",
   "ownerBasedAccessControl": false,
@@ -39,6 +39,13 @@
     "accountId": {
       "displayName": "AWS account ID",
       "description": "Non-secret AWS account identifier verified with STS when the connection is tested.",
+      "type": "text",
+      "default": "",
+      "nullable": false
+    },
+    "roleArn": {
+      "displayName": "AWS Health role ARN",
+      "description": "Optional non-secret IAM role assumed by the app before it reads AWS Health.",
       "type": "text",
       "default": "",
       "nullable": false
