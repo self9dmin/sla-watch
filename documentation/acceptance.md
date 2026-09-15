@@ -1,6 +1,22 @@
 # Release acceptance record
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.74`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.76`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+
+## 0.0.76 verified scenarios
+
+The `0.0.76` artifact from source commit `6ceedfb` was built and deployed to the designated Dynatrace target environment with Node 24.19.0 on 2026-09-15, then exercised through the connected Chrome profile. The target smoke was read-only and changed only application routes. It did not create or modify provider connections, credentials, SLA matches, custom terms, evidence decisions, objectives, entities, or cloud resources.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Release artifact | The `0.0.76` manifest and six AppEngine functions deployed successfully under the unchanged `my.sla` application ID | Supported-runtime deployment and connected Chrome smoke; source commit `6ceedfb` |
+| Release gate | UI and API type checks, lint, 36 test suites with 203 tests, production coverage collection, build, App Toolkit analysis, and production dependency audit passed under Node 24.19.0 | `npm run verify:release`; 84.64% statement, 67.31% branch, 91.17% function, and 89.64% line coverage; zero production dependency vulnerabilities |
+| AWS role assumption | A configured same-account role is assumed through regional STS before account verification and AWS Health reads. The resulting access key and session token sign both downstream calls and are never persisted | Function tests covering success, cross-account rejection, STS denial, session-token signing, and the existing direct-credential path |
+| Trust boundaries | The role ARN is validated before Credential Vault access, must match the configured account, and causes access changes to require a new connection test | Connection validation tests, function tests, and source review |
+| Installed setup | Provider connections displayed separate AWS account, Health role ARN, and Credential Vault fields with instructions that distinguish the durable base credential from the request-local one-hour role session | Installed target-environment Settings visual smoke |
+| Narrow AppShell layout | The three provider-connection requirement cards stacked into readable rows in the constrained AppShell instead of compressing their content | Installed target-environment responsive visual smoke |
+| Installed version | The installed change log showed `0.0.76 Current release` and the role-assumption, responsive-layout, and backward-compatibility notes | Installed target-environment accessibility-tree smoke |
+| Live AWS acceptance boundary | No AWS credential was entered and no connection was saved. Live acceptance still requires a durable base identity whose only app permission is `sts:AssumeRole` on the configured Health role | Deliberate secret-handling boundary; the target environment currently has no suitable base credential record |
+| Runtime quality | Settings and the change log completed loading without a visible app error | Connected Chrome post-deploy smoke |
 
 ## 0.0.74 verified scenarios
 
