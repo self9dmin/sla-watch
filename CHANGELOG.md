@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.80
+
+- Organizes the SRE journey as Identify, Evaluate, and Automate, with Coverage still the landing page and a shorter Evidence review layout.
+- Shows one customer screening SLO proposal per exact provider product, account, and region. Existing SLO overlaps, incomplete inventory, different terms, or missing telemetry block creation.
+- Brings Workflow discovery and private draft creation into Automate. Earlier active FinOps Agent Workflows remain visible until a verified changeover; automatic queueing and lane assignment remain off by default.
+- Keeps the model local, the route advisory, Phoenix outside the decision path, and provider filing under human control.
+
 ## 0.0.79
 
 - Clarifies the first-run path, required Dynatrace permissions, and the separately configured local FinOps pilot.

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { openApp } from "@dynatrace-sdk/navigation";
 import { useDql } from "@dynatrace-sdk/react-hooks";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -21,6 +22,7 @@ type ServiceObjectivePreviewProps = {
   providerServiceName: string;
   target: number | null;
   termsSource: "sla.directory" | "custom terms";
+  allowCreate?: boolean;
 };
 
 type PreviewRecord = Record<string, unknown>;
@@ -35,6 +37,7 @@ export const ServiceObjectivePreview = ({
   providerServiceName,
   target,
   termsSource,
+  allowCreate = true,
 }: ServiceObjectivePreviewProps) => {
   const termsSourceLabel = termsSource === "sla.directory" ? "Published terms" : "Custom terms";
   const [confirming, setConfirming] = useState(false);
@@ -117,14 +120,15 @@ export const ServiceObjectivePreview = ({
             : previewResult.error
               ? "Unavailable"
               : percent(preview?.reliability ?? null)}</strong></div>
-        <div><span>Target</span><strong>{percent(target)}</strong></div>
+        <div><span>{existing ? "Provider term target" : "Proposed objective target"}</span><strong>{percent(target)}</strong></div>
+        {existing ? <div><span>Current objective target</span><strong>{percent(existingTarget)}</strong></div> : null}
         <div><span>Evaluation</span><strong>{OBJECTIVE_EVALUATION_WINDOW === "now-30d" ? "Last 30 days" : OBJECTIVE_EVALUATION_WINDOW}</strong></div>
         <div><span>Terms</span><strong>{termsSourceLabel}</strong></div>
       </div>
       <p className="service-objective-note">
         {existing
-          ? "Observed value comes from the Dynatrace objective evaluation. Provider corroboration remains optional evidence."
-          : "This preview measures customer-observed availability for one Dynatrace service. Provider corroboration remains optional evidence."}
+          ? "Observed value comes from the Dynatrace objective. Its target can differ from the provider SLA target used in Evidence. Provider reports remain optional evidence."
+          : "This preview measures customer-observed availability for one Dynatrace service. The proposed objective target comes from current provider terms."}
       </p>
       {!existing && preview && preview.totalRequests > 0 ? (
         <p className="service-objective-traffic">{preview.totalRequests.toLocaleString()} requests, {preview.failedRequests.toLocaleString()} failed in the 30-day evaluation window.</p>
@@ -135,9 +139,9 @@ export const ServiceObjectivePreview = ({
       {objectives.error ? <div className="service-objective-warning">{objectives.error}</div> : null}
       {existing && evaluation?.state === "unavailable" ? <div className="service-objective-warning">{evaluation.message ?? "The Dynatrace objective could not be evaluated."}</div> : null}
       {existing && targetDiffers ? (
-        <div className="service-objective-warning">The existing target is {percent(existingTarget)}. Current terms suggest {percent(target)}. Review it in Dynatrace before changing anything.</div>
+        <div className="service-objective-warning">The customer objective uses {percent(existingTarget)} while current provider terms suggest {percent(target)}. These are separate targets. Review the objective in Dynatrace before changing it.</div>
       ) : null}
-      {!existing && previewQuery ? (
+      {!existing && previewQuery && allowCreate ? (
         <details className="service-objective-query">
           <summary>View scoped query</summary>
           <pre>{definition?.customSli?.indicator ?? previewQuery}</pre>
@@ -146,6 +150,8 @@ export const ServiceObjectivePreview = ({
       <div className="service-objective-actions">
         {existing ? (
           <Button size="condensed" onClick={() => openApp("dynatrace.service.level.objectives")}>Open in SLOs</Button>
+        ) : !allowCreate ? (
+          <Button as={Link} to={`/finops?provider=${encodeURIComponent(providerSlug)}&service=${encodeURIComponent(serviceClassicId ?? "")}`} size="condensed">Set up in Automate</Button>
         ) : confirming ? (
           <>
             <span>Create one Dynatrace objective for this provider and service?</span>

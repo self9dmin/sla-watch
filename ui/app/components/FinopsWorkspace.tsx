@@ -1,9 +1,13 @@
 import React, { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { businessEventsClient } from "@dynatrace-sdk/client-classic-environment-v2";
 import { useDql } from "@dynatrace-sdk/react-hooks";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
+import type { ProviderCoverageModel } from "../data/providerCoverage";
+import type { ServiceRecord, SlaProviderResponse } from "../types";
+import { FinopsAutomationSetup } from "./FinopsAutomationSetup";
 
 const ROUTES = ["prepare_provider_draft", "internal_only", "human_review"] as const;
 type Route = typeof ROUTES[number];
@@ -155,7 +159,7 @@ const RouteReview = ({ row }: { row: Row }) => {
   return (
     <li className="candidate-completion">
       <strong>{row.provider}: {row.problemId}</strong>
-      <span>Recommendation: {row.route.replaceAll("_", " ")}</span>
+      <span>Internal routing recommendation: {row.route.replaceAll("_", " ")}</span>
       <small>{row.reason} · {row.model} · {row.timestamp}</small>
       <small>Work lane: {row.assignedLane}. {row.disposition
         ? `Human outcome: ${row.disposition.replaceAll("_", " ")}.`
@@ -202,18 +206,47 @@ const RouteReview = ({ row }: { row: Row }) => {
   );
 };
 
-export const FinopsWorkspace = ({ providerSlug }: { providerSlug: string }) => {
+export const FinopsWorkspace = ({
+  providerSlug,
+  provider,
+  services,
+  coverageModel,
+  coverageLoading,
+  coverageComplete,
+}: {
+  providerSlug: string;
+  provider?: SlaProviderResponse;
+  services: ServiceRecord[];
+  coverageModel: ProviderCoverageModel;
+  coverageLoading: boolean;
+  coverageComplete: boolean;
+}) => {
   const query = useDql({ query: QUERY });
   const rows = useMemo(() => parseRows(query.data?.records), [query.data?.records]);
   const visible = rows.filter((row) => row.provider === providerSlug);
   return (
     <Surface className="panel-card">
-      <Heading level={2}>FinOps Agent</Heading>
-      <Paragraph>When the optional local gateway and Workflows are configured, complete reviewed SLA cases can be routed for internal follow-up. A person confirms the later outcome for Phoenix evaluation.</Paragraph>
-      {query.isLoading ? <Paragraph>Loading router decisions…</Paragraph> : null}
-      {query.error ? <Paragraph>Router decisions are unavailable. Check business event read access.</Paragraph> : null}
+      <Heading level={2}>Automate</Heading>
+      <Paragraph>Review one product scope objective and the local decision Workflows. A person completes Evidence before routing, then records the later outcome.</Paragraph>
+      <FinopsAutomationSetup
+        providerSlug={providerSlug}
+        provider={provider}
+        services={services}
+        coverageModel={coverageModel}
+        coverageLoading={coverageLoading}
+        coverageComplete={coverageComplete}
+      />
+      <div className="finops-decisions-heading">
+        <h3>Recent decisions</h3>
+        <span>Last 30 days · Grail</span>
+      </div>
+      {query.isLoading ? <Paragraph>Loading routing recommendations…</Paragraph> : null}
+      {query.error ? <Paragraph>Routing recommendations are unavailable. Check business event read access.</Paragraph> : null}
       {!query.isLoading && !query.error && visible.length === 0
-        ? <Paragraph>No routed cases for this provider in the last 30 days.</Paragraph> : null}
+        ? <div className="finops-empty">
+          <Paragraph>No cases have been routed for this provider in the last 30 days. Complete an eligible case in Evidence, then choose Send to Automate on its saved human review. Internal routing recommendations and later human outcomes appear here.</Paragraph>
+          <Button as={Link} to={`/evidence?provider=${encodeURIComponent(providerSlug)}`} size="condensed">Review cases in Evidence</Button>
+        </div> : null}
       {visible.length > 0 ? <ul>{visible.map((row) => <RouteReview key={`${row.spanId}`} row={row} />)}</ul> : null}
     </Surface>
   );

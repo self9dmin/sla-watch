@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { openApp } from "@dynatrace-sdk/navigation";
+import { getAppLink } from "@dynatrace-sdk/navigation";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
@@ -122,6 +122,7 @@ const IncidentDetail = ({
   triageItems,
   providerSlug,
   providerName,
+  lookbackHours,
   matchingLoading,
   reviewState,
   reviewStateLoading,
@@ -131,6 +132,7 @@ const IncidentDetail = ({
   triageItems: IncidentBulkReviewItem[];
   providerSlug: string;
   providerName: string;
+  lookbackHours: EvidenceLookbackHours;
   matchingLoading: boolean;
   reviewState: EvidenceReviewStateResult;
   reviewStateLoading: boolean;
@@ -231,6 +233,7 @@ const IncidentDetail = ({
     (item) => item.assessment.relation === "provider-linked",
   ).length;
   const davisImpact = formatDavisImpact(reviewCase.problems);
+  const problemIds = reviewCase.problems.map((item) => item.id).join(", ");
 
   return (
     <article className="incident-detail">
@@ -317,6 +320,16 @@ const IncidentDetail = ({
             Resolve coverage
           </Button>
         ) : null}
+      </section>
+
+      <section className="incident-problems-handoff" aria-label="Investigate selected case in Dynatrace Problems">
+        <div>
+          <strong>Need the full Davis investigation?</strong>
+          <span>Use {problemIds} and set the time range to at least {formatEvidenceLookback(lookbackHours)}. Problems opens in a new tab, leaving this case selected.</span>
+        </div>
+        <Button as="a" href={getAppLink("dynatrace.davis.problems")} target="_blank" rel="noreferrer" size="condensed">
+          Open Problems app
+        </Button>
       </section>
 
       {reviewCase.problems.length > 1 ? (
@@ -838,15 +851,6 @@ export const IncidentReview = ({
             >
               {selectionMode ? "Done selecting" : `Select multiple (${eligibleBulkCount})`}
             </Button>
-            <Button
-              size="condensed"
-              onClick={() => openApp("dynatrace.davis.problems")}
-            >
-              <Button.Prefix>
-                <DynatraceIntelligenceSignetIcon />
-              </Button.Prefix>
-              Open Problems
-            </Button>
           </div>
         </div>
         <div className="scope-map-boundary">
@@ -944,7 +948,8 @@ export const IncidentReview = ({
       ) : problems.length === 0 ? (
         <div className="incidents-empty">
           <strong>No Problems in the last {formatEvidenceLookback(lookbackHours)}</strong>
-          <span>Open Problems to investigate a different timeframe or filter.</span>
+          <span>Choose a longer lookback above, or use the Problems app for other filters.</span>
+          <Button as="a" href={getAppLink("dynatrace.davis.problems")} target="_blank" rel="noreferrer" size="condensed">Open Problems app</Button>
         </div>
       ) : (
         <div className="incidents-layout">
@@ -1037,7 +1042,7 @@ export const IncidentReview = ({
               })}
             </div>
             <div className="incident-pagination" aria-label="Review case pages">
-              <span>{orderedCases.length.toLocaleString()} cases · page {page} of {pageCount}</span>
+              <span>{orderedCases.length.toLocaleString()} total cases ({providerRelevantCases.toLocaleString()} provider-relevant) · page {page} of {pageCount}</span>
               <div>
                 <Button
                   size="condensed"
@@ -1064,6 +1069,7 @@ export const IncidentReview = ({
               triageItems={triageItems}
               providerSlug={provider?.provider.slug ?? "provider"}
               providerName={provider?.provider.name ?? "the selected provider"}
+              lookbackHours={lookbackHours}
               matchingLoading={matchingLoading}
               reviewState={reviewStateByCase.get(selectedCase.key) ??
                 resolveEvidenceReviewState(selectedCase, decisionByKey)}

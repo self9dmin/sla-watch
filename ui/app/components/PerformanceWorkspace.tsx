@@ -209,9 +209,7 @@ export const PerformanceWorkspace = ({
         <div className="scope-map-boundary">
           <strong>How it is used</strong>
           <span>
-            Objective status comes from Dynatrace service telemetry. Incidents
-            and Evidence keep optional provider corroboration separate from customer-observed
-            performance.
+            This is the customer objective target, which may differ from the provider SLA target shown in Evidence. Objective status comes from Dynatrace service telemetry; provider reports remain optional corroboration.
           </span>
         </div>
       </div>
@@ -230,12 +228,9 @@ export const PerformanceWorkspace = ({
       ) : objectives.objectives.length === 0 ? (
         <div className="performance-empty">
           <strong>No customer objectives for {providerName}</strong>
-          <span>
-            Open a covered service to preview and explicitly create one. Nothing
-            is created automatically.
-          </span>
-          <Button as={Link} to="/" size="condensed" variant="emphasized">
-            Open Coverage
+          <span>Automate can create one customer screening objective for a verified product, account, and region scope. Nothing is created automatically.</span>
+          <Button as={Link} to={`/finops?provider=${encodeURIComponent(providerSlug)}`} size="condensed" variant="emphasized">
+            Open Automate
           </Button>
         </div>
       ) : (

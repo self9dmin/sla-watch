@@ -230,7 +230,7 @@ const percent = (value: number | null): string =>
   value === null ? "Not available" : `${value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}%`;
 
 const reviewStateLabel = (state: EvidenceReviewState): string => {
-  if (state === "ready-for-follow-up") return "Ready for follow-up";
+  if (state === "ready-for-follow-up") return "Evidence review complete";
   if (state === "needs-evidence") return "Needs evidence";
   if (state === "excluded") return "Excluded from provider follow-up";
   if (state === "mixed") return "Mixed review";

@@ -35,18 +35,12 @@ test.describe("SLA Review deployed smoke", () => {
   }) => {
     const app = await openWatch(page);
 
-    const sectionNavigation = app.getByRole("navigation", {
-      name: "Review sections",
-    });
-    await expect(sectionNavigation.getByRole("link")).toHaveText([
-      "Coverage",
-      "Performance",
-      "Incidents",
-      "Evidence",
-      "Directory",
-      "FinOps Agent",
-    ]);
-    await expect(sectionNavigation.getByRole("link", { name: "FinOps Agent" })).toBeVisible();
+    const stageNavigation = app.getByRole("navigation", { name: "Review stages" });
+    await expect(stageNavigation.getByRole("link")).toHaveCount(3);
+    await expect(stageNavigation.getByRole("link", { name: /Identify/ })).toBeVisible();
+    await expect(stageNavigation.getByRole("link", { name: /Evaluate/ })).toBeVisible();
+    await expect(stageNavigation.getByRole("link", { name: "3 Automate" })).toBeVisible();
+    await expect(app.getByRole("navigation", { name: "Identify views" }).getByRole("link")).toHaveText(["Coverage", "Incident cases"]);
     await expect(
       app.locator(".sla-header").getByRole("link", { name: "Coverage" }),
     ).toHaveCount(0);
@@ -150,7 +144,7 @@ test.describe("SLA Review deployed smoke", () => {
       .filter({ hasText: /SLA matches/i });
     const linkedTotal = await providerSlaMatches.locator("strong").innerText();
     const evaluatedDetail = await providerSlaMatches.locator("small").innerText();
-    const evaluatedTotal = evaluatedDetail.match(/^(\d[\d,]*) environment service/);
+    const evaluatedTotal = evaluatedDetail.match(/^Of (\d[\d,]*) loaded scopes/);
     expect(evaluatedTotal).not.toBeNull();
     await expect(coveredCoverage.locator("strong")).toHaveText(linkedTotal);
     await expect(allCoverage.locator("strong")).toHaveText(evaluatedTotal?.[1] ?? "");
@@ -184,7 +178,8 @@ test.describe("SLA Review deployed smoke", () => {
     }
     await expectNoPageScroll(app);
 
-    await app.getByRole("link", { name: "Performance" }).click();
+    await stageNavigation.getByRole("link", { name: /Evaluate/ }).click();
+    await app.getByRole("navigation", { name: "Evaluate views" }).getByRole("link", { name: "Performance" }).click();
     await expect(
       app.getByRole("heading", { name: "Performance" }),
     ).toBeVisible();
@@ -202,7 +197,8 @@ test.describe("SLA Review deployed smoke", () => {
     ).toBeVisible();
     await expectNoPageScroll(app);
 
-    await app.getByRole("link", { name: "Incidents" }).click();
+    await stageNavigation.getByRole("link", { name: /Identify/ }).click();
+    await app.getByRole("navigation", { name: "Identify views" }).getByRole("link", { name: "Incident cases" }).click();
     await expect(app.getByRole("heading", { name: "Incidents" })).toBeVisible();
     const lookback = app.getByRole("combobox", {
       name: "Incident evidence lookback",
@@ -217,9 +213,9 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(
       app.getByRole("button", { name: /Select multiple \(\d+\)/ }),
     ).toBeVisible();
-    const openProblems = app.getByRole("button", { name: "Open Problems" });
+    const openProblems = app.getByRole("link", { name: "Open Problems app" });
     await expect(openProblems).toBeVisible();
-    await expect(openProblems.locator("svg")).toHaveCount(1);
+    await expect(openProblems).toHaveAttribute("target", "_blank");
     const problemsRegion = app.getByRole("region", { name: "Provider impact review cases" });
     const emptyProblems = app.getByText(/No Problems in the last/);
     await expect(problemsRegion.or(emptyProblems)).toBeVisible();
@@ -245,7 +241,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(app.getByText(/maximum credit/i)).toHaveCount(0);
     await expectNoPageScroll(app);
 
-    await app.getByRole("link", { name: "Evidence" }).click();
+    await stageNavigation.getByRole("link", { name: /Evaluate/ }).click();
     await expect(
       app.getByRole("heading", { name: "Evidence" }),
     ).toBeVisible();
@@ -262,8 +258,15 @@ test.describe("SLA Review deployed smoke", () => {
       await expect(
         evidenceQueue.getByRole("group", { name: "Filter review cases" }),
       ).toBeVisible();
-      expect(await evidenceQueue.locator(".candidate-queue-item").count()).toBeLessThanOrEqual(20);
+      expect(await evidenceQueue.locator(".candidate-queue-item").count()).toBeLessThanOrEqual(5);
       await expect(app.getByText("Review readiness", { exact: true })).toBeVisible();
+      await expect(app.getByText("What needs attention", { exact: true })).toBeVisible();
+      const reviewScroll = await app.locator(".candidate-detail").evaluate((detail) => ({
+        detail: getComputedStyle(detail).overflowY,
+        queue: getComputedStyle(document.querySelector(".candidate-queue-list")!).overflowY,
+      }));
+      expect(reviewScroll).toEqual({ detail: "visible", queue: "visible" });
+      await app.getByRole("button", { name: "Supporting evidence and terms" }).click();
       await expect(
         app.getByLabel("Optional provider corroboration").getByText("Optional", { exact: true }),
       ).toBeVisible();
@@ -272,7 +275,6 @@ test.describe("SLA Review deployed smoke", () => {
       await expect(app.getByText("Claim package", { exact: false })).toHaveCount(0);
       await expect(app.getByLabel("Evidence source status")).toBeVisible();
     }
-    await expectNoPageScroll(app);
 
     await app.getByRole("link", { name: "Provider corroboration" }).click();
     await expect(app.getByRole("heading", { name: "Provider corroboration" })).toBeVisible();
@@ -282,7 +284,7 @@ test.describe("SLA Review deployed smoke", () => {
     ).toBeVisible();
     await expectNoPageScroll(app);
 
-    await sectionNavigation.getByRole("link", { name: "Directory" }).click();
+    await app.getByRole("navigation", { name: "Evaluate views" }).getByRole("link", { name: "Provider terms" }).click();
     await expect(
       app.getByRole("heading", { name: /terms/ }),
     ).toBeVisible();
@@ -426,10 +428,8 @@ test.describe("SLA Review deployed smoke", () => {
   }) => {
     const app = await openWatch(page);
 
-    await app
-      .getByRole("navigation", { name: "Review sections" })
-      .getByRole("link", { name: "Directory" })
-      .click();
+    await app.getByRole("navigation", { name: "Review stages" }).getByRole("link", { name: /Evaluate/ }).click();
+    await app.getByRole("navigation", { name: "Evaluate views" }).getByRole("link", { name: "Provider terms" }).click();
     await expect(
       app.getByRole("heading", { name: /terms/ }),
     ).toBeVisible();
@@ -507,8 +507,8 @@ test.describe("SLA Review deployed smoke", () => {
     }
 
     await expect(
-      app.getByRole("navigation", { name: "Review sections" })
-        .getByRole("link", { name: "Directory" }),
+      app.getByRole("navigation", { name: "Evaluate views" })
+        .getByRole("link", { name: "Provider terms" }),
     ).toBeVisible();
     await expectNoPageScroll(app);
   });

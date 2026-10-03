@@ -1,5 +1,14 @@
 # Release acceptance record
 
+## 0.0.80 local readiness, 2026-10-03
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Release checks | Typecheck, lint, 40 Jest suites with 220 tests, production build and analyzer, public source audit, 12 local gateway tests, and production dependency audit passed | Local commands; release script's elevated Git listing failed, so its component checks ran separately |
+| Connected development smoke | Automate showed the exact AWS RDS product/account/region scope, one linked service with 30-day traffic, the published 99.95% target, and an existing 99.99% service SLO that blocks a duplicate | Existing Chrome session against the local development server; no tenant objective or Workflow was created |
+| Workflow migration | Earlier FinOps Agent route and feedback Workflows were detected as deployed; replacement Workflow pair remains absent | Connected Chrome development smoke; old triggers were retained pending a verified synthetic changeover |
+
+
 This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.76`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
 
 ## 0.0.76 verified scenarios

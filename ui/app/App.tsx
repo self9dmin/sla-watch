@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useCurrentTheme } from "@dynatrace/strato-components/core";
 import { ProgressCircle } from "@dynatrace/strato-components/content";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import { Header } from "./components/Header";
 import { ProductTour } from "./components/ProductTour";
+import { safeWorkspaceReturnPath } from "./data/reviewRoutes";
 import { SlaPreferencesProvider, useSlaPreferences } from "./context/SlaPreferencesContext";
 import { ChangeLogPage } from "./pages/ChangeLogPage";
 import { Dashboard } from "./pages/Dashboard";
@@ -40,13 +41,14 @@ const AppShell = ({
   saveError: string | null;
 }) => {
   const location = useLocation();
-  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/performance" || location.pathname === "/incidents" || location.pathname === "/provider-notices" || location.pathname === "/evidence" || location.pathname === "/directory" || location.pathname === "/finops";
+  const compactWatch = location.pathname === "/" || location.pathname === "/setup" || location.pathname === "/performance" || location.pathname === "/incidents" || location.pathname === "/provider-notices" || location.pathname === "/evidence" || location.pathname === "/directory";
+  const singleScrollReview = location.pathname === "/evidence" && new URLSearchParams(location.search).get("view") !== "provider-reports";
   return (
     <div className="sla-app">
       <header className="sla-header">
         <Header theme={theme} onToggleTheme={onToggleTheme} onStartTour={onStartTour} />
       </header>
-      <main className={`sla-main${compactWatch ? " sla-main-watch" : ""}`}>
+      <main className={`sla-main${compactWatch ? " sla-main-watch" : ""}${singleScrollReview ? " sla-main-evidence" : ""}`}>
         {saveError ? <div className="save-status" role="status">{saveError}</div> : null}
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -73,7 +75,18 @@ const AppContent = () => {
   const systemTheme = useCurrentTheme() === "dark" ? "dark" : "light";
   const { preferences, loading, saveError, updatePreferences } = useSlaPreferences();
   const [tourOpen, setTourOpen] = useState(false);
+  const tourReturnPath = useRef("/");
   const theme: AppTheme = preferences.theme === "system" ? systemTheme : preferences.theme;
+
+  const startTour = () => {
+    tourReturnPath.current = `${location.pathname}${location.search}`;
+    setTourOpen(true);
+  };
+
+  const closeTour = () => {
+    setTourOpen(false);
+    void navigate(tourReturnPath.current);
+  };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -88,8 +101,13 @@ const AppContent = () => {
   useEffect(() => {
     const search = new URLSearchParams(location.search);
     if (search.get("walkthrough") !== "1") return;
-    setTourOpen(true);
+    const requestedReturn = search.get("tourReturn");
     search.delete("walkthrough");
+    search.delete("tourReturn");
+    tourReturnPath.current = requestedReturn
+      ? safeWorkspaceReturnPath(requestedReturn, "/")
+      : `${location.pathname}${search.toString() ? `?${search.toString()}` : ""}`;
+    setTourOpen(true);
     void navigate({
       pathname: location.pathname,
       search: search.toString() ? `?${search.toString()}` : "",
@@ -104,7 +122,7 @@ const AppContent = () => {
       onToggleTheme={() => {
         void updatePreferences({ theme: theme === "dark" ? "light" : "dark" });
       }}
-      onStartTour={() => setTourOpen(true)}
+      onStartTour={startTour}
       saveError={saveError}
     />
   );
@@ -113,11 +131,7 @@ const AppContent = () => {
     <div className="sla-theme-root" data-app-theme={theme}>
       {content}
       {tourOpen ? (
-        <ProductTour
-          onComplete={() => {
-            setTourOpen(false);
-          }}
-        />
+        <ProductTour providerSlug={preferences.providerSlug} onComplete={closeTour} />
       ) : null}
     </div>
   );

@@ -99,7 +99,7 @@ describe("evidence review state", () => {
   });
 
   it("presents persisted enum values with operator-facing language", () => {
-    expect(evidenceReviewStatePresentation("ready-for-follow-up").label).toBe("Ready for follow-up");
+    expect(evidenceReviewStatePresentation("ready-for-follow-up").label).toBe("Evidence review complete");
     expect(evidenceReviewStatePresentation("excluded").label).toBe("Excluded");
   });
 });

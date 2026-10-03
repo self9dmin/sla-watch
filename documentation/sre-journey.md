@@ -8,6 +8,8 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 
 ## Journey map
 
+The primary navigation has three stages: **Identify** (Coverage and Incident cases), **Evaluate** (Evidence with Performance and Provider terms as references), and **Automate** (the local FinOps route after a complete human review). Coverage is always the landing page. A focused case carries its context into supporting views and returns to Evidence for the human decision.
+
 | Stage | Touchpoint | User action | Likely reaction | Main risk | Product response |
 | --- | --- | --- | --- | --- | --- |
 | Install and open | Dynatrace Apps | Open SLA Review | “Show me what this environment already knows.” | A wizard delays evidence and repeats automatic detection | Open directly in Coverage and start read-only detection |
@@ -16,16 +18,16 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 | Review defaults | Settings | Choose the focused provider, tag convention, and evidence lookback | Consistent review behavior without duplicating provider setup | A stale focus could be mistaken for current evidence | Constrain the chooser to providers discovered from evidence, confirmed SLA matches, or enabled connections |
 | Incident connection | Settings | Optionally connect account-specific provider notices | Useful only when customer-scoped provider evidence is needed | Credentials and IAM setup interrupt first value | Ask for credentials only after the user chooses a provider connection |
 | Incident triage | Incidents | Review active and provider-relevant cases, inspect the root-cause and affected-service context, then choose Coverage, Evidence, native Problems, or a guarded bulk exclusion | Fewer review units without losing the source records | Same-vendor signals could be over-grouped or mistaken for a confirmed violation | Group only on provider service, effective terms scope, bounded time, and shared service or exact root cause; keep one audit record per Problem and reuse the Evidence state everywhere |
-| Evidence review | Evidence | Search or filter review cases, inspect readiness, customer telemetry, objective posture, terms, exclusions, and optional provider corroboration, then save Ready for follow-up, Needs evidence, or Excluded from provider follow-up | One bounded decision with every underlying signal retained, a portable artifact, and a clear stop | Provider silence could be mistaken for proof against customer impact, or readiness for submission | Keep provider corroboration supporting only, persist the same outcome per included Problem, surface mixed or unavailable state, and state that nothing is sent and the provider determines fault, eligibility, and credit |
-| Follow-up | Directory and optional FinOps Agent | Review filing requirements; after a complete human review, optionally queue an internal route when the local gateway and Workflows have been configured and verified | Clear next action | A model recommendation could be mistaken for credit eligibility or provider submission | Keep automatic queueing and lane assignment off by default; require a person to record the later outcome and any external filing reference |
+| Evidence review | Evidence | Search or filter review cases, inspect readiness, customer telemetry, objective posture, terms, exclusions, and optional provider corroboration, then save Evidence review complete, Needs evidence, or Excluded from provider follow-up | One bounded decision with every underlying signal retained, a portable artifact, and a clear stop | Provider silence could be mistaken for proof against customer impact, or readiness for submission | Keep provider corroboration supporting only, persist the same outcome per included Problem, surface mixed or unavailable state, and state that nothing is sent and the provider determines fault, eligibility, and credit |
+| Follow-up | Provider terms and Automate | Review filing requirements; after a complete human review, queue an eligible case for internal routing when the local gateway and Workflows have been configured and verified | Clear next action | A model recommendation could be mistaken for credit eligibility or provider submission | Keep automatic queueing and lane assignment off by default; require a person to record the later outcome and any external filing reference |
 
 ## Product decisions
 
-- Remove the five-step onboarding wizard and duplicate provider confirmation.
+- Keep the optional three-step quick tour aligned with the three primary stages, without a required setup wizard or duplicate provider confirmation.
 - Make Coverage the first screen for every new and returning user.
 - Keep provider additions and optional incident connections in Settings.
 - Keep the quick tour optional, replayable, and non-mutating.
-- End the SRE path in Evidence with an explicit ready-for-follow-up, needs-evidence, or excluded state. Keep the optional local FinOps route separate and provider submission outside the app.
+- Complete the human evidence review in Evidence before the Automate stage. Keep provider submission outside the app.
 - Measure success by time to evidence, resolved coverage exceptions, and repeat incident review, not onboarding completion.
 
 ## Critical checks
@@ -41,6 +43,6 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 - Automatic case grouping requires one provider service, one effective terms scope, a bounded review window, and either one shared affected service or one exact returned root cause. Provider identity by itself is never enough.
 - Manual bulk triage may include a missing-root-cause case only when every underlying Problem is closed, provider scope is confirmed, relationship and decision context are complete, and no prior decision exists.
 - A bulk exclusion remains a human operational classification. It is not proof that the provider was uninvolved.
-- Ready for follow-up requires each published evidence requirement to be present and acknowledged; Needs evidence records what is still missing.
+- Evidence review complete requires each published evidence requirement to be present and acknowledged; Needs evidence records what is still missing.
 - Evidence separates facts collected automatically, facts confirmed externally, and missing items. Provider corroboration stays optional.
 - Copying a follow-up summary or downloading the JSON review never submits, routes, or changes the saved decision.

@@ -23,6 +23,7 @@ import {
   mergeServiceInventory,
 } from "../data/providerAttribution";
 import { buildProviderCoverageModel } from "../data/providerCoverage";
+import { createEvidenceReviewPath } from "../data/reviewRoutes";
 import {
   parseProviderInventory,
   providerInventoryDetail,
@@ -130,57 +131,69 @@ const OverviewFact = ({
   </div>
 );
 
-const WATCH_LINKS: ReadonlyArray<{
-  section: WatchSection;
-  label: string;
-  to: string;
-  tour: string;
-}> = [
-  { section: "coverage", label: "Coverage", to: "/", tour: "coverage" },
-  {
-    section: "performance",
-    label: "Performance",
-    to: "/performance",
-    tour: "performance",
-  },
-  {
-    section: "incidents",
-    label: "Incidents",
-    to: "/incidents",
-    tour: "incidents",
-  },
-  {
-    section: "evidence",
-    label: "Evidence",
-    to: "/evidence",
-    tour: "evidence",
-  },
-  {
-    section: "directory",
-    label: "Directory",
-    to: "/directory",
-    tour: "directory",
-  },
-  { section: "finops", label: "FinOps Agent", to: "/finops", tour: "finops" },
-];
+type ReviewStage = "identify" | "evaluate" | "finops";
+const stageForSection = (section: WatchSection): ReviewStage =>
+  section === "coverage" || section === "incidents"
+    ? "identify"
+    : section === "finops"
+      ? "finops"
+      : "evaluate";
 
-const WatchNavigation = ({ section, providerSlug }: { section: WatchSection; providerSlug: string }) => (
-  <nav className="section-tabs" aria-label="Review sections">
-    {WATCH_LINKS.map((item) => (
-      <Link
-        key={item.section}
-        className={
-          section === item.section ? "section-tab active" : "section-tab"
-        }
-        to={`${item.to}${item.to.includes("?") ? "&" : "?"}provider=${encodeURIComponent(providerSlug)}`}
-        aria-current={section === item.section ? "page" : undefined}
-        data-tour={item.tour}
+const STAGES: ReadonlyArray<{ id: ReviewStage; label: string; to: string }> = [
+  { id: "identify", label: "Identify", to: "/" },
+  { id: "evaluate", label: "Evaluate", to: "/evidence" },
+  { id: "finops", label: "Automate", to: "/finops" },
+];
+const STAGE_VIEWS: Record<Exclude<ReviewStage, "finops">, ReadonlyArray<{ section: WatchSection; label: string; to: string }>> = {
+  identify: [
+    { section: "coverage", label: "Coverage", to: "/" },
+    { section: "incidents", label: "Incident cases", to: "/incidents" },
+  ],
+  evaluate: [
+    { section: "evidence", label: "Evidence", to: "/evidence" },
+    { section: "performance", label: "Performance", to: "/performance" },
+    { section: "directory", label: "Provider terms", to: "/directory" },
+  ],
+};
+
+const WatchNavigation = ({ section, providerSlug }: { section: WatchSection; providerSlug: string }) => {
+  const stage = stageForSection(section);
+  const location = useLocation();
+  const toProviderView = (path: string) => {
+    const current = new URLSearchParams(location.search);
+    const params = new URLSearchParams({ provider: providerSlug });
+    if (path !== "/") {
+      const problemId = current.get("problem");
+      const caseId = current.get("case");
+      if (problemId) params.set("problem", problemId);
+      if (caseId) params.set("case", caseId);
+    }
+    return `${path}?${params.toString()}`;
+  };
+  return <div className="journey-navigation">
+    <nav className="journey-stages" aria-label="Review stages">
+      {STAGES.map((item, index) => <Link
+        key={item.id}
+        className={`journey-stage${stage === item.id ? " active" : ""}`}
+        to={toProviderView(item.id === "identify" && new URLSearchParams(location.search).has("problem") ? "/incidents" : item.to)}
+        aria-current={stage === item.id ? "step" : undefined}
+        data-tour={item.id}
       >
-        {item.label}
-      </Link>
-    ))}
-  </nav>
-);
+        <span className="journey-stage-number">{index + 1}</span>
+        <span>{item.label}</span>
+      </Link>)}
+    </nav>
+    {stage !== "finops" ? <nav className="journey-views" aria-label={`${stage === "identify" ? "Identify" : "Evaluate"} views`}>
+      {STAGE_VIEWS[stage].map((item) => <Link
+        key={item.section}
+        className={`journey-view${section === item.section ? " active" : ""}`}
+        to={toProviderView(item.to)}
+        aria-current={section === item.section ? "page" : undefined}
+        data-tour={item.section}
+      >{item.label}</Link>)}
+    </nav> : null}
+  </div>;
+};
 
 export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const section = initialSection;
@@ -192,6 +205,8 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
       ? "provider-reports"
       : "candidates";
   const routeProviderSlug = routeParams.get("provider")?.trim().toLowerCase();
+  const routeProblemId = routeParams.get("problem");
+  const routeCaseId = routeParams.get("case") ?? undefined;
   const { preferences, updatePreferences } = useSlaPreferences();
   const scopeSettings = useProviderScopeAssignments();
   const providerConnections = useProviderConnections();
@@ -449,7 +464,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
   const suggestedServiceCount = coverageModel.reviewServiceCount;
   const reviewScopeCount = coverageModel.reviewRows.length;
   const taggedProviderServices = coverageModel.taggedServiceCount;
-  const providerSlaMatchDetail = `${coverageModel.resourceRows.length.toLocaleString()} linked resource${coverageModel.resourceRows.length === 1 ? "" : "s"} · ${coverageModel.linkedServiceCount.toLocaleString()} dependent service${coverageModel.linkedServiceCount === 1 ? "" : "s"}${reviewScopeCount > 0 ? ` · ${reviewScopeCount.toLocaleString()} scope${reviewScopeCount === 1 ? "" : "s"} need review` : ""}`;
+  const providerSlaMatchDetail = `${reviewScopeCount.toLocaleString()} need review · ${coverageModel.resourceRows.length.toLocaleString()} linked resource${coverageModel.resourceRows.length === 1 ? "" : "s"} · ${coverageModel.linkedServiceCount.toLocaleString()} dependent service${coverageModel.linkedServiceCount === 1 ? "" : "s"}`;
   const providerInfrastructureCandidate = matchedProviderScopes === 0
     ? buildProviderInfrastructureCandidate({
         providerSlug: selectedProviderSlug,
@@ -580,6 +595,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     if (routeProviderSlug) {
       const nextParams = new URLSearchParams(location.search);
       nextParams.set("provider", nextProviderSlug);
+      ["problem", "case", "service", "providerService", "return"].forEach((key) => nextParams.delete(key));
       void navigate(`${location.pathname}?${nextParams.toString()}`, {
         replace: true,
       });
@@ -592,8 +608,11 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
         <div className="hero-copy-block">
           <Heading level={1}>Provider review</Heading>
           <Paragraph className="hero-copy">
-            Review provider coverage, Dynatrace Problems, and filing windows for
-            this environment.
+            {stageForSection(section) === "identify"
+              ? "Confirm coverage, then select a Dynatrace Problem case."
+              : stageForSection(section) === "evaluate"
+                ? "Review customer impact and provider terms, then record the human decision in Evidence."
+                : "Route a complete human-reviewed case through the configured local workflow."}
           </Paragraph>
         </div>
       </section>
@@ -611,6 +630,13 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
           </div>
         ) : null}
       </div>
+
+      {(section === "performance" || section === "directory") && routeProblemId ? (
+        <div className="journey-case-context" role="status">
+          <span>{section === "performance" ? "Customer objectives" : "Provider terms"} are supporting views for {routeProblemId}. The human decision stays in Evidence.</span>
+          <Link to={createEvidenceReviewPath({ providerSlug, problemId: routeProblemId, caseId: routeCaseId })}>Back to case</Link>
+        </div>
+      ) : null}
 
       <div className={`watch-view watch-view-${section}`}>
         {section === "coverage" ? (
@@ -660,13 +686,13 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 }
               />
               <OverviewFact
-                label={`${providerName} SLA matches`}
+                label="Confirmed SLA matches"
                 value={
                   servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "Checking"
                     : matchedProviderScopes.toLocaleString()
                 }
-                detail={providerSlaMatchDetail}
+                detail={`Of ${coverageModel.rows.length.toLocaleString()} loaded scopes · ${providerSlaMatchDetail}`}
                 tone={
                   servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "neutral"
@@ -755,7 +781,16 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             />
           </Surface>
         ) : section === "finops" ? (
-          <FinopsWorkspace providerSlug={selectedProviderSlug} />
+          <FinopsWorkspace
+            providerSlug={selectedProviderSlug}
+            provider={directoryData}
+            services={services}
+            coverageModel={coverageModel}
+            coverageLoading={servicesLoading || topologyQuery.isLoading || directoryLoading || scopeSettings.loading}
+            coverageComplete={!serviceInventoryIncomplete && !topologyInventoryIncomplete &&
+              !inventoryUnverified && !scopeSettings.incomplete && !serviceError &&
+              !topologyQuery.error && !scopeSettings.error}
+          />
         ) : section === "incidents" ? (
           <IncidentReview
             provider={directoryData}

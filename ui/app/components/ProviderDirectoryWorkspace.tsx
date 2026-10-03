@@ -365,7 +365,7 @@ export const ProviderDirectoryWorkspace = ({
             item.id === "services"
               ? directory.services.length
               : item.id === "overrides"
-                ? providerOverrides.length
+                ? contractSettings.loading || contractSettings.error || !contractSettings.canRead ? undefined : providerOverrides.length
                 : undefined;
           return (
             <button
@@ -380,7 +380,7 @@ export const ProviderDirectoryWorkspace = ({
               onClick={() => setTab(item.id)}
             >
               {item.label}
-              {count !== undefined ? <span>{count}</span> : null}
+              {count !== undefined ? <span>{count}</span> : item.id === "overrides" ? <span>{contractSettings.loading ? "Checking" : "Unavailable"}</span> : null}
             </button>
           );
         })}

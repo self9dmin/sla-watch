@@ -26,7 +26,7 @@ const SETUP_LINKS = [
   ["intro", "Getting started"],
   ["watch", "Review defaults"],
   ["provider-connections", "Provider connections"],
-  ["sla-overrides", "Custom terms"],
+  ["sla-overrides", "Add custom terms"],
   ["finops", "FinOps routing"],
   ["appearance", "Appearance"],
 ] as const;
@@ -608,7 +608,8 @@ const SlaOverrideSettings = () => {
       <div className="page-intro sla-override-page-intro">
         <Text className="eyebrow">Settings · custom terms</Text>
         <Heading level={1}>{activeDirectory ? `Add ${activeDirectory.provider.name} custom terms.` : "Add custom terms."}</Heading>
-        <Paragraph>Define operational terms for a provider service and an explicit Dynatrace scope. Published terms remain available as the comparison baseline.</Paragraph>
+        <Paragraph>This form adds a new scoped agreement. Review existing custom terms in Provider terms before creating another. Published terms remain the comparison baseline.</Paragraph>
+        <NavLink className="text-action" to={`/directory?provider=${encodeURIComponent(requestedProviderSlug)}&tab=overrides`}>Review existing custom terms</NavLink>
       </div>
       {loading ? <div className="settings-callout" role="status"><strong>Loading terms scope</strong><span>Reading published terms, service inventory, Smartscape topology, and shared settings.</span></div> : null}
       {!loading && !activeDirectory ? <div className="error-box"><strong>Provider terms are unavailable.</strong><span>Return to Review defaults, verify the active provider and API connection, then try again.</span></div> : null}
@@ -703,14 +704,14 @@ const IntroSettings = () => {
   return (
     <section className="settings-page">
       <div className="page-intro"><Text className="eyebrow">Settings · getting started</Text><Heading level={1}>Start with Coverage.</Heading><Paragraph>Most users do not need to configure anything before the first review. SLA Review reads the current environment and opens on Coverage.</Paragraph></div>
-      <div className="settings-actions"><Button variant="emphasized" onClick={() => void navigate("/")}>Open Coverage</Button><Button onClick={() => void navigate("/?walkthrough=1")}>Show quick tour</Button></div>
+      <div className="settings-actions"><Button variant="emphasized" onClick={() => void navigate("/")}>Open Coverage</Button><Button onClick={() => void navigate({ pathname: "/", search: new URLSearchParams({ walkthrough: "1", tourReturn: "/settings/intro" }).toString() })}>Show quick tour</Button></div>
       <div className="settings-callout"><strong>What must already be available</strong><span>A tenant administrator installs the app, grants the required Dynatrace access, and allows <code>sla.directory</code> under External requests so published terms can load.</span></div>
       <div className="settings-summary-grid">
         <NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Optional</span><strong>Change review defaults.</strong><span>Choose the focused provider, source-tag convention, or evidence window.</span></NavLink>
         <NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">When terms differ</span><strong>Add custom terms.</strong><span>Use an explicit scope and agreement reference for negotiated or private terms.</span></NavLink>
         <NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Administrator</span><strong>Connect provider reports.</strong><span>When AWS EventBridge health ingest is enabled, those events appear in Grail without an app credential. Add direct provider APIs only when that source is not enough.</span></NavLink>
       </div>
-      <div className="settings-callout"><strong>Evidence is the handoff point</strong><span>The SRE records Ready for follow-up, Needs evidence, or Excluded from provider follow-up. A complete ready case can be queued only after the optional local FinOps integration is configured. SLA Review does not submit a claim, send email, or decide fault or credit.</span></div>
+      <div className="settings-callout"><strong>Evidence is the handoff point</strong><span>The SRE records Evidence review complete, Needs evidence, or Excluded from provider follow-up. A complete reviewed case can be queued in Automate only after the local FinOps integration is configured. SLA Review does not submit a claim, send email, or decide fault or credit.</span></div>
       <div className="settings-callout"><strong>The quick tour changes nothing</strong><span>It does not change providers, connections, SLA matches, telemetry, tags, terms, objectives, or evidence decisions.</span></div>
     </section>
   );

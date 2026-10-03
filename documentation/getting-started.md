@@ -2,7 +2,7 @@
 
 SLA Review opens directly in Coverage. There is no required setup wizard and no provider credential is needed for the core review.
 
-Coverage starts with what Dynatrace can already see. Published terms load from `sla.directory`, then the SRE reviews only the SLA matches that remain ambiguous. Settings is a separate administrative area for the few things that cannot be discovered safely.
+Coverage starts with what Dynatrace can already see. The three stages are **Identify**, **Evaluate**, and **Automate**. Published terms load from `sla.directory`, then the SRE reviews only the SLA matches that remain ambiguous. Settings is a separate administrative area for the few things that cannot be discovered safely.
 
 ## What works immediately
 
@@ -25,7 +25,7 @@ Each source fails independently. If a user lacks a read permission or an upstrea
 | Tenant installer | Dynatrace AppEngine, a deployment identity with `app-engine:apps:install` and `app-engine:apps:run`, approval for the scopes in `app.config.json`, and `sla.directory` allowed under **Settings > General > External requests**. |
 | SRE reader | Access to run the app and the Dynatrace read grants needed for the views they use. A complete review uses Smartscape, Problems, metrics, logs, spans, objectives, App Settings, and app-state reads. |
 | SRE reviewer | Reader access plus App Settings write access to save SLA matches, custom terms, and Evidence decisions. Objective write access is needed only when the user explicitly creates a customer objective. |
-| FinOps operator, optional | Reviewer access plus `openpipeline:bizevents:ingest` to queue a complete reviewed case or record later human feedback, and `storage:bizevents:read` to see route outcomes. A tenant administrator must separately configure and verify the local gateway, EdgeConnect, and Dynatrace Workflows before queueing. |
+| FinOps operator | Reviewer access plus `openpipeline:bizevents:ingest` to queue a complete reviewed case or record later human feedback, and `storage:bizevents:read` to see route outcomes. Draft creators also need `automation:workflows:read/write`. A tenant administrator must separately configure and verify the local gateway, EdgeConnect, and Dynatrace Workflows before queueing. |
 | Direct provider connection administrator | Reviewer access, permission to use the selected Credential Vault record, the provider's least-privilege IAM grants, and the exact outbound hosts for that adapter. Dynatrace-ingested AWS Health does not need this role. |
 | Developer or deployer | Node.js 24, npm, the repository, and a deployment identity for the target environment. |
 
@@ -33,22 +33,19 @@ The exact scope-to-feature behavior is documented in [Permissions](permissions.m
 
 ## First review
 
-1. Open SLA Review. It lands in **Coverage**.
-2. If more than one provider is detected, choose the provider mark you want to review.
-3. Start in **Detected topology**. This is provider presence, not service attribution.
-4. Open **SLA matches** only when a service relationship needs review. Confirm a match only when the topology, source metadata, or your operational knowledge supports it.
-5. Use **Performance** for continuous customer posture and **Incidents** for current or recent review cases.
-6. Finish in **Evidence**. Save **Ready for follow-up**, **Needs evidence**, or **Excluded from provider follow-up**.
+1. **Identify:** Open SLA Review in **Coverage**. Choose a provider if more than one is detected. **Detected topology** shows presence, not service attribution. Open **SLA matches** only for an uncertain relationship, then select a current or recent case in **Incident cases**.
+2. **Evaluate:** Open **Evidence** for the selected case. Use **Performance** to inspect customer objectives and **Provider terms** to inspect published or custom terms. Save **Evidence review complete**, **Needs evidence**, or **Excluded from provider follow-up** after a human review. If a case has an incident start time, custom terms are matched against that date; published terms are the current directory reference and may need historical confirmation.
+3. **Automate:** Inspect the customer objective and Workflow status. Create the service objective and private, undeployed route and feedback Workflow drafts only when needed. After the local gateway and Workflows have been configured and verified with a synthetic case, manually queue an eligible, complete case. Automatic queueing and lane assignment start off. A model recommendation is not a credit decision or claim submission.
 
-Evidence is the human review gate. A saved review can be copied or downloaded for an external handoff. After the optional local FinOps integration is configured and verified, a complete, closed, single-service case may be manually queued for the FinOps Agent. Automatic queueing and lane assignment are separate settings that start off. The local model recommends an internal route; SLA Review does not decide provider fault or credit eligibility or submit a claim. See [FinOps Agent setup](finops-agent.md).
+Evidence is the human review gate. A saved review can be copied or downloaded for an external handoff. After the local FinOps integration is configured and verified, a complete, closed, single-service case may be manually queued in Automate. Automatic queueing and lane assignment are separate settings that start off. The local model recommends an internal route; SLA Review does not decide provider fault or credit eligibility or submit a claim. See [FinOps routing setup](finops-agent.md).
 
 ## Check a new installation without changing data
 
 1. Open the installed app. It should land in **Coverage** without a setup wizard. A tenant with no detected provider may show an empty or access-incomplete state; that is not a successful detection.
-2. Open **Settings > Getting started**, then **Show quick tour**. The five steps point to Coverage, Performance, Incidents, Evidence, and Directory. Closing the tour should not change any saved setting or review.
-3. Open **Directory**. Published terms should load when `sla.directory` is allowed, or the view should state why they are unavailable. No provider credential is needed for this check.
-4. Open **Incidents** and **Evidence**. Confirm that returned Problems and review cases appear, or that an empty, denied, or unavailable state is explained. Do not save a decision just to complete this check.
-5. If using FinOps, open **FinOps Agent** and **Settings > FinOps routing**. Both automatic controls should be off until a separate synthetic end-to-end verification is complete. The presence of this view alone does not mean the gateway, Workflows, Bindplane, or Phoenix are operating.
+2. Open **Settings > Getting started**, then **Show quick tour**. Its three steps visit Identify, Evaluate, and Automate, then return to the starting page. Closing the tour should not change any saved setting or review.
+3. Open **Evaluate > Provider terms**. Published terms should load when `sla.directory` is allowed, or the view should state why they are unavailable. No provider credential is needed for this check.
+4. Open **Identify > Incident cases** and **Evaluate > Evidence**. Confirm that returned Problems and review cases appear, or that an empty, denied, or unavailable state is explained. Do not save a decision just to complete this check.
+5. Open **Automate** and **Settings > FinOps routing**. Check the SLO and Workflow states, including the Workflow actor and last execution when visible. Both automatic controls should be off until a separate synthetic end-to-end verification is complete. A Workflow draft or a status row does not prove that the gateway, Bindplane, or Phoenix are operating.
 
 For a clean local development run, set `DT_APP_ENVIRONMENT_URL` to a real environment you may use, then run `npm ci`, `npm run verify:release`, and `npm run start` from the repository root. The checked-in URL is a placeholder. Local development and deployment may require interactive Dynatrace sign-in. See the [README](../README.md#install-or-develop) for commands; a passing local gate does not verify an installed version in the target tenant.
 
@@ -60,7 +57,7 @@ For a clean local development run, set `DT_APP_ENVIRONMENT_URL` to a real enviro
 | SLA match in Coverage | Dynatrace cannot safely resolve a service-to-provider relationship, or an operator needs to correct a saved match. | Assigning every environment service because provider infrastructure exists. |
 | Custom terms | A negotiated or private agreement differs from the published baseline. Set an explicit **Applies to** scope, effective dates, and a concise agreement reference. | Storing confidential agreement text, credentials, personal data, or unrelated incident notes. |
 | Direct provider connection | The review needs a customer-scoped provider API that is not already represented in Dynatrace. | Loading published terms, using Dynatrace evidence, or reading Dynatrace-ingested AWS Health events. Those work without an app credential. |
-| Customer objective | A covered service should have an explicitly created, app-managed availability objective. | Measuring provider-wide uptime or counting provider reports as local health. |
+| Customer objective in Automate | An exact, unambiguous provider-native or operator-confirmed product resource relationship has a known account and region, common terms target, and request evidence for every linked service. | Creating one objective per dependent service, treating customer telemetry as provider-wide uptime, or counting provider reports as local health. |
 | Appearance | A user wants system, light, or dark mode. | Shared workspace configuration. Appearance is personal. |
 
 ## Add a provider connection

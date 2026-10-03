@@ -7,9 +7,11 @@ import { businessEventsClient, credentialVaultClient } from "@dynatrace-sdk/clie
 const ROUTER_URL = "REPLACE_WITH_PRIVATE_EDGE_CONNECT_URL/route";
 const REVIEW_GATE_URL = "/apps/my.sla/api/finopsReviewGate";
 const BRIDGE_CREDENTIAL_ID = "CREDENTIALS_VAULT-REPLACE_ME";
+const EXPECTED_SOURCE = "REPLACE_WITH_LOCAL_MODEL_SOURCE";
 
 export default async function () {
-  if (ROUTER_URL.includes("REPLACE_WITH") || BRIDGE_CREDENTIAL_ID.includes("REPLACE_ME"))
+  if (ROUTER_URL.includes("REPLACE_WITH") || BRIDGE_CREDENTIAL_ID.includes("REPLACE_ME") ||
+      !["jev", "laya"].includes(EXPECTED_SOURCE))
     throw new Error("Configure the private router URL and Credential Vault ID before running.");
   const ex = await execution();
   const event = ex.params.event;
@@ -51,6 +53,8 @@ export default async function () {
   if (!response.ok) throw new Error(`FinOps router returned HTTP ${response.status}.`);
   const result = await response.json();
   if (!result.traceExported || result.providerSubmission !== "not_sent" ||
+      !["policy", EXPECTED_SOURCE].includes(result.source) ||
+      (result.source === "policy" && result.route !== "human_review") ||
       !/^[0-9a-f]{24}$/.test(result.requestHash) ||
       !/^[0-9a-f]{32}$/.test(result.traceId) || !/^[0-9a-f]{16}$/.test(result.spanId) ||
       !["prepare_provider_draft", "internal_only", "human_review"].includes(result.route))

@@ -184,55 +184,20 @@ export const Header = ({
             review default, custom terms, or customer-scoped provider reports.
           </p>
           <section>
-            <h3>1. Confirm coverage</h3>
-            <p>
-              Start in Coverage. Review detected topology, then resolve only SLA
-              matches that need a decision. Provider presence alone does not
-              assign every service.
-            </p>
+            <h3>1. Identify</h3>
+            <p>Coverage opens first. Confirm only uncertain SLA matches, then choose a Dynatrace Problem in Incident cases. Provider detection alone does not prove coverage.</p>
           </section>
           <section>
-            <h3>2. Check performance</h3>
-            <p>
-              Performance evaluates app-managed customer objectives from
-              Dynatrace service-request telemetry. Provider corroboration remains
-              optional, separate evidence.
-            </p>
+            <h3>2. Evaluate</h3>
+            <p>Evidence carries the case, customer impact, and applicable terms into one human decision. Performance and Provider terms are supporting views. Save Needs evidence when requirements are missing. Nothing is submitted.</p>
           </section>
           <section>
-            <h3>3. Review incidents</h3>
-            <p>
-              Incidents groups related Problems only when the provider service,
-              applicable terms, time, and shared service or exact root cause support
-              one review. Open Problems for the full investigation.
-            </p>
+            <h3>3. Automate</h3>
+            <p>A person can queue a complete reviewed case for a local routing recommendation. Automatic queueing and lane assignment start off. The model cannot decide credit eligibility or file a claim.</p>
           </section>
           <section>
-            <h3>4. Finish the evidence review</h3>
-            <p>
-              Evidence carries forward the SLA match, observed impact, applicable
-              terms, and optional provider reports. Mark a case ready, keep it open
-              for evidence, or exclude it. Nothing is submitted. This is where the
-              SRE review stops.
-            </p>
-          </section>
-          <section>
-            <h3>5. Review provider terms</h3>
-            <p>
-              Directory separates published terms, service-level coverage,
-              support options, filing instructions, and custom terms for the
-              active provider. It is a reference, not a required detour.
-            </p>
-          </section>
-          <section>
-            <h3>6. Configure only when needed</h3>
-            <p>
-              Review defaults changes the focused provider, source-tag convention,
-              and evidence window. Custom terms are for private agreements.
-              AWS Health events already ingested into Grail need no app credential.
-              Other direct provider connections require provider IAM, Credential
-              Vault, and approved External requests.
-            </p>
+            <h3>Settings are optional</h3>
+            <p>Use Settings only for review defaults, private terms, or customer-scoped provider reports. Published terms and Dynatrace evidence do not need a provider credential.</p>
           </section>
           <div className="help-drawer-actions">
             <button

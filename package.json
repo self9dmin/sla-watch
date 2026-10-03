@@ -1,6 +1,6 @@
 {
   "name": "sla-review",
-  "version": "0.0.79",
+  "version": "0.0.80",
   "description": "Evidence-first provider review for Dynatrace",
   "scripts": {
     "build": "dt-app build",
@@ -18,14 +18,16 @@
     "typecheck:api": "tsc -p api/tsconfig.json --noEmit",
     "test": "jest --config jest.config.cjs",
     "test:finops": "node --test finops-agent/*.test.mjs",
+    "sync:finops-workflows": "node scripts/sync-finops-workflows.mjs",
+    "check:finops-workflows": "node scripts/sync-finops-workflows.mjs --check",
     "test:ci": "jest --config jest.config.cjs --ci --coverage",
     "test:e2e": "playwright test",
     "assets:providers": "node scripts/vendor-provider-logos.mjs",
     "analyze": "dt-app analyze",
     "audit:production": "node scripts/audit-production.mjs",
     "audit:public": "node scripts/audit-public-source.mjs",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run analyze",
-    "verify:release": "npm run audit:public && npm run typecheck && npm run lint && npm run test:ci && npm run build && npm run analyze && npm run audit:production"
+    "verify": "npm run check:finops-workflows && npm run typecheck && npm run lint && npm test && npm run build && npm run analyze",
+    "verify:release": "npm run audit:public && npm run check:finops-workflows && npm run typecheck && npm run lint && npm run test:ci && npm run build && npm run analyze && npm run audit:production"
   },
   "engines": {
     "node": ">=24.0.0"
@@ -35,6 +37,7 @@
   "dependencies": {
     "@dynatrace-sdk/app-environment": "^1.1.4",
     "@dynatrace-sdk/client-app-settings-v2": "^1.2.0",
+    "@dynatrace-sdk/client-automation": "^8.7.0",
     "@dynatrace-sdk/client-classic-environment-v2": "^9.0.1",
     "@dynatrace-sdk/client-platform-management-service": "^1.8.1",
     "@dynatrace-sdk/client-query": "^1.21.2",

@@ -13,6 +13,7 @@ type ServiceObjectiveQuery = {
   serviceClassicId?: string | null;
   page?: number;
   pageSize?: number;
+  managedOnly?: boolean;
 };
 
 const errorMessage = (error: unknown): string => {
@@ -29,6 +30,7 @@ export const useServiceObjectives = ({
   serviceClassicId,
   page = 1,
   pageSize = 8,
+  managedOnly = true,
 }: ServiceObjectiveQuery) => {
   const [objectives, setObjectives] = useState<Slo[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -59,10 +61,10 @@ export const useServiceObjectives = ({
       serviceLevelObjectivesClient.getSlos({
         pageSize: boundedPageSize,
         page: boundedPage,
-        filter: createManagedObjectiveFilter({
+        filter: managedOnly ? createManagedObjectiveFilter({
           providerSlug,
           serviceClassicId,
-        }),
+        }) : undefined,
         sort: "name",
       }),
     ]);
@@ -94,6 +96,7 @@ export const useServiceObjectives = ({
     enabled,
     providerSlug,
     serviceClassicId,
+    managedOnly,
   ]);
 
   useEffect(() => {

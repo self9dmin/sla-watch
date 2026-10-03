@@ -2,6 +2,7 @@ import {
   createOverrideKey,
   normalizeContractOverride,
   resolveEffectiveContractTerms,
+  resolveIncidentContractTerms,
   validateContractOverride,
 } from "../ui/app/data/contractOverrides";
 import type { ContractOverrideRecord, SlaProviderResponse } from "../ui/app/types";
@@ -165,6 +166,43 @@ describe("contract override precedence", () => {
     expect(first.availabilityTarget).toBe(99.95);
     expect(second.availabilityTarget).toBe(99.95);
     expect(unrelated.availabilityTarget).toBe(99.99);
+  });
+
+  it("matches custom terms to the incident date instead of the review date", () => {
+    const expiredAfterIncident = baseOverride({
+      availabilityTarget: 99.95,
+      filingDeadlineDays: 90,
+      effectiveFrom: "2026-08-01",
+      effectiveTo: "2026-09-30",
+    });
+    const laterAgreement = baseOverride({
+      objectId: "object-2",
+      availabilityTarget: 99.9,
+      effectiveFrom: "2026-10-01",
+    });
+    const result = resolveIncidentContractTerms(
+      directory,
+      [expiredAfterIncident, laterAgreement],
+      { providerSlug: "aws", providerServiceId: "ec2" },
+      "2026-09-20T13:00:00Z",
+      new Date("2026-10-03T12:00:00Z"),
+    );
+    expect(result.incidentDate).toBe("2026-09-20");
+    expect(result.terms.availabilityTarget).toBe(99.95);
+    expect(result.terms.filingDeadlineDays).toBe(90);
+    expect(result.terms.appliedOverrides.map((item) => item.objectId)).toEqual(["object-1"]);
+  });
+
+  it("makes a missing incident start explicit while retaining a current reference", () => {
+    const result = resolveIncidentContractTerms(
+      directory,
+      [baseOverride({ availabilityTarget: 99.95 })],
+      { providerSlug: "aws", providerServiceId: "ec2" },
+      undefined,
+      new Date("2026-10-03T12:00:00Z"),
+    );
+    expect(result.incidentDate).toBeNull();
+    expect(result.terms.availabilityTarget).toBe(99.95);
   });
 });
 

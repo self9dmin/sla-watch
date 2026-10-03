@@ -4,42 +4,42 @@ import React, {
   useLayoutEffect,
   useState,
 } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@dynatrace/strato-components/buttons";
 
-type TourStep = { target: string; title: string; body: string };
+type TourStep = { target: string; path: string; title: string; body: string };
 
 const STEPS: TourStep[] = [
   {
-    target: '[data-tour="coverage"]',
-    title: "Start with what Dynatrace found",
-    body: "Coverage opens automatically with detected providers and topology. Review only ambiguous SLA matches. Provider presence alone does not assign every service.",
+    target: '[data-tour="identify"]',
+    path: "/",
+    title: "1. Identify a case",
+    body: "Coverage is the landing page. Confirm the SLA match, then open Incident cases to choose a Dynatrace Problem. A detected provider alone does not prove service coverage.",
   },
   {
-    target: '[data-tour="performance"]',
-    title: "Check customer performance",
-    body: "Performance evaluates customer objectives from Dynatrace request telemetry. Provider reports remain separate supporting evidence.",
+    target: '[data-tour="evaluate"]',
+    path: "/evidence",
+    title: "2. Evaluate the evidence",
+    body: "Evidence brings together customer impact and applicable provider terms. Performance and Provider terms are references. Save Needs evidence when requirements are missing; Evidence review complete requires a complete human review.",
   },
   {
-    target: '[data-tour="incidents"]',
-    title: "Triage review cases",
-    body: "Incidents narrows Dynatrace Problems into defensible review cases. Open Problems when you need the full investigation.",
-  },
-  {
-    target: '[data-tour="evidence"]',
-    title: "Make the review decision",
-    body: "Evidence brings together impact, SLA matches, applicable terms, and optional provider reports. Mark the case ready, keep it open for evidence, or exclude it. Nothing is sent. The SRE review stops here.",
-  },
-  {
-    target: '[data-tour="directory"]',
-    title: "Check provider terms",
-    body: "Directory is the reference for published terms, service coverage, support options, filing instructions, and any environment-owned custom terms.",
+    target: '[data-tour="finops"]',
+    path: "/finops",
+    title: "3. Automate the handoff",
+    body: "After a complete human review, an operator can manually queue the local FinOps route. Automatic queueing starts off. The model recommends an internal next step; it does not decide credit eligibility or submit a claim.",
   },
 ];
 
-export const ProductTour = ({ onComplete }: { onComplete: () => void }) => {
+export const ProductTour = ({ providerSlug, onComplete }: { providerSlug: string; onComplete: () => void }) => {
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
   const step = STEPS[index];
+
+  useEffect(() => {
+    void navigate(`${step.path}?provider=${encodeURIComponent(providerSlug)}`);
+  }, [navigate, providerSlug, step.path]);
 
   const measure = useCallback(() => {
     setRect(
@@ -47,7 +47,12 @@ export const ProductTour = ({ onComplete }: { onComplete: () => void }) => {
     );
   }, [step.target]);
 
-  useLayoutEffect(measure, [measure]);
+  useLayoutEffect(measure, [location.pathname, measure]);
+  useEffect(() => {
+    const observer = new MutationObserver(measure);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [measure]);
   useEffect(() => {
     window.addEventListener("resize", measure);
     window.addEventListener("scroll", measure, true);

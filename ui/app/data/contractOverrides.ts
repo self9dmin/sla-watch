@@ -213,6 +213,28 @@ export const resolveEffectiveContractTerms = (
   }), baseline);
 };
 
+export const resolveIncidentContractTerms = (
+  directory: SlaProviderResponse,
+  overrides: ContractOverrideRecord[],
+  context: ContractContext,
+  incidentStartedAt?: string,
+  now = new Date(),
+): { terms: EffectiveContractTerms; incidentDate: string | null } => {
+  const startedAt = incidentStartedAt ? Date.parse(incidentStartedAt) : Number.NaN;
+  const incidentDate = Number.isFinite(startedAt)
+    ? new Date(startedAt).toISOString().slice(0, 10)
+    : null;
+  return {
+    terms: resolveEffectiveContractTerms(
+      directory,
+      overrides,
+      context,
+      incidentDate ? new Date(`${incidentDate}T12:00:00.000Z`) : now,
+    ),
+    incidentDate,
+  };
+};
+
 export const validateContractOverride = (value: ContractOverrideValue): string[] => {
   const errors: string[] = [];
   const scopeIds = getOverrideScopeIds(value);

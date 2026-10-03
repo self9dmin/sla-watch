@@ -108,6 +108,7 @@ export const CoverageWorkspace = ({
   const [topologySearchText, setTopologySearchText] = useState("");
   const [page, setPage] = useState(0);
   const lastFocusedService = useRef<string | null>(null);
+  const leavingFocusedService = useRef<string | null>(null);
   const contractSettings = useContractOverrides();
   const providerSlug = provider?.provider.slug ?? infrastructureCandidate?.providerSlug ?? "";
   const providerName = provider?.provider.name ?? providerDisplayName(providerSlug);
@@ -156,6 +157,20 @@ export const CoverageWorkspace = ({
   );
   const visibleStart = filteredRows.length === 0 ? 0 : page * COVERAGE_PAGE_SIZE + 1;
   const visibleEnd = Math.min((page + 1) * COVERAGE_PAGE_SIZE, filteredRows.length);
+  const focusedRowIndex = focusedServiceId
+    ? coverageRows.findIndex((row) => rowServiceIds(row).includes(focusedServiceId))
+    : -1;
+  const focusedRow = focusedRowIndex >= 0 ? coverageRows[focusedRowIndex] : undefined;
+
+  const selectRow = (row: CoverageRow) => {
+    if (focusedServiceId && !rowServiceIds(row).includes(focusedServiceId)) {
+      leavingFocusedService.current = focusedServiceId;
+      const params = new URLSearchParams(location.search);
+      ["case", "problem", "service", "providerService", "return"].forEach((key) => params.delete(key));
+      void navigate({ pathname: "/", search: `?${params.toString()}` }, { replace: true });
+    }
+    setSelectedRowKey(row.key);
+  };
 
   useEffect(() => {
     setPage(0);
@@ -166,28 +181,51 @@ export const CoverageWorkspace = ({
   }, [page, pageCount]);
 
   useEffect(() => {
+    if (!focusedServiceId) {
+      lastFocusedService.current = null;
+      leavingFocusedService.current = null;
+      return;
+    }
+    if (leavingFocusedService.current === focusedServiceId) return;
+    leavingFocusedService.current = null;
     if (!focusedServiceId || loading || scopeSettings.loading) return;
     const focusKey = `${providerSlug}:${focusedServiceId}`;
     if (lastFocusedService.current === focusKey) return;
-    const targetIndex = coverageRows.findIndex(
-      (row) => rowServiceIds(row).includes(focusedServiceId),
-    );
-    if (targetIndex < 0) return;
+    if (focusedRowIndex < 0) {
+      setSelectedRowKey(null);
+      return;
+    }
     lastFocusedService.current = focusKey;
     setCoverageFilter("all");
     setSearchText("");
-    setPage(Math.floor(targetIndex / COVERAGE_PAGE_SIZE));
-    setSelectedRowKey(coverageRows[targetIndex].key);
-  }, [coverageRows, focusedServiceId, loading, providerSlug, scopeSettings.loading]);
+    setPage(Math.floor(focusedRowIndex / COVERAGE_PAGE_SIZE));
+    setSelectedRowKey(focusedRow?.key ?? null);
+  }, [focusedRow?.key, focusedRowIndex, focusedServiceId, loading, providerSlug, scopeSettings.loading]);
 
   useEffect(() => {
     if (!provider || loading || scopeSettings.loading) return;
+    if (focusedServiceId) {
+      if (leavingFocusedService.current === focusedServiceId) return;
+      if (!focusedRow) {
+        if (selectedRowKey !== null) setSelectedRowKey(null);
+        return;
+      }
+      if (coverageFilter !== "all" || searchText || page !== Math.floor(focusedRowIndex / COVERAGE_PAGE_SIZE)) return;
+      const selectedVisibleRow = visibleRows.find((row) => row.key === selectedRowKey);
+      if (!selectedVisibleRow || !rowServiceIds(selectedVisibleRow).includes(focusedServiceId)) {
+        setSelectedRowKey(focusedRow.key);
+      }
+      return;
+    }
     if (!visibleRows.some((row) => row.key === selectedRowKey)) {
       setSelectedRowKey(visibleRows[0]?.key ?? null);
     }
-  }, [loading, provider, scopeSettings.loading, selectedRowKey, visibleRows]);
+  }, [coverageFilter, focusedRow, focusedRowIndex, focusedServiceId, loading, page, provider, scopeSettings.loading, searchText, selectedRowKey, visibleRows]);
 
   const selectedRow = coverageRows.find((row) => row.key === selectedRowKey);
+  const focusedSelectionMismatch = Boolean(
+    focusedServiceId && selectedRow && !rowServiceIds(selectedRow).includes(focusedServiceId),
+  );
   const selectedAssignments = selectedRow?.kind === "scope"
     ? selectedRow.assignments
     : selectedRow?.assignment
@@ -293,6 +331,10 @@ export const CoverageWorkspace = ({
   };
 
   const saveAssignment = async () => {
+    if (focusedSelectionMismatch) {
+      setFeedback({ tone: "warning", message: "The selected scope does not include the service in this case. Return to that service before saving an SLA match." });
+      return;
+    }
     const values = assignmentValues();
     if (values.length === 0 || scopeSettings.mutating) return;
     setFeedback(undefined);
@@ -319,7 +361,7 @@ export const CoverageWorkspace = ({
   };
 
   const removeAssignment = async () => {
-    if (selectedAssignments.length === 0 || scopeSettings.mutating || !window.confirm(
+    if (focusedSelectionMismatch || selectedAssignments.length === 0 || scopeSettings.mutating || !window.confirm(
       selectedRow?.kind === "scope"
         ? `Remove the confirmed SLA match for ${selectedRow.edge.targetName}?`
         : `Remove the confirmed SLA match between ${selectedAssignments[0].serviceEntityName} and ${assignmentDisplayName(selectedAssignments[0])}?`,
@@ -348,7 +390,7 @@ export const CoverageWorkspace = ({
         ? `${impactNames.slice(0, 2).join(", ")} +${impactNames.length - 2}`
         : impactNames.join(", ");
       return (
-        <button type="button" role="option" aria-selected={selectedRowKey === row.key} className={`scope-map-row${selectedRowKey === row.key ? " selected" : ""}`} key={row.key} onClick={() => setSelectedRowKey(row.key)}>
+        <button type="button" role="option" aria-selected={selectedRowKey === row.key} className={`scope-map-row${selectedRowKey === row.key ? " selected" : ""}`} key={row.key} onClick={() => selectRow(row)}>
           <span className="scope-node">{row.edge.targetType === "HOST" ? <HostsIcon /> : <SmartscapeIcon />}<span><small>{formatResourceType(row.edge.targetType)}</small><strong>{row.edge.targetName}</strong></span></span>
           <span className="scope-connector"><span aria-hidden="true" /><small>used by</small></span>
           <span className="scope-node"><ServicesIcon /><span><small>{impactServices.length} dependent service{impactServices.length === 1 ? "" : "s"}</small><strong>{impactSummary}</strong></span></span>
@@ -359,7 +401,7 @@ export const CoverageWorkspace = ({
     }
 
     return (
-      <button type="button" role="option" aria-selected={selectedRowKey === row.key} className={`scope-map-row coverage-service-row${selectedRowKey === row.key ? " selected" : ""}`} key={row.key} onClick={() => setSelectedRowKey(row.key)}>
+      <button type="button" role="option" aria-selected={selectedRowKey === row.key} className={`scope-map-row coverage-service-row${selectedRowKey === row.key ? " selected" : ""}`} key={row.key} onClick={() => selectRow(row)}>
         <span className="scope-node"><ServicesIcon /><span><small>Service</small><strong>{row.service.name}</strong></span></span>
         <span className="scope-connector"><span aria-hidden="true" /><small>found in</small></span>
         <span className="scope-node coverage-source-node"><ServicesIcon /><span><small>Coverage source</small><strong>{row.sourceTag ? `${providerTagKey}:${providerSlug}` : row.conflicting ? "Different provider tag" : "Service inventory"}</strong></span></span>
@@ -484,9 +526,11 @@ export const CoverageWorkspace = ({
       {focusedProblemId ? (
         <div className="coverage-review-context" role="status">
           <div>
-            <strong>Resolve coverage for {focusedProblemId}</strong>
+            <strong>{focusedRow ? "Review coverage" : "Coverage scope not found"} for {focusedProblemId}</strong>
             <span>
-              {focusedServiceId
+              {focusedServiceId && !focusedRow && !loading && !scopeSettings.loading
+                ? `${services.find((service) => service.id === focusedServiceId)?.name ?? focusedServiceId} has no loaded scope for ${providerName}. No other service is selected. Return to the case or inspect provider topology before making a match.`
+                : focusedServiceId
                 ? `Review ${services.find((service) => service.id === focusedServiceId)?.name ?? focusedServiceId}. Saving an SLA match returns you to the same review.`
                 : "Review the affected service, then return to the same incident."}
             </span>
@@ -601,12 +645,13 @@ export const CoverageWorkspace = ({
                 </div>
                 <div className="scope-detail-actions">
                   {selectedConflict ? <Link className="text-action" to="/settings/watch">Review matching rules</Link> : null}
-                  {showSaveAction ? <Button size="condensed" variant="emphasized" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void saveAssignment()}>{scopeSettings.mutating ? "Saving" : selectedAssignment ? "Update SLA match" : selectionMatchesCandidate || (selectedRow.kind === "service" && selectedProviderService?.id === "*") ? "Confirm SLA match" : `Match ${selectedProviderService?.name}`}</Button> : null}
-                  {selectedAssignment ? <Button size="condensed" disabled={!scopeSettings.canWrite || scopeSettings.mutating} onClick={() => void removeAssignment()}>Remove SLA match</Button> : null}
+                  {showSaveAction ? <Button size="condensed" variant="emphasized" disabled={!scopeSettings.canWrite || scopeSettings.mutating || focusedSelectionMismatch} onClick={() => void saveAssignment()}>{scopeSettings.mutating ? "Saving" : selectedAssignment ? "Update SLA match" : selectionMatchesCandidate || (selectedRow.kind === "service" && selectedProviderService?.id === "*") ? "Confirm SLA match" : `Match ${selectedProviderService?.name}`}</Button> : null}
+                  {selectedAssignment ? <Button size="condensed" disabled={!scopeSettings.canWrite || scopeSettings.mutating || focusedSelectionMismatch} onClick={() => void removeAssignment()}>Remove SLA match</Button> : null}
                 </div>
                 {feedback ? <div className={`scope-map-feedback scope-map-feedback-${feedback.tone}`} role={feedback.tone === "warning" ? "alert" : "status"}>{feedback.message}</div> : null}
                 {selectedCovered && selectedProviderService && selectedTerms ? (
                   <ServiceObjectivePreview
+                    allowCreate={false}
                     serviceClassicId={selectedServiceClassicId}
                     serviceName={selectedServiceName}
                     providerSlug={providerSlug}
@@ -617,6 +662,12 @@ export const CoverageWorkspace = ({
                   />
                 ) : null}
               </>
+            ) : focusedServiceId && !loading && !scopeSettings.loading ? (
+              <div className="scope-mapping-state" role="status">
+                <StatusPill tone="warning">Scope unavailable</StatusPill>
+                <strong>No loaded SLA match for this service</strong>
+                <span>Return to the case. Do not assign a different service to resolve this review.</span>
+              </div>
             ) : (
               <div className="scope-mapping-state">
                 <StatusPill tone="positive">No exceptions</StatusPill>
@@ -625,7 +676,17 @@ export const CoverageWorkspace = ({
               </div>
             )}
             <div className="coverage-detail-checks">
-              <SetupAdvisor recommendations={recommendations} loading={recommendationsLoading} limitedContext={limitedContext} />
+              {selectedRow && rowNeedsReview(selectedRow) ? (
+                <div className="coverage-primary-guidance">Choose the provider service for the selected scope first. Ownership metadata can help later routing, but it does not confirm an SLA match.</div>
+              ) : null}
+              {recommendations.some((item) => item.priority === "high") ? (
+                <SetupAdvisor recommendations={recommendations} loading={recommendationsLoading} limitedContext={limitedContext} />
+              ) : (
+                <details className="coverage-secondary-guidance">
+                  <summary>Other coverage guidance</summary>
+                  <SetupAdvisor recommendations={recommendations} loading={recommendationsLoading} limitedContext={limitedContext} />
+                </details>
+              )}
             </div>
           </aside>
         </div>

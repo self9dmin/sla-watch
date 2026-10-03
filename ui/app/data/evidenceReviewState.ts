@@ -70,7 +70,7 @@ export const evidenceReviewStatePresentation = (
   state: EvidenceReviewState,
 ): EvidenceReviewStatePresentation => {
   if (state === "ready-for-follow-up") {
-    return { label: "Ready for follow-up", tone: "positive" };
+    return { label: "Evidence review complete", tone: "neutral" };
   }
   if (state === "needs-evidence") {
     return { label: "Needs evidence", tone: "warning" };

@@ -10,7 +10,8 @@ Start with [Getting started and configuration](getting-started.md) for the opera
 | --- | --- |
 | Reader | Run the app and read the Dynatrace sources used by the views they need. Denied sources stay explicitly unavailable. |
 | Reviewer | Reader access plus App Settings write access for SLA matches, custom terms, and Evidence decisions. Add `slo:slos:write` only when the user should create an objective. |
-| FinOps operator, optional | Reviewer access plus business-event ingest and read access. The local gateway and Workflows must be separately configured; the manifest scopes alone do not activate routing. |
+| FinOps operator | Reviewer access plus business-event ingest and read access. The local gateway and Workflows must be separately configured; the manifest scopes alone do not activate routing. |
+| Automation setup operator | FinOps operator plus `automation:workflows:read/write` to inspect and create private undeployed Workflow drafts. This broad write grant can modify Workflows outside SLA Review; use a restricted setup identity. |
 | Direct provider connection administrator | Reviewer access plus permission to use the selected Credential Vault record, provider-side least-privilege IAM, and the adapter's exact External requests hosts. Dynatrace-ingested AWS Health does not require this profile. |
 | Deployer | Separate `app-engine:apps:install` and `app-engine:apps:run` access for local or CI deployment. Runtime data access still follows the app and current user. |
 
@@ -28,8 +29,10 @@ These profiles describe product responsibilities, not prebuilt Dynatrace groups.
 | `storage:logs:read` | Count recent log records | Show log count as unavailable |
 | `storage:spans:read` | Count recent spans | Show span count as unavailable |
 | `storage:smartscape:read` | Read service inventory plus provider, runtime, dependency, and location relationships used for coverage selection | Show Smartscape access as incomplete; never infer services or topology from names |
-| `slo:slos:read` | Find and evaluate objectives previously created by SLA Review | Keep the service preview available, identify Performance as unavailable, and disable creation to prevent duplicates |
-| `slo:slos:write` | Create one explicitly confirmed customer objective for a covered Dynatrace service | Keep the preview read-only and explain that objective write access is required |
+| `slo:slos:read` | Read the full native objective inventory for overlaps and evaluate SLA Review objectives | Keep the service preview available, identify Performance as unavailable, and disable creation to prevent duplicates |
+| `slo:slos:write` | Create one explicitly confirmed customer screening objective for a verified provider product, account, and region | Keep the preview read-only and explain that objective write access is required |
+| `automation:workflows:read` | Inspect the route and feedback Workflow definitions, deployment state, actor, and last execution in Automate | Show Workflow state as unavailable and disable draft creation to prevent duplicates |
+| `automation:workflows:write` | Create private, undeployed route and feedback Workflow drafts after an explicit operator action | Keep existing status read-only and disable draft creation |
 | `environment-api:credentials:read` | Read the administrator-selected AppEngine Token credential inside the provider AppEngine function | Keep customer-scoped provider notices unavailable; a supported public status source can remain available |
 | `app-settings:objects:read` | Read shared custom terms, provider connections, confirmed SLA matches, and human evidence decisions | Use public sources where possible and identify shared tenant configuration as unavailable |
 | `app-settings:objects:write` | Create, update, disable, or remove custom terms, SLA matches, provider connections, and human evidence decisions | Keep the corresponding Settings, Coverage, and Evidence actions read-only |
@@ -62,7 +65,8 @@ These profiles describe product responsibilities, not prebuilt Dynatrace groups.
 | User app state | User state read | User state write | Personal preferences remain local when denied |
 | Shared app state | App state read | App state write | Workspace configuration remains local when denied |
 | Dynatrace entity tags | Read through the service inventory | None | Existing source tags can support a review, but the app never writes, replaces, or removes them |
-| Dynatrace objectives | App-managed records with `slo:slos:read` | Explicit create only with `slo:slos:write` | One provider and service objective is created from customer-observed request telemetry; Performance evaluates only a bounded visible page; no objective is created on load and no provider report is counted as local health |
+| Dynatrace objectives | Full native inventory with `slo:slos:read`, app-managed records for Performance | Explicit create only with `slo:slos:write` | One product/account/region screening objective aggregates linked customer service requests; incomplete inventory or overlapping service objectives block creation; no objective is created on load and no provider report is counted as local health |
+| Dynatrace Workflows | Current-user `automation:workflows:read` | Explicit private draft creation with `automation:workflows:write` | Automate lists the new tenant-wide pair and earlier FinOps Agent Workflows, and creates replacements undeployed; an operator verifies a synthetic case and retires old triggers before enabling replacements |
 | Tickets and credits | Not accessed | Not written | No automated eligibility, submission, or remediation is performed |
 
 ## Deployment permissions
