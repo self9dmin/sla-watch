@@ -82,6 +82,11 @@ test("bridge authenticates, calls Jev, exports a redacted route span, and return
   assert.equal(span.name, "finops.route");
   assert.equal(JSON.stringify(otlp).includes(packet.problemId), false);
   assert.equal(JSON.stringify(otlp).includes(packet.caseId), false);
+  const attributeNames = span.attributes.map(({ key }) => key);
+  assert.equal(attributeNames.includes("finops.case_hash"), false);
+  assert.equal(attributeNames.includes("finops.provider"), false);
+  assert.equal(attributeNames.includes("finops.observed_availability_percent"), false);
+  assert.equal(attributeNames.includes("finops.sla_target_percent"), false);
 });
 
 test("human feedback annotates the Phoenix span with route correctness", async () => {

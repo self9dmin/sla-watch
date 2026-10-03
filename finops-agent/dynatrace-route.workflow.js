@@ -12,8 +12,10 @@ export default async function () {
   const event = ex.params.event;
   if (event?.["event.type"] !== "sla.finops.review.ready") throw new Error("Unexpected trigger event.");
   const packet = JSON.parse(event["finops.packet"]);
+  const packetReviewTime = Date.parse(packet.reviewedAt);
+  const eventReviewTime = Date.parse(event["finops.reviewed_at"]);
   if (packet.requestId !== event["finops.request_id"] ||
-      packet.reviewedAt !== event["finops.reviewed_at"] ||
+      !Number.isFinite(packetReviewTime) || packetReviewTime !== eventReviewTime ||
       !["manual", "automatic"].includes(event["finops.trigger_mode"]) ||
       typeof event["finops.auto_assign_lane"] !== "boolean")
     throw new Error("Ready event identity or routing controls are invalid.");
