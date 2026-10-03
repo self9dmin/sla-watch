@@ -4,7 +4,7 @@ jest.mock("@dynatrace-sdk/client-classic-environment-v2", () => ({
 
 import { credentialVaultClient } from "@dynatrace-sdk/client-classic-environment-v2";
 import getAwsHealth, { parseAwsAffectedEntities, parseAwsHealthEvents } from "../api/awsHealth.function";
-import { mapAwsServiceToDirectoryIds } from "../api/awsNoticeMappings";
+import { mapAwsServiceToDirectoryIds } from "../ui/app/data/awsNoticeMappings";
 
 const ACCOUNT_ID = "123456789012";
 const OTHER_ACCOUNT_ID = "210987654321";

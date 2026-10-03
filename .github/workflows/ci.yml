@@ -37,11 +37,11 @@ jobs:
       - name: Unit tests
         run: npm run test:ci
 
-      - name: Production dependency audit
-        run: npm audit --omit=dev
-
       - name: Build
         run: npm run build
 
       - name: Analyze App Toolkit bundle
         run: npm run analyze
+
+      - name: Production dependency audit
+        run: npm run audit:production

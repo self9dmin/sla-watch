@@ -6,7 +6,7 @@ The app does not decide fault, label a case as an SLA violation, file a claim, o
 
 ## Project status
 
-SLA Review is a working custom Dynatrace AppEngine app under active development. Release 0.0.76 is deployed and smoke-tested in the designated Dynatrace environment. It is not yet a generally available Dynatrace Hub app.
+SLA Review is a working custom Dynatrace AppEngine app under active development. Release 0.0.78 is the current source release. It is not yet a generally available Dynatrace Hub app.
 
 The core Coverage, Performance, Incidents, Evidence, and Directory views have automated tests and target-tenant smoke evidence. The four cloud-provider adapters are implemented, tested with controlled responses, and deployed. Live least-privilege credential acceptance for every provider is still open, along with denied-permission and large-environment testing.
 
@@ -22,7 +22,7 @@ The exact evidence and remaining gaps are in [release acceptance](documentation/
 | **Evidence** | Carries the case forward with Problems, request telemetry, objectives, applicable terms, and optional provider reports. The SRE records **Ready for follow-up**, **Needs evidence**, or **Excluded from provider follow-up**, then can copy or download the review package. Nothing is submitted. |
 | **Directory** | Shows published `sla.directory` terms, service-level coverage, support options, filing instructions, and environment-owned custom terms. |
 
-Evidence is the stopping point today. FinOps Agent is visible as a planned idea and remains disabled.
+FinOps Agent is a controlled routing workflow for reviewed evidence. A person can queue one complete case for a local decision model. Automatic queueing and work-lane assignment are separate settings and both default to off. The model cannot decide credit eligibility or submit a claim. A person may record an external filing only with its channel and receipt or ticket reference. See [FinOps Agent setup](documentation/finops-agent.md) and the [SAL rollout status](documentation/finops-rollout-status.md) before using it with a live case.
 
 Settings is not another required workflow. Administrators use it for optional provider connections, custom terms, the source-tag convention, the evidence window, and appearance.
 
@@ -43,12 +43,14 @@ Provider marks are copied from the public `sla.directory` logo set and bundled l
 
 | Provider | Optional customer-scoped incident source | Public fallback |
 | --- | --- | --- |
-| AWS | Account-specific AWS Health events | None used by the app |
+| AWS | Dynatrace-ingested AWS Health events from Grail; optional direct API fallback | None used by the app |
 | Azure | Subscription-specific Azure Resource Health events | None used by the app |
 | GCP | Project-specific Personalized Service Health | Google Cloud public status |
 | OCI | Tenancy-specific OCI Announcements | OCI regional public status |
 
-Connections are optional and read-only. An administrator can add more than one account, subscription, project, or tenancy. Secrets stay in Dynatrace Credential Vault; the app stores only the credential record ID, provider scope, and an optional non-secret AWS role ARN. For AWS, the recommended path is a base credential that can assume a dedicated Health read role. The resulting one-hour role credentials exist only in memory for the request. A new or changed private connection must pass **Test connection** before it can be saved.
+Connections are optional and read-only. AWS is the exception to the normal setup burden: SLA Review first reads `aws.health` events already ingested into Grail by the tenant's existing Dynatrace AWS connection. That path needs no SLA Review credential, account ID, or role ARN. The AWS EventBridge integration must have event ingest enabled with source `aws.health`.
+
+Direct provider API connections remain available when an administrator needs a source that is not already present in Dynatrace. Those secrets stay in Dynatrace Credential Vault; the app stores only the credential record ID, provider scope, and an optional non-secret AWS role ARN. The direct AWS fallback can assume a dedicated Health read role from a durable base credential, and the resulting one-hour role session exists only in memory for the request. AppEngine does not inherit credentials from Dynatrace's internal AWS monitoring service. A new or changed direct connection must pass **Test connection** before it can be saved.
 
 Public-only adapters also exist for OpenAI, Anthropic, and ElevenLabs. Those feeds are non-customer-specific supporting signals. They do not prove local impact or provider fault.
 
@@ -75,7 +77,7 @@ For an installed copy:
 2. Review **SLA matches** only when the app cannot safely resolve a service relationship.
 3. Use **Incidents** to narrow Dynatrace Problems, then finish the human decision in **Evidence**.
 
-Published terms do not require a provider credential. A tenant administrator must allow `sla.directory` under Dynatrace **Settings > General > External requests**. Provider connections are optional and are only for customer-scoped provider reports.
+Published terms do not require a provider credential. A tenant administrator must allow `sla.directory` under Dynatrace **Settings > General > External requests**. Dynatrace-ingested AWS Health events also require no app credential. Direct provider connections are optional and are only for customer-scoped reports that are not already available in Grail.
 
 The [getting started and configuration guide](documentation/getting-started.md) separates SRE, reviewer, administrator, and developer requirements and explains when each setting is needed.
 

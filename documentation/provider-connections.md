@@ -1,6 +1,6 @@
 # Provider incident connections
 
-Provider connections are optional, read-only sources of provider-reported service health. They supplement public `sla.directory` terms and Dynatrace evidence. They do not replace either source, prove that a Dynatrace service was affected, establish provider fault, or determine service credit eligibility.
+Provider connections are optional, read-only sources of provider-reported service health. They supplement public `sla.directory` terms and Dynatrace evidence. They do not replace either source, prove that a Dynatrace service was affected, establish provider fault, or determine service credit eligibility. AWS Health events already ingested into Grail are available without creating an SLA Review connection.
 
 Do not start here unless the review needs customer-scoped provider reports. Provider detection, published terms, Dynatrace evidence, and the core SRE review work without a provider credential. Start with [Getting started and configuration](getting-started.md).
 
@@ -11,11 +11,12 @@ An installed copy of SLA Review can keep multiple AWS accounts, Azure subscripti
 - Published terms load automatically from `sla.directory`. The user does not supply an API key or configure the `sla.directory` MCP server.
 - Coverage, Smartscape-backed SLA matching, Performance, Incidents, Evidence, Directory, custom terms, and Dynatrace telemetry review remain available.
 - Google Cloud and OCI can use clearly labeled public status sources. Those feeds are not project- or tenancy-specific.
-- AWS and Azure remain available for published terms and Dynatrace evidence, but account-specific provider notices require a configured connection.
+- AWS Health events ingested through the tenant's Amazon EventBridge integration are read directly from Grail. This uses the existing `storage:events:read` scope and no SLA Review credential.
+- Azure remains available for published terms and Dynatrace evidence, but subscription-specific provider notices require a configured connection.
 
 ## Administrator prerequisites
 
-Before adding a connection, confirm all of the following:
+Before adding a direct connection, confirm all of the following:
 
 1. The administrator can write the SLA Review `provider-connections` App Settings schema.
 2. The provider identity has only the read permissions listed below.
@@ -29,12 +30,18 @@ See the Dynatrace guidance for [Credential Vault](https://docs.dynatrace.com/doc
 
 | Provider source | One connection represents | Provider prerequisite | Credential Vault Token value | Required outbound hosts | Behavior without a connection |
 | --- | --- | --- | --- | --- | --- |
-| AWS Health | One 12-digit AWS account | An eligible AWS Health API support plan; a dedicated role with `health:DescribeEvents`, `health:DescribeEventDetails`, and `health:DescribeAffectedEntities`; and a base identity allowed to call `sts:AssumeRole` on that role | JSON containing the base identity's `accessKeyId`, `secretAccessKey`, and optional `sessionToken`; the non-secret role ARN is entered separately | `sts.us-east-1.amazonaws.com`, `health.us-east-1.amazonaws.com` | No AWS provider notices; published terms and Dynatrace evidence remain available |
+| AWS Health direct fallback | One 12-digit AWS account | An eligible AWS Health API support plan; a dedicated role with `health:DescribeEvents`, `health:DescribeEventDetails`, and `health:DescribeAffectedEntities`; and a base identity allowed to call `sts:AssumeRole` on that role | JSON containing the base identity's `accessKeyId`, `secretAccessKey`, and optional `sessionToken`; the non-secret role ARN is entered separately | `sts.us-east-1.amazonaws.com`, `health.us-east-1.amazonaws.com` | Uses Dynatrace-ingested `aws.health` events from Grail when available |
 | Azure Service Health | One Azure subscription | A dedicated Microsoft Entra service principal with `Microsoft.ResourceHealth/events/read` on that subscription | JSON containing `tenantId`, `clientId`, and `clientSecret` | `login.microsoftonline.com`, `management.azure.com` | No Azure provider notices; published terms and Dynatrace evidence remain available |
 | Google Cloud Personalized Service Health | One Google Cloud project | Enable `servicehealth.googleapis.com`; grant `roles/servicehealth.viewer` and `roles/serviceusage.serviceUsageConsumer` | The service account JSON key | `oauth2.googleapis.com`, `servicehealth.googleapis.com` | Public Google Cloud status remains available and is labeled non-project-specific |
 | OCI Announcements | One commercial OCI tenancy and region | A dedicated API user in a group granted `Allow group AnnouncementListers to inspect announcements in tenancy` | JSON containing `userOcid`, `fingerprint`, and unencrypted RSA `privateKey` | Exact `announcements.<region>.oraclecloud.com` hostname | Public OCI regional status remains available and is labeled non-tenancy-specific |
 
-AWS currently requires Business Support+, Enterprise Support, or Unified Operations for AWS Health API access. The recommended connection stores a dedicated base signing credential in Credential Vault and a non-secret Health role ARN in App Settings. On every request, SLA Review calls STS `AssumeRole`, keeps the one-hour session only in function memory, verifies the resulting account with `GetCallerIdentity`, and signs the Health requests with that session. The role trust policy should name the base principal when practical. If it trusts the whole account, the base identity still needs an explicit `sts:AssumeRole` permission, but the trust boundary is broader. A direct credential with the three Health actions remains supported for existing connections when the role ARN is blank.
+## AWS default: Dynatrace event ingestion
+
+SLA Review first queries Grail for records where `dt.da.source == "aws-event-ingest"` and `source == "aws.health"`. Enable Amazon EventBridge event ingestion on the existing Dynatrace AWS connection and include the `aws.health` source. Dynatrace links events with affected resource identifiers to Smartscape resource nodes and account-level events to the AWS account node. SLA Review keeps that distinction and does not turn an account-linked event into proof that a service was affected.
+
+This default path has no app-owned AWS identity. AppEngine does not receive or reuse the internal credentials of the Dynatrace AWS monitoring service. If the selected window returns no records, the UI says that either no matching event occurred or EventBridge health ingestion is not enabled. It does not report the environment as healthy.
+
+Use the direct AWS Health connection only when API lookback is required and Grail ingestion is not enough. AWS currently requires Business Support+, Enterprise Support, or Unified Operations for direct AWS Health API access. The fallback stores a dedicated base signing credential in Credential Vault and a non-secret Health role ARN in App Settings. On every request, SLA Review calls STS `AssumeRole`, keeps the one-hour session only in function memory, verifies the resulting account with `GetCallerIdentity`, and signs the Health requests with that session. The role trust policy should name the base principal when practical. If it trusts the whole account, the base identity still needs an explicit `sts:AssumeRole` permission, but the trust boundary is broader. A direct credential with the three Health actions remains supported when the role ARN is blank.
 
 The base credential must remain valid long enough for normal use. Vaulting a one-hour STS session does not create automatic renewal and will fail after it expires. The automatic refresh applies to the temporary credential obtained by assuming the configured role. The app retrieves bounded affected-entity pages for the newest account-specific events and attempts an exact identifier match against the current Smartscape runtime inventory. It rejects account or region conflicts and never treats account or region overlap alone as local impact. See the [AWS Health API reference](https://docs.aws.amazon.com/health/latest/APIReference/Welcome.html), [AssumeRole](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html), and [DescribeAffectedEntities](https://docs.aws.amazon.com/health/latest/APIReference/API_DescribeAffectedEntities.html).
 
@@ -44,7 +51,7 @@ Google documents `roles/servicehealth.viewer` as the read-only Personalized Serv
 
 OCI Announcements are retained by Oracle for 90 days. The app reads summary announcements and does not mark them as read or create subscriptions. See [Viewing OCI Announcements](https://docs.oracle.com/en-us/iaas/Content/General/Concepts/announcements_topic-To_view_a_list_of_all_announcements.htm) and [OCI announcement policies](https://docs.oracle.com/en-us/iaas/Content/Identity/policiescommon/commonpolicies.htm).
 
-## Add and verify a connection
+## Add and verify a direct connection
 
 1. Complete the provider-side identity and read permission.
 2. Add the required hostnames to Dynatrace External requests.
@@ -64,7 +71,7 @@ For live acceptance, use a dedicated, revocable least-privilege identity. For AW
 ## Interpreting the result
 
 - **Connection verified** means the current user and SLA Review could read the selected provider scope at test time. It does not mean an incident exists.
-- **No notices returned** is a valid result when the provider has no relevant event in the selected lookback window.
+- **No notices returned** is a valid direct-API result when the provider has no relevant event in the selected lookback window. For Dynatrace-ingested AWS Health, it can also mean EventBridge health ingestion is not enabled.
 - **Public** or **fallback** means the result is not customer-specific. It must not be used as proof of local impact.
 - Authentication, support-plan, IAM, scope, outbound-host, and malformed-response failures remain visible. The app does not silently turn a failed account-specific AWS, Azure, or OCI request into public evidence.
 
@@ -77,4 +84,4 @@ For live acceptance, use a dedicated, revocable least-privilege identity. For AW
 
 ## Current acceptance boundary
 
-The adapters have automated tests with synthetic credentials, are deployed, and their setup forms have been verified in the target environment. Live least-privilege acceptance with disposable AWS, Azure, Google Cloud, and OCI identities remains a release acceptance task. Do not describe a provider connection as operational until **Test connection** succeeds in the installing tenant.
+The adapters have automated tests with synthetic credentials, and their setup forms have been verified in the target environment. Dynatrace-ingested AWS Health normalization has automated coverage, but each installing tenant must verify that its AWS connection actually ingests `aws.health` EventBridge records. Live least-privilege acceptance of the optional direct AWS fallback and the Azure, Google Cloud, and OCI adapters remains a release acceptance task. Do not describe a direct provider connection as operational until **Test connection** succeeds in the installing tenant.

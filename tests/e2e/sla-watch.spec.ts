@@ -44,11 +44,9 @@ test.describe("SLA Review deployed smoke", () => {
       "Incidents",
       "Evidence",
       "Directory",
+      "FinOps Agent",
     ]);
-    await expect(
-      sectionNavigation.getByRole("button", { name: /FinOps Agent/i }),
-    ).toBeDisabled();
-    await expect(sectionNavigation.getByText("Planned")).toBeVisible();
+    await expect(sectionNavigation.getByRole("link", { name: "FinOps Agent" })).toBeVisible();
     await expect(
       app.locator(".sla-header").getByRole("link", { name: "Coverage" }),
     ).toHaveCount(0);

@@ -9,6 +9,7 @@ import { useSlaPreferences } from "../context/SlaPreferencesContext";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { useProviderConnections } from "../hooks/useProviderConnections";
 import { useProviderScopeAssignments } from "../hooks/useProviderScopeAssignments";
+import { useFinopsRouting } from "../hooks/useFinopsRouting";
 import { createOverrideKey } from "../data/contractOverrides";
 import { mergeServiceInventory } from "../data/providerAttribution";
 import { CONNECTED_PROVIDER_OPTIONS, createProviderConnectionKey, providerConnectionScopeId, providerConnectionScopeLabel, providerConnectionVerificationKey, validateProviderConnection, type ConnectedProvider } from "../data/providerConnections";
@@ -26,6 +27,7 @@ const SETUP_LINKS = [
   ["watch", "Review defaults"],
   ["provider-connections", "Provider connections"],
   ["sla-overrides", "Custom terms"],
+  ["finops", "FinOps routing"],
   ["appearance", "Appearance"],
 ] as const;
 
@@ -398,15 +400,15 @@ const ProviderConnectionsSettings = () => {
     <section className="settings-page provider-connections-settings">
       <div className="page-intro">
         <Heading level={1}>Connect provider incident data.</Heading>
-        <Paragraph>Add account-specific incident sources for AWS, Azure, Google Cloud, or OCI. Each connection is optional and read-only.</Paragraph>
+        <Paragraph>Add a direct provider API only when Dynatrace does not already contain the customer-scoped events you need. Each connection is optional and read-only.</Paragraph>
       </div>
 
       <div className="provider-connection-boundary">
-        <div><span className="eyebrow">Optional provider evidence</span><strong>AWS Health · Azure Service Health · Google Cloud Personalized Service Health · OCI Announcements</strong><small>Published terms work without these connections. Add more than one account, subscription, project, or tenancy when required.</small></div>
+        <div><span className="eyebrow">Optional direct sources</span><strong>AWS Health · Azure Service Health · Google Cloud Personalized Service Health · OCI Announcements</strong><small>AWS Health events already ingested into Grail are automatic. Published terms and Dynatrace evidence work without any direct connection.</small></div>
         <span className="connection-state connected">{providerConnections.connections.filter((item) => CONNECTED_PROVIDER_OPTIONS.some((provider) => provider.slug === item.providerSlug)).length} saved</span>
       </div>
 
-      <div className="provider-connection-prerequisite"><strong>Before you connect</strong><span>Allow the listed provider hosts under Dynatrace Settings &gt; General &gt; External requests. Create a Token in Credential Vault with AppEngine scope, access limited to SLA Review, and access for the administrators who will test it. Paste only the credential ID below. Use a dedicated, revocable provider credential and rotate it through your normal credential process.</span></div>
+      <div className="provider-connection-prerequisite"><strong>{connectionProvider === "aws" ? "AWS default" : "Before you connect"}</strong><span>{connectionProvider === "aws" ? <>SLA Review first reads <code>aws.health</code> events already ingested through the monitored account&apos;s Amazon EventBridge integration. That path needs no app credential. Use the direct API form below only as a fallback for API lookback when Grail ingestion is unavailable.</> : "Allow the listed provider hosts under Dynatrace Settings > General > External requests. Create a Token in Credential Vault with AppEngine scope, access limited to SLA Review, and access for the administrators who will test it. Paste only the credential ID below. Use a dedicated, revocable provider credential and rotate it through your normal credential process."}</span></div>
 
       <div className="provider-connection-switcher">
         <label className="field-label">Connection type
@@ -424,10 +426,10 @@ const ProviderConnectionsSettings = () => {
       </div>
 
       {connectionProvider === "aws" ? (
-        <ol className="provider-connection-steps" aria-label="AWS connection requirements">
-          <li><span>1</span><div><strong>Confirm AWS Health API access</strong><small>The account needs Business Support+, Enterprise Support, or Unified Operations.</small></div></li>
-          <li><span>2</span><div><strong>Create a read-only Health role</strong><small>Grant the role <code>health:DescribeEvents</code>, <code>health:DescribeEventDetails</code>, and <code>health:DescribeAffectedEntities</code>. Grant the base identity only <code>sts:AssumeRole</code> on that role.</small></div></li>
-          <li><span>3</span><div><strong>Vault the base signing credential</strong><small>Store its <code>accessKeyId</code>, <code>secretAccessKey</code>, and optional <code>sessionToken</code>. SLA Review assumes the role on each request. Allow <code>sts.us-east-1.amazonaws.com</code> and <code>health.us-east-1.amazonaws.com</code>.</small></div></li>
+        <ol className="provider-connection-steps" aria-label="Optional direct AWS connection requirements">
+          <li><span>1</span><div><strong>Prefer Dynatrace ingestion</strong><small>Enable Amazon EventBridge event ingest with source <code>aws.health</code> on the existing Dynatrace AWS connection. These events are correlated in Grail and need no Credential Vault entry.</small></div></li>
+          <li><span>2</span><div><strong>Use direct access only when needed</strong><small>The direct AWS Health API fallback needs Business Support+, Enterprise Support, or Unified Operations.</small></div></li>
+          <li><span>3</span><div><strong>Use a dedicated signing identity</strong><small>The Health role needs <code>health:DescribeEvents</code>, <code>health:DescribeEventDetails</code>, and <code>health:DescribeAffectedEntities</code>. Vault a durable base identity that can call <code>sts:AssumeRole</code>. AppEngine cannot borrow the internal Dynatrace monitoring identity.</small></div></li>
         </ol>
       ) : connectionProvider === "azure" ? (
         <ol className="provider-connection-steps" aria-label="Azure connection requirements">
@@ -663,6 +665,39 @@ const AppearanceSettings = () => {
   );
 };
 
+const FinopsRoutingSettings = () => {
+  const routing = useFinopsRouting();
+  const [error, setError] = useState<string>();
+  const toggle = async (field: "autoQueueAfterReady" | "autoAssignLane") => {
+    setError(undefined);
+    try {
+      await routing.save({ ...routing.config, [field]: !routing.config[field] });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "FinOps setting could not be saved.");
+    }
+  };
+  return (
+    <section className="settings-page">
+      <div className="page-intro"><Text className="eyebrow">Settings · FinOps</Text><Heading level={1}>Routing controls.</Heading>
+        <Paragraph>Both controls start off. A candidate must pass human evidence review before any routing event is queued.</Paragraph></div>
+      {!routing.reliable ? <div className="error-box">Shared FinOps settings are unavailable. Automatic behavior is off.</div> : null}
+      {error ? <div className="error-box" role="alert">{error}</div> : null}
+      <div className="settings-form-grid">
+        <label className="field-label"><input type="checkbox" checked={routing.config.autoQueueAfterReady}
+          disabled={!routing.reliable || !routing.canWrite || routing.mutating}
+          onChange={() => void toggle("autoQueueAfterReady")} /> Queue automatically after a person marks a complete case ready
+          <small>Manual queueing remains available. Discovery of a candidate never starts the model.</small>
+        </label>
+        <label className="field-label"><input type="checkbox" checked={routing.config.autoAssignLane}
+          disabled={!routing.reliable || !routing.canWrite || routing.mutating}
+          onChange={() => void toggle("autoAssignLane")} /> Assign the suggested work lane after routing
+          <small>Off means the route remains unassigned for a person. This never marks a case filed or credit eligible.</small>
+        </label>
+      </div>
+    </section>
+  );
+};
+
 const IntroSettings = () => {
   const navigate = useNavigate();
   return (
@@ -673,9 +708,9 @@ const IntroSettings = () => {
       <div className="settings-summary-grid">
         <NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Optional</span><strong>Change review defaults.</strong><span>Choose the focused provider, source-tag convention, or evidence window.</span></NavLink>
         <NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">When terms differ</span><strong>Add custom terms.</strong><span>Use an explicit scope and agreement reference for negotiated or private terms.</span></NavLink>
-        <NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Administrator</span><strong>Connect provider reports.</strong><span>Add customer-scoped provider events only when they help. Provider IAM, Credential Vault, and External requests are required.</span></NavLink>
+        <NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Administrator</span><strong>Connect provider reports.</strong><span>AWS Health events in Grail are automatic. Add direct provider APIs only when the environment source is not enough.</span></NavLink>
       </div>
-      <div className="settings-callout"><strong>Evidence is the stopping point</strong><span>The SRE records Ready for follow-up, Needs evidence, or Excluded from provider follow-up. SLA Review does not submit a claim, send email, or decide fault or credit.</span></div>
+      <div className="settings-callout"><strong>Evidence is the handoff point</strong><span>The SRE records Ready for follow-up, Needs evidence, or Excluded from provider follow-up. A complete ready case can be queued for FinOps routing. SLA Review does not submit a claim, send email, or decide fault or credit.</span></div>
       <div className="settings-callout"><strong>The quick tour changes nothing</strong><span>It does not change providers, connections, SLA matches, telemetry, tags, terms, objectives, or evidence decisions.</span></div>
     </section>
   );
@@ -683,6 +718,6 @@ const IntroSettings = () => {
 
 export const SettingsPage = () => {
   const { page = "intro" } = useParams();
-  const content = page === "appearance" ? <AppearanceSettings /> : page === "provider-connections" ? <ProviderConnectionsSettings /> : page === "sla-overrides" ? <SlaOverrideSettings /> : page === "watch" ? <WatchSettings /> : <IntroSettings />;
+  const content = page === "appearance" ? <AppearanceSettings /> : page === "finops" ? <FinopsRoutingSettings /> : page === "provider-connections" ? <ProviderConnectionsSettings /> : page === "sla-overrides" ? <SlaOverrideSettings /> : page === "watch" ? <WatchSettings /> : <IntroSettings />;
   return <div className="settings-layout"><SettingsRail page={page} /><main className={`settings-content settings-content-${page}`}>{content}</main></div>;
 };
