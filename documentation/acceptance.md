@@ -1,5 +1,21 @@
 # Release acceptance record
 
+## 0.0.86 production verification, 2026-10-03
+
+Source commit `ca4494e` was pushed to public `main` and deployed to the existing `my.sla` app in the designated production tenant. The senior UX review approved the Automate layout and case-to-Service-health return path before release.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Release checks | UI and API type checks, lint, 42 Jest suites with 228 tests, build, App Toolkit analysis, public source audit, and production dependency audit passed under Node 24.19.0 | Local release gate; the advisory endpoint required an elevated retry. The existing scoped `GHSA-vfj7-8cjw-p6xm` exception remains time limited to 2026-11-01 and its affected tree is absent from the built app bundles |
+| Installed version | `0.0.86 Current release` and the new navigation appeared in the installed change log | Connected Chrome production smoke after `dt-app deploy` completed |
+| Evidence work items | Provider-wide Problems appeared as one coverage action, while exact products appeared as investigations with separate episodes on drilldown | Installed Evidence queue; individual evidence and human decisions remain separate |
+| Automate entry | Overview showed native SLOs, route and feedback Workflow states, the decision path, and recent Grail recommendations without assuming a provider mapping from SLO names | Installed Automate page |
+| Service health | The separate Automate tab showed native SLOs with per-page status counts and an explicit unverified provider-mapping label | Installed Service health tab |
+| Setup and migration | Setup distinguished the reviewed Workflow pair from the earlier pair and blocked a duplicate product objective where an existing service SLO overlapped | Installed Setup tab; no SLO or Workflow was created during smoke |
+| Automatic controls | Automatic queueing and lane assignment were independently confirmed off after a reload | Installed FinOps routing settings and Automate overview; routing requires manual queueing |
+
+The production smoke did not submit a provider claim, create an SLO, create or change a Workflow, or run an inference request. A synthetic route, Grail and Phoenix trace correlation, human outcome annotation, and safe replacement of the earlier Workflow triggers remain open verification work.
+
 ## 0.0.80 local readiness, 2026-10-03
 
 | Check | Result | Evidence |
@@ -9,7 +25,7 @@
 | Workflow migration | Earlier FinOps Agent route and feedback Workflows were detected as deployed; replacement Workflow pair remains absent | Connected Chrome development smoke; old triggers were retained pending a verified synthetic changeover |
 
 
-This record retains the latest fully documented target-environment smoke evidence, which is for `0.0.76`, plus prior release records. This complements automated tests and is not a substitute for least-privilege and Playwright acceptance jobs.
+The newer production smoke above complements the earlier detailed scenario records. It is not a substitute for least-privilege and Playwright acceptance jobs.
 
 ## 0.0.76 verified scenarios
 
