@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.dynatrace.com/docs-assets/schema_strict_apps.json",
+  "dynatrace": "1",
+  "schemaId": "finops-routing",
+  "version": "1.0.0",
+  "displayName": "FinOps routing controls",
+  "description": "Workspace-wide opt-in controls for SLA FinOps routing.",
+  "documentation": "Automatic queueing starts only after a human marks a complete evidence package ready. Automatic lane assignment is a work queue suggestion, not a credit decision or provider filing. Both controls default to off.",
+  "multiObject": true,
+  "maxObjects": 1,
+  "summaryPattern": "{configurationKey}",
+  "searchPattern": "{configurationKey}",
+  "ordered": false,
+  "maturity": "GENERAL_AVAILABILITY",
+  "ownerBasedAccessControl": false,
+  "properties": {
+    "configurationKey": {
+      "displayName": "Configuration key",
+      "type": "text",
+      "default": "workspace",
+      "nullable": false,
+      "constraints": [{ "type": "NOT_BLANK" }]
+    },
+    "autoQueueAfterReady": {
+      "displayName": "Queue after human ready decision",
+      "type": "boolean",
+      "default": false,
+      "nullable": false
+    },
+    "autoAssignLane": {
+      "displayName": "Assign suggested work lane",
+      "type": "boolean",
+      "default": false,
+      "nullable": false
+    }
+  }
+}

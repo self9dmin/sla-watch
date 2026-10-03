@@ -10,7 +10,7 @@ Start with [Getting started and configuration](getting-started.md) for the opera
 | --- | --- |
 | Reader | Run the app and read the Dynatrace sources used by the views they need. Denied sources stay explicitly unavailable. |
 | Reviewer | Reader access plus App Settings write access for SLA matches, custom terms, and Evidence decisions. Add `slo:slos:write` only when the user should create an objective. |
-| Provider connection administrator | Reviewer access plus permission to use the selected Credential Vault record, provider-side least-privilege IAM, and the adapter's exact External requests hosts. |
+| Direct provider connection administrator | Reviewer access plus permission to use the selected Credential Vault record, provider-side least-privilege IAM, and the adapter's exact External requests hosts. Dynatrace-ingested AWS Health does not require this profile. |
 | Deployer | Separate `app-engine:apps:install` and `app-engine:apps:run` access for local or CI deployment. Runtime data access still follows the app and current user. |
 
 These profiles describe product responsibilities, not prebuilt Dynatrace groups. Grant only the rows and scopes each person needs.
@@ -19,7 +19,8 @@ These profiles describe product responsibilities, not prebuilt Dynatrace groups.
 
 | Scope | Operation | Deny behavior |
 | --- | --- | --- |
-| `storage:events:read` | Read Davis Problems | Show the Problem check as unavailable; do not claim there are no Problems |
+| `storage:events:read` | Read Davis Problems and Dynatrace-ingested AWS Health events | Show the Problem or provider-event check as unavailable; do not claim there are no Problems or provider events |
+| `storage:buckets:read` | Read the Grail buckets behind `dt.davis.problems` | Show Problems as unavailable; do not claim the tenant has no Problems |
 | `storage:metrics:read` | Read service request time series | Show metrics as unavailable; do not claim that traffic is absent |
 | `storage:logs:read` | Count recent log records | Show log count as unavailable |
 | `storage:spans:read` | Count recent spans | Show span count as unavailable |
@@ -42,7 +43,8 @@ These profiles describe product responsibilities, not prebuilt Dynatrace groups.
 | Problems, logs, spans, metrics | Current-user scope | None | Evidence posture becomes unknown when a read fails |
 | Smartscape relationships | Current-user scope | None | Host, runtime, and location assignments are unavailable when denied; names are not substituted |
 | `sla.directory` published terms | AppEngine external request allowlist | None | Published provider terms become unavailable when the function cannot run |
-| AWS Health account events | Current-user plus app access to a selected Credential Vault record, AWS Health API plan access, a base identity with `sts:AssumeRole` on the selected role, a role with `health:DescribeEvents`, `health:DescribeEventDetails`, and `health:DescribeAffectedEntities`, and the fixed STS and Health hosts | None | Assume the role per request, keep its temporary credential only in memory, verify the effective account with STS, retrieve bounded affected-resource identifiers, and show any account, support-plan, signing, IAM, or exact-correlation failure explicitly |
+| Dynatrace-ingested AWS Health events | Current-user `storage:events:read`; the monitored account's Dynatrace AWS connection must ingest Amazon EventBridge source `aws.health` | None | Query bounded Grail records, retain account, region, affected-resource, timing, service, and Smartscape context, and never treat an account-linked event as exact service impact |
+| Direct AWS Health fallback | Current-user plus app access to a selected Credential Vault record, AWS Health API plan access, a base identity with `sts:AssumeRole` on the selected role, a role with `health:DescribeEvents`, `health:DescribeEventDetails`, and `health:DescribeAffectedEntities`, and the fixed STS and Health hosts | None | Assume the role per request, keep its temporary credential only in memory, verify the effective account with STS, retrieve bounded affected-resource identifiers, and show any account, support-plan, signing, IAM, or exact-correlation failure explicitly |
 | Azure Service Health subscription events | Current-user plus app access to a selected Credential Vault record, `Microsoft.ResourceHealth/events/read` on the selected subscription, and the fixed Entra and Resource Manager hosts | None | Show the selected subscription source or its failure explicitly; never treat an event as proof of local impact |
 | Google Cloud provider notices | Public status, or current-user plus app access to a selected Credential Vault record and Google `roles/servicehealth.viewer` plus `roles/serviceusage.serviceUsageConsumer` | None | Show public, project-specific, or fallback source explicitly; never claim project impact from public status |
 | OCI tenancy announcements | Current-user plus app access to a selected Credential Vault record, OCI `ANNOUNCEMENT_LIST`, and the exact regional outbound host | None | Show the selected tenancy source or its failure explicitly; never treat an announcement as proof of local impact |

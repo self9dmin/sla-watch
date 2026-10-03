@@ -1,6 +1,6 @@
 {
   "name": "sla-review",
-  "version": "0.0.76",
+  "version": "0.0.78",
   "description": "Evidence-first provider review for Dynatrace",
   "scripts": {
     "build": "dt-app build",
@@ -17,11 +17,12 @@
     "typecheck:ui": "tsc -p ui/tsconfig.json --noEmit",
     "typecheck:api": "tsc -p api/tsconfig.json --noEmit",
     "test": "jest --config jest.config.cjs",
+    "test:finops": "node --test finops-agent/*.test.mjs",
     "test:ci": "jest --config jest.config.cjs --ci --coverage",
     "test:e2e": "playwright test",
     "assets:providers": "node scripts/vendor-provider-logos.mjs",
     "analyze": "dt-app analyze",
-    "audit:production": "npm audit --omit=dev",
+    "audit:production": "node scripts/audit-production.mjs",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run analyze",
     "verify:release": "npm run typecheck && npm run lint && npm run test:ci && npm run build && npm run analyze && npm run audit:production"
   },

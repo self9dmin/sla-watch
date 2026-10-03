@@ -33,6 +33,9 @@ const formatEnum = (value?: string): string => value
   : "Not provided";
 
 const SourceLabel = ({ response }: { response: ProviderNoticesResponse }) => {
+  if (response.delivery === "dynatrace") {
+    return <StatusPill tone="positive">Ingested by Dynatrace</StatusPill>;
+  }
   if (response.connectionState === "connected") {
     const label = response.provider === "aws"
       ? "Account-specific"
@@ -144,6 +147,7 @@ export const ProviderNotices = ({ providerSlug, lookbackHours, topology = [], em
           {response ? <SourceLabel response={response} /> : null}
           {source.accountConnectionSupported && source.savedConnections.length > 0 ? (
             <select className="provider-notice-source-select" value={source.effectiveConnectionKey} onChange={(event) => source.setSourceConnectionKey(event.target.value)} aria-label={`${source.providerName} notice scope`}>
+              {source.hasEnvironmentSource ? <option value="environment">Dynatrace-ingested AWS Health</option> : null}
               {source.savedConnections.map((item) => <option key={item.objectId} value={item.connectionKey}>{item.displayName} · {providerConnectionScopeId(item)}{item.providerSlug === "oci" ? ` · ${item.region}` : ""}</option>)}
               {source.hasPublicSource ? <option value="public">Public {source.providerName} status</option> : null}
             </select>
@@ -163,7 +167,7 @@ export const ProviderNotices = ({ providerSlug, lookbackHours, topology = [], em
       ) : !source.loading && source.error ? (
         <div className="error-box provider-notice-error"><strong>Provider evidence is unavailable.</strong><span>{source.error.message}</span><Button size="condensed" onClick={() => void source.refetch()}>Try again</Button></div>
       ) : source.loading || !response ? (
-        <div className="provider-notices-empty" role="status"><strong>Reading provider evidence</strong><span>{source.connection ? `Checking the configured ${source.connectionKind} source.` : `Checking the public ${source.providerName} status source.`}</span></div>
+        <div className="provider-notices-empty" role="status"><strong>Reading provider evidence</strong><span>{source.usingAwsEnvironmentSource ? "Checking AWS Health events already ingested into this Dynatrace environment." : source.connection ? `Checking the configured ${source.connectionKind} source.` : `Checking the public ${source.providerName} status source.`}</span></div>
       ) : response ? (
         <>
           <dl className="provider-notices-summary">
@@ -174,7 +178,7 @@ export const ProviderNotices = ({ providerSlug, lookbackHours, topology = [], em
           </dl>
           {response.warning ? <div className="provider-notice-warning" role="status"><strong>Source boundary</strong><span>{response.warning}</span></div> : null}
           {response.notices.length === 0 ? (
-            <div className="provider-notices-empty"><strong>{source.currentStateOnly ? "No current public OCI disruptions were returned." : `No ${source.providerName} notices were returned in the selected window.`}</strong><span>This means the provider source returned no matching event. It does not establish that the monitored services were healthy.</span></div>
+            <div className="provider-notices-empty"><strong>{source.currentStateOnly ? "No current public OCI disruptions were returned." : source.usingAwsEnvironmentSource ? "No AWS Health events are in Grail for this window." : `No ${source.providerName} notices were returned in the selected window.`}</strong><span>{source.usingAwsEnvironmentSource ? "Either no matching event occurred or AWS EventBridge health ingestion is not enabled for the monitored account. This does not establish that the monitored services were healthy." : "This means the provider source returned no matching event. It does not establish that the monitored services were healthy."}</span></div>
           ) : (
             <div className="provider-notices-layout">
               <aside className="provider-notice-queue" aria-label={`${source.providerName} provider evidence`}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { Slo } from "@dynatrace-sdk/client-service-level-objectives";
+import { businessEventsClient } from "@dynatrace-sdk/client-classic-environment-v2";
 import { Button } from "@dynatrace/strato-components/buttons";
 import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
@@ -39,6 +40,7 @@ import {
   type IncidentReviewCase,
 } from "../data/incidentReviewCases";
 import { formatDavisImpact } from "../data/problems";
+import { finopsRoutePacket } from "../data/finopsRoutePacket";
 import {
   buildEvidenceReviewArtifact,
   evidenceReviewArtifactFilename,
@@ -53,6 +55,7 @@ import {
 } from "../data/evidenceReviewState";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { useEvidenceDecisions } from "../hooks/useEvidenceDecisions";
+import { useFinopsRouting } from "../hooks/useFinopsRouting";
 import {
   useObjectiveEvaluations,
   type ObjectiveEvaluation,
@@ -239,6 +242,9 @@ const CandidateDetail = ({
   const [acknowledgedEvidence, setAcknowledgedEvidence] = useState<string[]>([]);
   const [saveError, setSaveError] = useState<string>();
   const [artifactFeedback, setArtifactFeedback] = useState<string>();
+  const [finopsQueueing, setFinopsQueueing] = useState(false);
+  const [queuedRequestId, setQueuedRequestId] = useState<string>();
+  const finopsRouting = useFinopsRouting();
   const affectedEntityIds = useMemo(
     () => Array.from(new Set(
       reviewCase.problems.flatMap((problem) => problem.affectedEntityIds),
@@ -310,18 +316,26 @@ const CandidateDetail = ({
     }
     setSaveError(undefined);
     try {
-      const result = await settings.saveDecisions(
-        reviewCase.candidates.map((item) => evidenceDecisionValue(
+      const values = reviewCase.candidates.map((item) => evidenceDecisionValue(
           item,
           provider.provider.slug,
           status,
           note,
           acknowledgedEvidence,
-        )),
-      );
+        ));
+      const result = await settings.saveDecisions(values);
       if (result.failures.length > 0)
         throw new Error(`${result.savedDecisionKeys.length} Problem decision${result.savedDecisionKeys.length === 1 ? " was" : "s were"} saved. ${result.failures.length} failed.`);
       if (result.refreshError) throw new Error(result.refreshError);
+      if (status === "validated" && finopsRouting.reliable && finopsRouting.config.autoQueueAfterReady) {
+        const readyArtifact = { ...artifact, review: {
+          ...artifact.review,
+          decisionStatus: "validated" as const,
+          reviewedAtUtc: values[0]?.reviewedAt ?? null,
+        } };
+        const packet = finopsRoutePacket(readyArtifact);
+        if (packet) await queueFinopsReview(packet, "automatic");
+      }
     } catch (error) {
       setSaveError(
         error instanceof Error
@@ -554,6 +568,38 @@ const CandidateDetail = ({
   const customerImpactReady = Boolean(reviewCase.startedAt) &&
     affectedEntityIds.length > 0;
 
+  const routePacket = currentDecision?.status === "validated"
+    ? finopsRoutePacket(artifact)
+    : null;
+  const queueFinopsReview = async (
+    packet: NonNullable<ReturnType<typeof finopsRoutePacket>>,
+    triggerMode: "manual" | "automatic",
+  ) => {
+    if (!finopsRouting.reliable || finopsQueueing || queuedRequestId === packet.requestId) return;
+    setFinopsQueueing(true);
+    setArtifactFeedback(undefined);
+    try {
+      await businessEventsClient.ingest({
+        type: "application/json; charset=utf-8",
+        body: {
+          "event.type": "sla.finops.review.ready",
+          "event.provider": "sla-review",
+          "finops.request_id": packet.requestId,
+          "finops.reviewed_at": packet.reviewedAt,
+          "finops.trigger_mode": triggerMode,
+          "finops.auto_assign_lane": finopsRouting.config.autoAssignLane,
+          "finops.packet": JSON.stringify(packet),
+        },
+      });
+      setQueuedRequestId(packet.requestId);
+      setArtifactFeedback("FinOps routing queued. Review the agent result in Dynatrace before any provider contact.");
+    } catch {
+      setArtifactFeedback("FinOps routing could not be queued. The evidence review remains saved.");
+    } finally {
+      setFinopsQueueing(false);
+    }
+  };
+
   const copyFollowUpSummary = async () => {
     setArtifactFeedback(undefined);
     const summary = formatEvidenceFollowUpSummary(artifact);
@@ -717,6 +763,15 @@ const CandidateDetail = ({
             <Button size="condensed" disabled={!settings.canWrite || settings.mutating} onClick={() => void resetDecision()}>
               Reopen review
             </Button>
+            {currentDecision.status === "validated" ? (
+              <Button size="condensed" disabled={!routePacket || !finopsRouting.reliable || finopsQueueing || queuedRequestId === routePacket.requestId}
+                onClick={() => { if (routePacket) void queueFinopsReview(routePacket, "manual"); }}>
+                {finopsQueueing ? "Queueing" : queuedRequestId === routePacket?.requestId ? "Queued" : "Queue FinOps review"}
+              </Button>
+            ) : null}
+            {currentDecision.status === "validated" && !routePacket ? (
+              <small>FinOps routing needs one closed Problem, one affected service, one provider service, confirmed scope, customer availability below the SLA target, and no missing requirements.</small>
+            ) : null}
           </div>
         ) : (
           <>

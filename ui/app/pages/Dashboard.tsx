@@ -7,6 +7,7 @@ import {
   Paragraph,
 } from "@dynatrace/strato-components/typography";
 import { EvidenceWorkspace } from "../components/EvidenceWorkspace";
+import { FinopsWorkspace } from "../components/FinopsWorkspace";
 import { IncidentReview } from "../components/IncidentReview";
 import { CoverageWorkspace } from "../components/CoverageWorkspace";
 import { PerformanceWorkspace } from "../components/PerformanceWorkspace";
@@ -160,6 +161,7 @@ const WATCH_LINKS: ReadonlyArray<{
     to: "/directory",
     tour: "directory",
   },
+  { section: "finops", label: "FinOps Agent", to: "/finops", tour: "finops" },
 ];
 
 const WatchNavigation = ({ section, providerSlug }: { section: WatchSection; providerSlug: string }) => (
@@ -177,22 +179,6 @@ const WatchNavigation = ({ section, providerSlug }: { section: WatchSection; pro
         {item.label}
       </Link>
     ))}
-    <span
-      className="section-tab-future"
-      title="Planned for a future AppEngine agent release"
-    >
-      <button
-        type="button"
-        className="section-tab section-tab-disabled"
-        disabled
-        aria-label="FinOps Agent, planned for a future AppEngine agent release"
-      >
-        FinOps Agent
-        <span className="section-tab-status" aria-hidden="true">
-          Planned
-        </span>
-      </button>
-    </span>
   </nav>
 );
 
@@ -458,20 +444,13 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     providerTagKey: providerLabelKey,
     assignments: scopeSettings.assignments,
   }), [directoryData, problems, providerEvidence, providerLabelKey, scopeSettings.assignments, selectedProviderSlug, services]);
-  const matchedProviderServices = coverageModel.coveredRows.length;
-  const suggestedServiceCount = coverageModel.reviewRows.length;
-  const unattributedServiceCount = coverageModel.unattributedRows.length;
+  const matchedProviderScopes = coverageModel.coveredRows.length;
+  const matchedProviderServices = coverageModel.matchedServiceCount;
+  const suggestedServiceCount = coverageModel.reviewServiceCount;
+  const reviewScopeCount = coverageModel.reviewRows.length;
   const taggedProviderServices = coverageModel.taggedServiceCount;
-  const evaluatedServiceCount = coverageModel.rows.length;
-  const evaluatedServiceLabel = `${evaluatedServiceCount.toLocaleString()} environment service${evaluatedServiceCount === 1 ? "" : "s"} checked`;
-  const providerSlaMatchDetail = suggestedServiceCount > 0
-    ? `${evaluatedServiceLabel} · ${suggestedServiceCount.toLocaleString()} need review · ${unattributedServiceCount.toLocaleString()} without an SLA match`
-    : matchedProviderServices === 0
-      ? `${evaluatedServiceLabel}; none matched`
-      : unattributedServiceCount > 0
-        ? `${evaluatedServiceLabel} · ${unattributedServiceCount.toLocaleString()} without an SLA match`
-        : `${evaluatedServiceLabel}; all matched`;
-  const providerInfrastructureCandidate = matchedProviderServices === 0
+  const providerSlaMatchDetail = `${coverageModel.resourceRows.length.toLocaleString()} linked resource${coverageModel.resourceRows.length === 1 ? "" : "s"} · ${coverageModel.linkedServiceCount.toLocaleString()} dependent service${coverageModel.linkedServiceCount === 1 ? "" : "s"}${reviewScopeCount > 0 ? ` · ${reviewScopeCount.toLocaleString()} scope${reviewScopeCount === 1 ? "" : "s"} need review` : ""}`;
+  const providerInfrastructureCandidate = matchedProviderScopes === 0
     ? buildProviderInfrastructureCandidate({
         providerSlug: selectedProviderSlug,
         inventory: selectedProviderInventory,
@@ -547,9 +526,9 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
           ? "Terms unavailable"
           : inventoryStatus.incomplete || inventoryStatus.unverified
             ? "Inventory incomplete"
-          : suggestedServiceCount > 0
+          : reviewScopeCount > 0
             ? "Review needed"
-              : matchedProviderServices > 0
+              : matchedProviderScopes > 0
                 ? "Coverage ready"
               : providerInfrastructureCandidate
                 ? "Infrastructure detected"
@@ -559,7 +538,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
       ? "neutral"
       : telemetryError || !directoryData || inventoryStatus.incomplete || inventoryStatus.unverified
         ? "warning"
-        : suggestedServiceCount > 0 || matchedProviderServices === 0
+        : reviewScopeCount > 0 || matchedProviderScopes === 0
           ? "warning"
           : "positive";
 
@@ -685,7 +664,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 value={
                   servicesLoading || inventoryLoading || scopeSettings.loading
                     ? "Checking"
-                    : matchedProviderServices.toLocaleString()
+                    : matchedProviderScopes.toLocaleString()
                 }
                 detail={providerSlaMatchDetail}
                 tone={
@@ -693,7 +672,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                     ? "neutral"
                     : inventoryStatus.incomplete || inventoryStatus.unverified
                       ? "warning"
-                    : suggestedServiceCount > 0 || matchedProviderServices === 0
+                    : reviewScopeCount > 0 || matchedProviderScopes === 0
                       ? "warning"
                       : "positive"
                 }
@@ -701,9 +680,11 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               <OverviewFact
                 label="Incidents"
                 value={
-                  problemsLoading ? "Checking" : `${activeProblems} active`
+                  problemsLoading ? "Checking" : problemError ? "Unavailable" : `${activeProblems} active`
                 }
-                detail={`${problems.length} observed in ${formatEvidenceLookback(lookbackHours)}`}
+                detail={problemError
+                  ? "Problem query could not be completed"
+                  : `${problems.length} observed in ${formatEvidenceLookback(lookbackHours)}`}
                 tone={
                   problemsLoading
                     ? "neutral"
@@ -773,6 +754,8 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               serviceError={serviceError ?? incidentServicesQuery.error ?? undefined}
             />
           </Surface>
+        ) : section === "finops" ? (
+          <FinopsWorkspace providerSlug={selectedProviderSlug} />
         ) : section === "incidents" ? (
           <IncidentReview
             provider={directoryData}

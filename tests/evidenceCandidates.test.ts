@@ -7,6 +7,7 @@ import {
   MAX_EVIDENCE_DECISION_NOTE_LENGTH,
   normalizeEvidenceDecision,
 } from "../ui/app/data/evidenceCandidates";
+import { createResourceScopeAssignment } from "../ui/app/data/providerScopeAssignments";
 import type {
   ProblemRecord,
   ProviderScopeAssignmentRecord,
@@ -114,6 +115,40 @@ describe("evidence candidates", () => {
       scopeConfirmed: true,
       providerServiceIds: ["ec2"],
     });
+  });
+
+  it("reuses a confirmed resource match only when the affected service has an exact topology edge", () => {
+    const resourceAssignment: ProviderScopeAssignmentRecord = {
+      ...createResourceScopeAssignment({
+        providerSlug: "aws",
+        providerServiceId: "ec2",
+        providerServiceName: "Amazon EC2",
+        runtimeEntityId: "AWS_EC2_INSTANCE-1",
+        runtimeEntityName: "checkout-runtime",
+        runtimeType: "AWS_EC2_INSTANCE",
+      }),
+      objectId: "resource-setting",
+      version: "1",
+    };
+    const [linked] = buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [service],
+      topology: [edge],
+      assignments: [resourceAssignment],
+      providerLabelKey: "provider",
+    });
+    expect(linked).toMatchObject({ mappingBasis: "confirmed-scope", providerServiceIds: ["ec2"] });
+
+    const [unlinked] = buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [service],
+      topology: [{ ...edge, targetClassicId: "AWS_EC2_INSTANCE-2" }],
+      assignments: [resourceAssignment],
+      providerLabelKey: "provider",
+    });
+    expect(unlinked).toMatchObject({ mappingBasis: "smartscape-observed" });
   });
 
   it("uses provider-native Smartscape topology without a saved mapping", () => {

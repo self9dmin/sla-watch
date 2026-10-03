@@ -1,5 +1,5 @@
-import { buildProviderCoverageModel, rowServiceId } from "../ui/app/data/providerCoverage";
-import { createServiceScopeAssignment } from "../ui/app/data/providerScopeAssignments";
+import { buildProviderCoverageModel, rowServiceIds } from "../ui/app/data/providerCoverage";
+import { createResourceScopeAssignment } from "../ui/app/data/providerScopeAssignments";
 import type {
   ProblemRecord,
   ProviderScopeAssignmentRecord,
@@ -91,34 +91,34 @@ const build = (assignments: ProviderScopeAssignmentRecord[] = []) =>
   });
 
 describe("provider coverage model", () => {
-  it("uses one row and one status per service", () => {
+  it("leads with exact provider resources and leaves unrelated inventory out of the worklist", () => {
     const model = build();
 
     expect(model.rows).toHaveLength(4);
-    expect(model.rows.map(rowServiceId)).toEqual(expect.arrayContaining([
-      "SERVICE-1",
-      "SERVICE-2",
-      "SERVICE-3",
-      "SERVICE-4",
-    ]));
-    expect(model.coveredRows.map(rowServiceId).sort()).toEqual([
+    expect(model.resourceRows).toHaveLength(3);
+    expect(model.rows.flatMap(rowServiceIds)).not.toContain("SERVICE-4");
+    expect(model.coveredRows.flatMap(rowServiceIds).sort()).toEqual([
       "SERVICE-1",
       "SERVICE-3",
     ]);
-    expect(model.reviewRows.map(rowServiceId)).toEqual(["SERVICE-2"]);
-    expect(model.unattributedRows.map(rowServiceId)).toEqual(["SERVICE-4"]);
+    expect(model.reviewRows.flatMap(rowServiceIds).sort()).toEqual(["SERVICE-1", "SERVICE-2"]);
+    expect(model.unattributedRows).toHaveLength(0);
     expect(model.taggedServiceCount).toBe(1);
-    expect(model.observedServiceCount).toBe(1);
+    expect(model.observedResourceCount).toBe(1);
+    expect(model.linkedServiceCount).toBe(2);
+    expect(model.matchedServiceCount).toBe(2);
+    expect(model.unlinkedServiceCount).toBe(2);
   });
 
-  it("moves a reviewed service into covered without changing the total", () => {
+  it("confirms one resource match without copying it to an unrelated service", () => {
     const assignment: ProviderScopeAssignmentRecord = {
-      ...createServiceScopeAssignment({
+      ...createResourceScopeAssignment({
         providerSlug: "aws",
         providerServiceId: "ec2",
         providerServiceName: "Amazon EC2",
-        serviceEntityId: "SERVICE-2",
-        serviceEntityName: "Checkout",
+        runtimeEntityId: "HOST-2",
+        runtimeEntityName: "ip-10-0-0-2.ec2.internal",
+        runtimeType: "HOST",
       }),
       objectId: "assignment-1",
       version: "1",
@@ -126,12 +126,30 @@ describe("provider coverage model", () => {
     const model = build([assignment]);
 
     expect(model.rows).toHaveLength(4);
-    expect(model.coveredRows.map(rowServiceId).sort()).toEqual([
-      "SERVICE-1",
-      "SERVICE-2",
-      "SERVICE-3",
-    ]);
-    expect(model.reviewRows).toHaveLength(0);
-    expect(model.unattributedRows.map(rowServiceId)).toEqual(["SERVICE-4"]);
+    expect(model.coveredRows.flatMap(rowServiceIds).sort()).toEqual(["SERVICE-1", "SERVICE-2", "SERVICE-3"]);
+    expect(model.reviewRows.flatMap(rowServiceIds)).toEqual(["SERVICE-1"]);
+    expect(model.matchedServiceCount).toBe(3);
+    expect(model.unlinkedServiceCount).toBe(2);
+  });
+
+  it("shows one resource row when multiple services depend on the same runtime", () => {
+    const shared = edge({
+      serviceNodeId: "checkout-service",
+      serviceClassicId: "SERVICE-2",
+      serviceName: "Checkout",
+    });
+    const model = buildProviderCoverageModel({
+      provider,
+      providerSlug: "aws",
+      topology: [...topology, shared],
+      services,
+      problems,
+      providerTagKey: "provider",
+      assignments: [],
+    });
+    const resource = model.resourceRows.find((row) => row.edge.targetClassicId === "AWS_EC2_INSTANCE-1");
+    expect(resource).toBeDefined();
+    expect(resource?.edges).toHaveLength(2);
+    expect(resource && rowServiceIds(resource).sort()).toEqual(["SERVICE-1", "SERVICE-2"]);
   });
 });

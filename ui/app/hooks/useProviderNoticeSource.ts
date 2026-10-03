@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAppFunction } from "@dynatrace-sdk/react-hooks";
+import { useAppFunction, useDql } from "@dynatrace-sdk/react-hooks";
 import type {
   AwsProviderNoticesResponse,
   AzureProviderNoticesResponse,
@@ -11,6 +11,8 @@ import type {
 } from "../types";
 import { providerConnectionScopeId } from "../data/providerConnections";
 import { providerDisplayName } from "../data/providers";
+import { parseAwsHealthEventRecords } from "../data/awsHealthEvents";
+import { createAwsHealthEventsQuery } from "../data/queries";
 import { useProviderConnections } from "./useProviderConnections";
 
 const PUBLIC_STATUS_PROVIDERS = new Set([
@@ -32,13 +34,17 @@ export const useProviderNoticeSource = (
     [connectionSettings.connections, providerSlug],
   );
   const [sourceConnectionKey, setSourceConnectionKey] = useState("auto");
+  const hasEnvironmentSource = providerSlug === "aws";
   const hasPublicSource = providerSlug === "gcp" ||
     PUBLIC_STATUS_PROVIDERS.has(providerSlug);
-  const defaultConnectionKey = savedConnections[0]?.connectionKey ??
+  const defaultConnectionKey = hasEnvironmentSource
+    ? "environment"
+    : savedConnections[0]?.connectionKey ??
     (hasPublicSource ? "public" : "unconfigured");
   const effectiveConnectionKey = sourceConnectionKey === "auto"
     ? defaultConnectionKey
-    : (sourceConnectionKey === "public" && hasPublicSource) ||
+    : (sourceConnectionKey === "environment" && hasEnvironmentSource) ||
+      (sourceConnectionKey === "public" && hasPublicSource) ||
       savedConnections.some((item) => item.connectionKey === sourceConnectionKey)
       ? sourceConnectionKey
       : defaultConnectionKey;
@@ -53,8 +59,9 @@ export const useProviderNoticeSource = (
     gcpSupported || ociSupported;
   const publicSupported = PUBLIC_STATUS_PROVIDERS.has(providerSlug);
   const supported = accountConnectionSupported || publicSupported;
-  const configuredSourceRequired = (awsSupported || azureSupported) &&
-    !connection;
+  const usingAwsEnvironmentSource = awsSupported &&
+    effectiveConnectionKey === "environment";
+  const configuredSourceRequired = azureSupported && !connection;
   const providerName = providerDisplayName(providerSlug);
   const connectionKind = awsSupported
     ? "account"
@@ -123,6 +130,14 @@ export const useProviderNoticeSource = (
     },
     { autoFetch: false, autoFetchOnUpdate: false },
   );
+  const awsEnvironmentQueryText = useMemo(
+    () => createAwsHealthEventsQuery(lookbackHours),
+    [lookbackHours],
+  );
+  const awsEnvironmentQuery = useDql(
+    { query: awsEnvironmentQueryText },
+    { enabled: usingAwsEnvironmentSource },
+  );
   const query = awsSupported && connection
     ? awsQuery
     : azureSupported && connection
@@ -132,7 +147,9 @@ export const useProviderNoticeSource = (
         : ociSupported && connection
           ? ociQuery
           : publicQuery;
-  const activeRequest = awsSupported && connection
+  const activeRequest = usingAwsEnvironmentSource
+    ? { source: "grail", lookbackHours }
+    : awsSupported && connection
     ? awsRequest
     : azureSupported && connection
       ? azureRequest
@@ -143,18 +160,28 @@ export const useProviderNoticeSource = (
           : publicRequest;
   const requestKey = `${providerSlug}:${effectiveConnectionKey}:${JSON.stringify(activeRequest)}`;
   const requestedKey = useRef<string>();
-  const response = query.data?.provider === providerSlug
-    ? query.data as ProviderNoticesResponse
-    : undefined;
+  const awsEnvironmentResponse = useMemo(
+    () => usingAwsEnvironmentSource && awsEnvironmentQuery.isSuccess
+      ? parseAwsHealthEventRecords(awsEnvironmentQuery.data)
+      : undefined,
+    [awsEnvironmentQuery.data, awsEnvironmentQuery.isSuccess, usingAwsEnvironmentSource],
+  );
+  const response = usingAwsEnvironmentSource
+    ? awsEnvironmentResponse
+    : query.data?.provider === providerSlug
+      ? query.data as ProviderNoticesResponse
+      : undefined;
 
   const refetch = useCallback(async () => {
-    if (awsSupported && connection) await awsQuery.refetch();
+    if (usingAwsEnvironmentSource) await awsEnvironmentQuery.forceRefetch();
+    else if (awsSupported && connection) await awsQuery.refetch();
     else if (azureSupported && connection) await azureQuery.refetch();
     else if (gcpSupported) await gcpQuery.refetch();
     else if (ociSupported && connection) await ociQuery.refetch();
     else await publicQuery.refetch();
   }, [
     awsQuery,
+    awsEnvironmentQuery,
     awsSupported,
     azureQuery,
     azureSupported,
@@ -164,6 +191,7 @@ export const useProviderNoticeSource = (
     ociQuery,
     ociSupported,
     publicQuery,
+    usingAwsEnvironmentSource,
   ]);
 
   useEffect(() => {
@@ -173,6 +201,7 @@ export const useProviderNoticeSource = (
   useEffect(() => {
     if (
       !supported ||
+      usingAwsEnvironmentSource ||
       configuredSourceRequired ||
       (accountConnectionSupported && connectionSettings.loading) ||
       requestedKey.current === requestKey
@@ -186,19 +215,22 @@ export const useProviderNoticeSource = (
     refetch,
     requestKey,
     supported,
+    usingAwsEnvironmentSource,
   ]);
 
   return {
     response,
-    loading: (accountConnectionSupported && connectionSettings.loading) ||
-      query.isLoading,
-    error: query.error,
+    loading: (!usingAwsEnvironmentSource && accountConnectionSupported && connectionSettings.loading) ||
+      (usingAwsEnvironmentSource ? awsEnvironmentQuery.isLoading : query.isLoading),
+    error: usingAwsEnvironmentSource ? awsEnvironmentQuery.error : query.error,
     refetch,
     sourceConnectionKey,
     setSourceConnectionKey,
     effectiveConnectionKey,
     savedConnections,
     connection,
+    hasEnvironmentSource,
+    usingAwsEnvironmentSource,
     hasPublicSource,
     accountConnectionSupported,
     supported,
@@ -209,7 +241,8 @@ export const useProviderNoticeSource = (
       response?.projectId ?? "Public provider status",
     sourceScopeId: connection ? providerConnectionScopeId(connection) : null,
     currentStateOnly: providerSlug === "oci" && response?.source === "public",
-    showHeaderSourceAction: !configuredSourceRequired && supported && Boolean(
+    showHeaderSourceAction: !usingAwsEnvironmentSource &&
+      !configuredSourceRequired && supported && Boolean(
       response || savedConnections.length > 0 || hasPublicSource,
     ),
   };

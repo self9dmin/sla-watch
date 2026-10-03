@@ -98,6 +98,11 @@ export const isServiceScopeAssignment = (
 ): boolean => assignment.runtimeType === SERVICE_LEVEL_SCOPE_TYPE &&
   assignment.runtimeEntityId === assignment.serviceEntityId;
 
+export const isResourceScopeAssignment = (
+  assignment: Pick<ProviderScopeAssignmentValue, "serviceEntityId" | "runtimeEntityId" | "runtimeType">,
+): boolean => assignment.runtimeType !== SERVICE_LEVEL_SCOPE_TYPE &&
+  assignment.runtimeEntityId === assignment.serviceEntityId;
+
 export const createServiceScopeAssignment = ({
   providerSlug,
   providerServiceId,
@@ -124,6 +129,44 @@ export const createServiceScopeAssignment = ({
   evidence: providerServiceId === "*"
     ? `Operator confirmed ${serviceEntityName} uses this provider.`
     : `Operator confirmed ${providerServiceName} terms for ${serviceEntityName}.`,
+  enabled: true,
+});
+
+export const createResourceScopeAssignment = ({
+  providerSlug,
+  providerServiceId,
+  providerServiceName,
+  runtimeEntityId,
+  runtimeEntityName,
+  runtimeType,
+  location,
+}: {
+  providerSlug: string;
+  providerServiceId: string;
+  providerServiceName: string;
+  runtimeEntityId: string;
+  runtimeEntityName: string;
+  runtimeType: string;
+  location?: string | null;
+}): ProviderScopeAssignmentValue => ({
+  assignmentKey: createProviderScopeAssignmentKey(
+    providerSlug,
+    runtimeEntityId,
+    runtimeEntityId,
+  ),
+  providerSlug: providerSlug.trim().toLowerCase(),
+  providerServiceId,
+  providerServiceName,
+  // The legacy settings schema requires a service anchor. Reusing the exact
+  // resource ID makes this a single resource-scoped record without copying the
+  // decision to every dependent service.
+  serviceEntityId: runtimeEntityId,
+  serviceEntityName: runtimeEntityName,
+  runtimeEntityId,
+  runtimeEntityName,
+  runtimeType,
+  location: location ?? null,
+  evidence: `Operator confirmed ${providerServiceName} terms for provider resource ${runtimeEntityName}.`,
   enabled: true,
 });
 
