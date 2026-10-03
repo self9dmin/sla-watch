@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.82
+
+- Shows the installed release and Automate changes in the in-app change log. Version 0.0.81 installed successfully; its change log still showed 0.0.79 as current.
+
 ## 0.0.81
 
 - Keeps the three-step Automate experience and guarded product-scope SLO creation.

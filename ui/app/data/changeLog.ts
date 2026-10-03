@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.79",
+    version: "0.0.82",
     label: "Current release",
+    summary: "Brought product-scope automation into SLA Review.",
+    details: [
+      "Identify, Evaluate, and Automate now guide the review, with Coverage as the landing page and a shorter Evidence layout.",
+      "Automate proposes one customer screening objective per exact provider product, account, and region. Overlapping objectives or incomplete evidence block creation.",
+      "Automate shows route and feedback Workflow status. Authorized operators create private drafts in Dynatrace Workflows because customer apps cannot request Workflow write access.",
+      "Automatic queueing and lane assignment remain off by default. The model cannot decide credit eligibility or file a claim.",
+    ],
+  },
+  {
+    version: "0.0.79",
+    label: "Previous release",
     summary: "Clarified setup and permissions for the optional FinOps pilot.",
     details: [
       "Getting started now separates the core review from the separately configured local FinOps gateway and Workflows.",
