@@ -8,6 +8,7 @@ Status recorded 2026-10-02 EDT (2026-10-03 UTC). This is an evidence log, not a 
 - Canonical GitHub repository: `self9dmin/sla-watch`. Its `main` was `f1c9e6c2f4d6730276e85dc9e25ba7cc4e8a69a7` at staging. The installed app was `0.0.76`.
 - The `0.0.78` release checkout combines the uncommitted production-app work from `C:\temp\DTapp\projects\SLA-workspace\sla` with the FinOps pilot from `C:\temp\Codex\sla-watch`. Neither source checkout was overwritten.
 - In the release checkout, typecheck, 12 FinOps tests, 211 repository tests, lint, build, bundle analysis, and an App Toolkit production-tenant dry run passed. A dry run does not deploy the app.
+- On 2026-10-02, the production dependency audit found high-severity `GHSA-vfj7-8cjw-p6xm` in `braces` through Dynatrace's `devkit` dependency tree. The advisory listed no patched version. Neither `braces`, `micromatch`, nor `@dynatrace/devkit` appeared in the generated UI or function bundle metafiles or external imports. CI has a temporary exception only for this exact five-package advisory tree, only while those packages are absent from both bundles, expiring 2026-11-01 UTC. Any changed or new advisory, failed audit request, missing bundle proof, or expired exception fails the gate. This is a build-dependency risk decision, not a claim that the package is fixed.
 
 ## Verified private route and local inference
 
