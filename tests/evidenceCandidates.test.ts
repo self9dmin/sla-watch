@@ -187,7 +187,7 @@ describe("evidence candidates", () => {
     });
   });
 
-  it("accepts distinct provider-native services across one Problem", () => {
+  it("keeps a Problem spanning distinct provider-native services unresolved", () => {
     const lambdaService = { ...service, id: "SERVICE-2", name: "Worker" };
     const [candidate] = buildEvidenceCandidates({
       provider,
@@ -211,7 +211,7 @@ describe("evidence candidates", () => {
     });
     expect(candidate).toMatchObject({
       mappingBasis: "smartscape-observed",
-      scopeConfirmed: true,
+      scopeConfirmed: false,
     });
     expect(candidate.providerServiceIds).toEqual(["ec2", "lambda"]);
   });
@@ -260,7 +260,7 @@ describe("evidence candidates", () => {
     });
     expect(candidate).toMatchObject({
       mappingBasis: "provider-tag",
-      scopeConfirmed: true,
+      scopeConfirmed: false,
     });
     expect(buildEvidenceCandidates({
       provider,
@@ -270,6 +270,24 @@ describe("evidence candidates", () => {
       assignments: [],
       providerLabelKey: "provider",
     })).toEqual([]);
+  });
+
+  it("does not apply product terms or reuse a completed review for a provider-wide assignment", () => {
+    const [candidate] = buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [service],
+      topology: [],
+      assignments: [{ ...assignment, providerServiceId: "*", providerServiceName: "AWS" }],
+      providerLabelKey: "provider",
+    });
+    expect(candidate).toMatchObject({
+      mappingBasis: "confirmed-scope",
+      providerServiceIds: ["*"],
+      scopeConfirmed: false,
+    });
+    const prior = evidenceDecisionValue(candidate, "aws", "validated", "Earlier review");
+    expect(evidenceDecisionMatchesCandidate(prior, candidate)).toBe(false);
   });
 
   it("creates and normalizes a conservative human review record", () => {

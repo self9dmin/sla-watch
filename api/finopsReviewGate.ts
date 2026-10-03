@@ -31,7 +31,7 @@ export const currentFinopsReviewIsValid = (
   if (!record(request) ||
       typeof request.providerSlug !== "string" || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(request.providerSlug) ||
       typeof request.problemId !== "string" || !request.problemId || request.problemId.length > 160 ||
-      typeof request.providerServiceId !== "string" || !request.providerServiceId || request.providerServiceId.length > 160 ||
+      typeof request.providerServiceId !== "string" || !request.providerServiceId || request.providerServiceId === "*" || request.providerServiceId.length > 160 ||
       typeof request.reviewedAt !== "string" || !Number.isFinite(Date.parse(request.reviewedAt)) ||
       !["manual", "automatic"].includes(request.triggerMode) ||
       typeof request.autoAssignLane !== "boolean" ||

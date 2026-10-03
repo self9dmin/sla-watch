@@ -178,18 +178,20 @@ test.describe("SLA Review deployed smoke", () => {
     }
     await expectNoPageScroll(app);
 
-    await stageNavigation.getByRole("link", { name: /Evaluate/ }).click();
-    await app.getByRole("navigation", { name: "Evaluate views" }).getByRole("link", { name: "Performance" }).click();
+    await stageNavigation.getByRole("link", { name: /Automate/ }).click();
+    await expect(app.getByRole("heading", { name: "Existing SLOs" })).toBeVisible();
+    await expect(app.getByRole("heading", { name: "Decision workflow" })).toBeVisible();
+    await app.getByRole("navigation", { name: "Automate views" }).getByRole("link", { name: "Service health" }).click();
     await expect(
-      app.getByRole("heading", { name: "Performance" }),
+      app.getByRole("heading", { name: "Service health" }),
     ).toBeVisible();
     await expect(
-      app.getByLabel("Performance status").locator(".overview-fact"),
+      app.getByLabel("Service health status").locator(".overview-fact"),
     ).toHaveCount(4);
     const objectiveRegion = app.getByRole("region", {
       name: "Customer objectives",
     });
-    const emptyPerformance = app.getByText(/No customer objectives for/);
+    const emptyPerformance = app.getByText(/No Dynatrace SLOs found/);
     await expect(objectiveRegion.or(emptyPerformance)).toBeVisible();
     await expect(app.getByText("Service objectives")).toBeVisible();
     await expect(
@@ -200,6 +202,9 @@ test.describe("SLA Review deployed smoke", () => {
     await stageNavigation.getByRole("link", { name: /Identify/ }).click();
     await expect(app.getByRole("heading", { name: "Coverage" })).toBeVisible();
     await expectNoPageScroll(app);
+
+    await app.getByRole("navigation", { name: "Automate views" }).getByRole("link", { name: "Setup" }).click();
+    await expect(app.getByRole("heading", { name: "Automation setup" })).toBeVisible();
 
     await stageNavigation.getByRole("link", { name: /Evaluate/ }).click();
     await expect(

@@ -1,5 +1,5 @@
 import { buildProviderCoverageModel, rowServiceIds } from "../ui/app/data/providerCoverage";
-import { createResourceScopeAssignment } from "../ui/app/data/providerScopeAssignments";
+import { createResourceScopeAssignment, createServiceScopeAssignment } from "../ui/app/data/providerScopeAssignments";
 import type {
   ProblemRecord,
   ProviderScopeAssignmentRecord,
@@ -99,14 +99,13 @@ describe("provider coverage model", () => {
     expect(model.rows.flatMap(rowServiceIds)).not.toContain("SERVICE-4");
     expect(model.coveredRows.flatMap(rowServiceIds).sort()).toEqual([
       "SERVICE-1",
-      "SERVICE-3",
     ]);
-    expect(model.reviewRows.flatMap(rowServiceIds).sort()).toEqual(["SERVICE-1", "SERVICE-2"]);
+    expect(model.reviewRows.flatMap(rowServiceIds).sort()).toEqual(["SERVICE-1", "SERVICE-2", "SERVICE-3"]);
     expect(model.unattributedRows).toHaveLength(0);
     expect(model.taggedServiceCount).toBe(1);
     expect(model.observedResourceCount).toBe(1);
     expect(model.linkedServiceCount).toBe(2);
-    expect(model.matchedServiceCount).toBe(2);
+    expect(model.matchedServiceCount).toBe(1);
     expect(model.unlinkedServiceCount).toBe(2);
   });
 
@@ -126,9 +125,9 @@ describe("provider coverage model", () => {
     const model = build([assignment]);
 
     expect(model.rows).toHaveLength(4);
-    expect(model.coveredRows.flatMap(rowServiceIds).sort()).toEqual(["SERVICE-1", "SERVICE-2", "SERVICE-3"]);
-    expect(model.reviewRows.flatMap(rowServiceIds)).toEqual(["SERVICE-1"]);
-    expect(model.matchedServiceCount).toBe(3);
+    expect(model.coveredRows.flatMap(rowServiceIds).sort()).toEqual(["SERVICE-1", "SERVICE-2"]);
+    expect(model.reviewRows.flatMap(rowServiceIds).sort()).toEqual(["SERVICE-1", "SERVICE-3"]);
+    expect(model.matchedServiceCount).toBe(2);
     expect(model.unlinkedServiceCount).toBe(2);
   });
 
@@ -151,5 +150,18 @@ describe("provider coverage model", () => {
     expect(resource).toBeDefined();
     expect(resource?.edges).toHaveLength(2);
     expect(resource && rowServiceIds(resource).sort()).toEqual(["SERVICE-1", "SERVICE-2"]);
+  });
+
+  it("keeps a provider-wide operator assignment in product review", () => {
+    const broad = createServiceScopeAssignment({
+      providerSlug: "aws",
+      providerServiceId: "*",
+      providerServiceName: "AWS",
+      serviceEntityId: "SERVICE-3",
+      serviceEntityName: "Tagged",
+    });
+    const model = build([{ ...broad, objectId: "broad", version: "1" }]);
+    expect(model.coveredRows.flatMap(rowServiceIds)).not.toContain("SERVICE-3");
+    expect(model.reviewRows.flatMap(rowServiceIds)).toContain("SERVICE-3");
   });
 });

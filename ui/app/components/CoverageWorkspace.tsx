@@ -121,7 +121,7 @@ export const CoverageWorkspace = ({
     focusedProblemId ? `/evidence?provider=${encodeURIComponent(providerSlug)}&problem=${encodeURIComponent(focusedProblemId)}` : "/evidence",
   );
   const assignmentDisplayName = (assignment: ProviderScopeAssignmentRecord): string =>
-    assignment.providerServiceId === "*" ? `${providerName} default terms` : assignment.providerServiceName;
+    assignment.providerServiceId === "*" ? `${providerName} (product not specified)` : assignment.providerServiceName;
   const coverageRows = coverageModel.rows;
   const reviewRows = coverageModel.reviewRows;
   const coveredRows = coverageModel.coveredRows;
@@ -395,7 +395,7 @@ export const CoverageWorkspace = ({
           <span className="scope-connector"><span aria-hidden="true" /><small>used by</small></span>
           <span className="scope-node"><ServicesIcon /><span><small>{impactServices.length} dependent service{impactServices.length === 1 ? "" : "s"}</small><strong>{impactSummary}</strong></span></span>
           <span className="scope-connector"><span aria-hidden="true" /><small>SLA terms</small></span>
-          <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{row.mixedAssignments ? "Conflicting matches" : assignment ? "Confirmed resource" : row.observed ? "Observed resource" : row.ambiguous ? "Ambiguous" : row.problemCount > 0 ? `${row.problemCount} recent Problems` : row.candidate ? "Recommended" : "Needs review"}</small><strong>{row.mixedAssignments ? "Review saved terms" : assignment ? assignmentDisplayName(assignment) : row.observed ? row.candidate?.providerServiceName : row.ambiguous ? "Review SLA match" : row.candidate?.providerServiceName ?? "Select provider service"}</strong></span></span>
+          <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{row.mixedAssignments ? "Conflicting matches" : assignment?.providerServiceId === "*" ? "Product needed" : assignment ? "Confirmed resource" : row.observed ? "Observed resource" : row.ambiguous ? "Ambiguous" : row.problemCount > 0 ? `${row.problemCount} recent Problems` : row.candidate ? "Recommended" : "Needs review"}</small><strong>{row.mixedAssignments ? "Review saved terms" : assignment ? assignmentDisplayName(assignment) : row.observed ? row.candidate?.providerServiceName : row.ambiguous ? "Review SLA match" : row.candidate?.providerServiceName ?? "Select provider service"}</strong></span></span>
         </button>
       );
     }
@@ -406,7 +406,7 @@ export const CoverageWorkspace = ({
         <span className="scope-connector"><span aria-hidden="true" /><small>found in</small></span>
         <span className="scope-node coverage-source-node"><ServicesIcon /><span><small>Coverage source</small><strong>{row.sourceTag ? `${providerTagKey}:${providerSlug}` : row.conflicting ? "Different provider tag" : "Service inventory"}</strong></span></span>
         <span className="scope-connector"><span aria-hidden="true" /><small>{assignment || row.sourceTag ? "No runtime" : `No ${providerName} match`}</small></span>
-        <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.conflicting ? "Different provider tag" : "No SLA match"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.conflicting ? row.values.join(", ") : "Not matched"}</strong></span></span>
+        <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment?.providerServiceId === "*" ? "Product needed" : assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.conflicting ? "Different provider tag" : "No SLA match"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.conflicting ? row.values.join(", ") : "Not matched"}</strong></span></span>
       </button>
     );
   };
@@ -418,7 +418,7 @@ export const CoverageWorkspace = ({
     </React.Fragment>
   ) : null;
 
-  const stateTone: Tone = selectedMixedAssignments || selectedConflict || selectedAmbiguous
+  const stateTone: Tone = selectedMixedAssignments || selectedConflict || selectedAmbiguous || selectedProviderService?.id === "*"
     ? "warning"
     : selectedAssignment || selectedServiceSourceTag || selectionUsesObservedMatch
     ? "positive"
@@ -427,6 +427,8 @@ export const CoverageWorkspace = ({
       : "neutral";
   const stateLabel = selectedMixedAssignments
     ? "Conflicting saved matches"
+    : selectedProviderService?.id === "*"
+    ? "Provider confirmed; product unresolved"
     : selectedAssignment
     ? "Confirmed SLA match"
     : selectedServiceSourceTag
@@ -446,6 +448,8 @@ export const CoverageWorkspace = ({
             : "Needs review";
   const stateTitle = selectedMixedAssignments
     ? "This resource has conflicting saved terms"
+    : selectedProviderService?.id === "*"
+    ? `Choose the exact ${providerName} product`
     : selectedAssignment
     ? `Confirmed SLA match: ${assignmentDisplayName(selectedAssignment)}`
     : selectedServiceSourceTag
@@ -485,6 +489,7 @@ export const CoverageWorkspace = ({
   const showSaveAction = Boolean(
     selectedRow &&
     selectedProviderService &&
+    selectedProviderService.id !== "*" &&
     !selectedConflict &&
     !selectionUsesObservedMatch &&
     (!selectedServiceSourceTag || selectedAssignment || selectedProviderService.id !== "*"),
@@ -510,7 +515,7 @@ export const CoverageWorkspace = ({
           ><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
         </div>
       </div>
-      <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed SLA matches, and matching source tags identify the provider service. Evidence then brings the matched terms into each Problem review. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>
+      <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology can identify an exact product. A provider tag or provider-wide assignment identifies the provider only. Choose the product before applying terms in Evidence. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>
       {hasProviderTopology ? (
         <div className="coverage-evidence-tabs" role="group" aria-label="Coverage evidence views">
           <button type="button" className={evidenceView === "topology" ? "active" : ""} aria-pressed={evidenceView === "topology"} onClick={() => setEvidenceView("topology")}>
@@ -629,7 +634,7 @@ export const CoverageWorkspace = ({
               <>
                 <label className="field-label">{selectedRow.kind === "service" && !selectedAssignment && !selectedSourceTag ? "Match to provider service" : "Provider service"}
                   <select value={selectedProviderServiceId} onChange={(event) => { setSelectedProviderServiceId(event.target.value); setFeedback(undefined); }} disabled={selectedConflict}>
-                    {selectedRow.kind === "service" ? <><option value="">Choose a provider service</option><option value="*">{providerName} default terms</option></> : <option value="">Select a provider service</option>}
+                    {selectedRow.kind === "service" ? <><option value="">Choose a provider service</option><option value="*" disabled>{providerName} (product not specified)</option></> : <option value="">Select a provider service</option>}
                     {provider.services.map((service, index) => <option key={`${service.id}:${service.name}:${index}`} value={service.id}>{service.name}</option>)}
                   </select>
                 </label>

@@ -30,6 +30,7 @@ describe("FinOps current review gate", () => {
     expect(currentFinopsReviewIsValid(request, routing, { ...decisions, items: [{ value: { ...decision, providerServiceIds: ["other"] } }] })).toBe(false);
     expect(currentFinopsReviewIsValid(request, routing, { ...decisions, nextPageKey: "more" })).toBe(false);
     expect(currentFinopsReviewIsValid(request, routing, { ...decisions, error: { message: "partial" } })).toBe(false);
+    expect(currentFinopsReviewIsValid({ ...request, providerServiceId: "*" }, routing, decisions)).toBe(false);
   });
 
   it("keeps automatic queueing and lane assignment independently off", () => {

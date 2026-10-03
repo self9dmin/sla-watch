@@ -147,7 +147,7 @@ const WatchSettings = () => {
           <select value={providerSlug} onChange={(event) => setProviderSlug(event.target.value)} aria-label="Active provider for focused views">
             {enabledProviderSlugs.map((slug) => <option key={slug} value={slug}>{providerDisplayName(slug)}</option>)}
           </select>
-          <small>Coverage, Performance, Incidents, Evidence, and Directory show providers detected from this environment or an enabled incident connection.</small>
+          <small>Coverage, Evidence, Provider terms, and Automate show providers detected from this environment or an enabled incident connection.</small>
         </label>
         <label className="field-label">Source tag key
           <input value={providerLabelKey} onChange={(event) => setProviderLabelKey(event.target.value)} placeholder="provider" autoComplete="off" />

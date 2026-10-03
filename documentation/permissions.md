@@ -29,7 +29,7 @@ These profiles describe product responsibilities, not prebuilt Dynatrace groups.
 | `storage:logs:read` | Count recent log records | Show log count as unavailable |
 | `storage:spans:read` | Count recent spans | Show span count as unavailable |
 | `storage:smartscape:read` | Read service inventory plus provider, runtime, dependency, and location relationships used for coverage selection | Show Smartscape access as incomplete; never infer services or topology from names |
-| `slo:slos:read` | Read the full native objective inventory for overlaps and evaluate SLA Review objectives | Keep the service preview available, identify Performance as unavailable, and disable creation to prevent duplicates |
+| `slo:slos:read` | Read the full native objective inventory for overlaps and show existing SLOs in Automate > Service health | Keep the service preview available, identify Service health as unavailable, and disable creation to prevent duplicates |
 | `slo:slos:write` | Create one explicitly confirmed customer screening objective for a verified provider product, account, and region | Keep the preview read-only and explain that objective write access is required |
 | `automation:workflows:read` | Inspect the route and feedback Workflow definitions, deployment state, actor, and last execution in Automate | Show Workflow state as unavailable and require manual inventory review in Workflows before creating another pair |
 | `environment-api:credentials:read` | Read the administrator-selected AppEngine Token credential inside the provider AppEngine function | Keep customer-scoped provider notices unavailable; a supported public status source can remain available |
@@ -64,7 +64,7 @@ These profiles describe product responsibilities, not prebuilt Dynatrace groups.
 | User app state | User state read | User state write | Personal preferences remain local when denied |
 | Shared app state | App state read | App state write | Workspace configuration remains local when denied |
 | Dynatrace entity tags | Read through the service inventory | None | Existing source tags can support a review, but the app never writes, replaces, or removes them |
-| Dynatrace objectives | Full native inventory with `slo:slos:read`, app-managed records for Performance | Explicit create only with `slo:slos:write` | One product/account/region screening objective aggregates linked customer service requests; incomplete inventory or overlapping service objectives block creation; no objective is created on load and no provider report is counted as local health |
+| Dynatrace objectives | Full native inventory with `slo:slos:read`; Automate > Overview shows currently matched product-scope SLOs and bounded tenant context, while Service health pages through native SLOs | Explicit create only with `slo:slos:write` | One product/account/region screening objective aggregates linked customer service requests; incomplete inventory or overlapping service objectives block creation; no objective is created on load and no provider report is counted as local health |
 | Dynatrace Workflows | Current-user `automation:workflows:read` | Separately authorized operator in Dynatrace Workflows | Automate lists the new tenant-wide pair and earlier FinOps Agent Workflows. The operator creates replacements undeployed, verifies a synthetic case, and retires old triggers before enabling replacements |
 | Tickets and credits | Not accessed | Not written | No automated eligibility, submission, or remediation is performed |
 

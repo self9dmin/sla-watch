@@ -1,6 +1,13 @@
-import type { SloConfig } from "@dynatrace-sdk/client-service-level-objectives";
+import type { Slo, SloConfig } from "@dynatrace-sdk/client-service-level-objectives";
 
 export const MANAGED_OBJECTIVE_TAG = "managed-by:sla-review";
+export const isProductScopeObjective = (objective: Pick<Slo, "tags">, providerSlug: string): boolean => {
+  const tags = objective.tags ?? [];
+  return tags.includes(MANAGED_OBJECTIVE_TAG) &&
+    tags.includes(`provider:${normalizeObjectiveTagValue(providerSlug)}`) &&
+    tags.some((tag) => tag.startsWith("product:")) &&
+    tags.some((tag) => tag.startsWith("scope:"));
+};
 export const OBJECTIVE_EVALUATION_WINDOW = "now-30d";
 export const OBJECTIVE_EVALUATION_HOURS = 30 * 24;
 

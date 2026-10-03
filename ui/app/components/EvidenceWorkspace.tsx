@@ -34,7 +34,7 @@ import {
   createCoverageReviewPath,
   createEvidenceReviewPath,
 } from "../data/reviewRoutes";
-import { groupReviewCasesByDay } from "../data/reviewDayGroups";
+import { buildCoverageWorkItem, groupReviewCasesByProduct } from "../data/reviewWorkItems";
 import { PROBLEMS_RESULT_LIMIT } from "../data/queries";
 import {
   buildIncidentReviewCases,
@@ -70,7 +70,6 @@ type Tone = "neutral" | "warning" | "positive";
 type EvidenceView = "candidates" | "provider-reports";
 type EvidenceQueueFilter = "all" | EvidenceReviewState;
 
-const EVIDENCE_CASE_PAGE_SIZE = 5;
 const EVIDENCE_QUEUE_FILTERS: Array<{
   value: EvidenceQueueFilter;
   label: string;
@@ -95,6 +94,7 @@ type EvidenceWorkspaceProps = {
   serviceTelemetryLoading: boolean;
   serviceTelemetryError?: Error;
   problemResultLimited: boolean;
+  evidenceReadIncomplete: boolean;
   totalProblemCount: number | null;
   lookbackHours: EvidenceLookbackHours;
   loading: boolean;
@@ -120,14 +120,12 @@ const formatDateTime = (value?: string): string => {
       }).format(parsed);
 };
 
-const formatQueueTime = (value?: string): string => {
+const formatQueueClock = (value?: string): string => {
   if (!value) return "Time unavailable";
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime())
     ? "Time unavailable"
     : new Intl.DateTimeFormat(undefined, {
-        month: "short",
-        day: "numeric",
         hour: "numeric",
         minute: "2-digit",
         timeZoneName: "short",
@@ -151,7 +149,7 @@ const formatPercent = (value: number | null): string =>
 
 const formatMappingBasis = (candidate: EvidenceCandidate): string =>
   candidate.mappingBasis === "confirmed-scope"
-    ? "Confirmed SLA match"
+    ? candidate.scopeConfirmed ? "Confirmed SLA match" : "Provider confirmed; product unresolved"
     : candidate.mappingBasis === "provider-tag"
       ? "Provider tag"
       : candidate.mappingBasis === "smartscape-observed"
@@ -216,7 +214,7 @@ const EvidenceObjectiveRow = ({
               : "Not created"}</strong>
         <small>{objective
           ? `${observed} observed · ${typeof target === "number" ? `${target}% target` : "target unavailable"}`
-          : "Use Performance to add one when useful."}</small>
+          : "Use Service health under Automate to inspect existing SLOs."}</small>
       </span>
     </li>
   );
@@ -241,6 +239,7 @@ const CandidateDetail = ({
   serviceTelemetry,
   serviceTelemetryLoading,
   serviceTelemetryError,
+  evidenceReadIncomplete,
   lookbackHours,
 }: {
   reviewCase: IncidentReviewCase;
@@ -252,6 +251,7 @@ const CandidateDetail = ({
   serviceTelemetry: ServiceTelemetryMap;
   serviceTelemetryLoading: boolean;
   serviceTelemetryError?: Error;
+  evidenceReadIncomplete: boolean;
   lookbackHours: EvidenceLookbackHours;
 }) => {
   const candidate = reviewCase.candidates[0];
@@ -347,7 +347,7 @@ const CandidateDetail = ({
       if (result.failures.length > 0)
         throw new Error(`${result.savedDecisionKeys.length} Problem decision${result.savedDecisionKeys.length === 1 ? " was" : "s were"} saved. ${result.failures.length} failed.`);
       if (result.refreshError) throw new Error(result.refreshError);
-      if (status === "validated" && finopsRouting.reliable && finopsRouting.config.autoQueueAfterReady) {
+      if (status === "validated" && !evidenceReadIncomplete && finopsRouting.reliable && finopsRouting.config.autoQueueAfterReady) {
         const readyArtifact = { ...artifact, review: {
           ...artifact.review,
           decisionStatus: "validated" as const,
@@ -485,6 +485,7 @@ const CandidateDetail = ({
     effectiveAcknowledgedEvidence.includes(item),
   );
   const structuralGaps = [
+    evidenceReadIncomplete ? "Grail or Smartscape evidence is incomplete. Resolve the read limit before reviewing or routing." : null,
     !reviewCase.candidates.every((item) => item.scopeConfirmed) ? "Confirm the provider-service scope." : null,
     reviewCase.problems.some((problem) => !problem.startedAt) ? "Confirm each impact start time." : null,
     affectedEntityIds.length === 0
@@ -596,17 +597,19 @@ const CandidateDetail = ({
   const customerImpactReady = Boolean(reviewCase.startedAt) &&
     affectedEntityIds.length > 0;
 
-  const routePacket = currentDecision?.status === "validated"
+  const routePacket = !evidenceReadIncomplete && currentDecision?.status === "validated"
     ? finopsRoutePacket(artifact)
     : null;
-  const routeBlockers = currentDecision?.status === "validated"
+  const routeBlockers = evidenceReadIncomplete
+    ? ["Complete Grail and Smartscape reads before routing this review."]
+    : currentDecision?.status === "validated"
     ? finopsRouteBlockers(artifact)
     : [];
   const queueFinopsReview = async (
     packet: NonNullable<ReturnType<typeof finopsRoutePacket>>,
     triggerMode: "manual" | "automatic",
   ) => {
-    if (!finopsRouting.reliable || finopsQueueing || queuedRequestId === packet.requestId) return;
+    if (evidenceReadIncomplete || !finopsRouting.reliable || finopsQueueing || queuedRequestId === packet.requestId) return;
     setFinopsQueueing(true);
     setQueueError(undefined);
     try {
@@ -1039,7 +1042,7 @@ const CandidateDetail = ({
               <section className="candidate-evidence-block" aria-label="Dynatrace objectives">
                 <div className="candidate-evidence-heading">
                   <strong>Dynatrace objectives, customer targets</strong>
-                  <Link to={supportingReviewPath("/performance")}>Open Performance</Link>
+                  <Link to={supportingReviewPath("/performance")}>Open Service health</Link>
                 </div>
                 {objectiveServices.length > 0 ? (
                   <ul className="candidate-objective-list">
@@ -1065,7 +1068,7 @@ const CandidateDetail = ({
                   <span className="candidate-evidence-note">Showing 3 of {reviewCase.affectedServices.length} affected services. The download includes every loaded objective snapshot.</span>
                 ) : null}
                 {managedObjectives.totalCount > managedObjectives.objectives.length ? (
-                  <span className="candidate-evidence-warning">The objective inventory is partial. Open Performance for the full list.</span>
+                  <span className="candidate-evidence-warning">The objective inventory is partial. Open Service health for the paged list.</span>
                 ) : null}
               </section>
               <section className="candidate-evidence-block" aria-label="Optional provider corroboration">
@@ -1148,6 +1151,7 @@ const CandidateWorkspace = ({
   serviceTelemetryLoading,
   serviceTelemetryError,
   problemResultLimited,
+  evidenceReadIncomplete,
   totalProblemCount,
   lookbackHours,
   loading,
@@ -1182,17 +1186,22 @@ const CandidateWorkspace = ({
       ),
     [providerSlug, settings.decisions],
   );
+  const coverageTask = useMemo(() => buildCoverageWorkItem(candidates), [candidates]);
+  const confirmedCandidates = useMemo(
+    () => candidates.filter((candidate) => candidate.scopeConfirmed),
+    [candidates],
+  );
   const reviewCases = useMemo(() => buildIncidentReviewCases({
     providerSlug,
-    problems: candidates.map((candidate) => candidate.problem),
-    candidates,
+    problems: confirmedCandidates.map((candidate) => candidate.problem),
+    candidates: confirmedCandidates,
     services,
     contractOverrides: contractSettings.overrides,
     allowGrouping: !contractSettings.loading &&
       !contractSettings.error &&
       contractSettings.canRead,
   }), [
-    candidates,
+    confirmedCandidates,
     contractSettings.canRead,
     contractSettings.error,
     contractSettings.loading,
@@ -1204,9 +1213,7 @@ const CandidateWorkspace = ({
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
   const [queueQuery, setQueueQuery] = useState("");
   const [queueFilter, setQueueFilter] = useState<EvidenceQueueFilter>("all");
-  const [page, setPage] = useState(1);
   const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>();
-  const queueInitialized = useRef(false);
   const caseStateByKey = useMemo(() => new Map(
     reviewCases.map((reviewCase) => [
       reviewCase.key,
@@ -1240,19 +1247,12 @@ const CandidateWorkspace = ({
       return searchable.includes(query);
     });
   }, [caseStateByKey, queueFilter, queueQuery, reviewCases]);
-  const dayGroups = useMemo(() => groupReviewCasesByDay(filteredCases), [filteredCases]);
-  const pageCount = Math.max(
-    1,
-    Math.ceil(dayGroups.length / EVIDENCE_CASE_PAGE_SIZE),
-  );
-  const visibleGroups = useMemo(
-    () => dayGroups.slice(
-      (page - 1) * EVIDENCE_CASE_PAGE_SIZE,
-      page * EVIDENCE_CASE_PAGE_SIZE,
-    ),
-    [dayGroups, page],
-  );
+  const visibleGroups = useMemo(() => groupReviewCasesByProduct(filteredCases), [filteredCases]);
   const visibleCases = useMemo(() => visibleGroups.flatMap((group) => group.cases), [visibleGroups]);
+  const priorUnresolvedDecisions = coverageTask?.candidates.filter((candidate) => decisionByKey.has(candidate.key)).length ?? 0;
+  const hasScopedCustomTerms = contractSettings.overrides.some((override) =>
+    override.enabled && override.providerSlug.toLowerCase() === providerSlug.toLowerCase() &&
+    (override.scopeKind === "host" || override.scopeKind === "location"));
 
   useEffect(() => {
     if (
@@ -1271,51 +1271,34 @@ const CandidateWorkspace = ({
           return;
         }
         lastRequestedSelection.current = requestedSelectionKey;
-        const requestedIndex = dayGroups.findIndex((group) =>
+        const requestedIndex = visibleGroups.findIndex((group) =>
           group.cases.some((reviewCase) => reviewCase.key === requested.key));
-        if (requestedIndex >= 0) setPage(Math.floor(requestedIndex / EVIDENCE_CASE_PAGE_SIZE) + 1);
         setSelectedKey(requested.key);
-        setExpandedGroupKey(dayGroups[requestedIndex]?.key);
+        setExpandedGroupKey(visibleGroups[requestedIndex]?.key);
         return;
       }
     }
-    if (
-      visibleCases.length > 0 &&
-      !visibleCases.some((reviewCase) => reviewCase.key === selectedKey)
-    ) {
-      setSelectedKey(visibleCases[0].key);
+    if (selectedKey && !visibleCases.some((reviewCase) => reviewCase.key === selectedKey)) {
+      setSelectedKey(undefined);
       setExpandedGroupKey(undefined);
     }
-    if (reviewCases.length === 0) setSelectedKey(undefined);
   }, [
     requestedCaseId,
     requestedProblemId,
     requestedSelectionKey,
     reviewCases,
-    dayGroups,
+    visibleGroups,
     queueFilter,
     queueQuery,
     selectedKey,
     visibleCases,
   ]);
 
-  useEffect(() => {
-    if (!queueInitialized.current) {
-      queueInitialized.current = true;
-      return;
-    }
-    if (!requestedCaseId && !requestedProblemId) setPage(1);
-  }, [providerSlug, queueFilter, queueQuery, requestedCaseId, requestedProblemId]);
-
-  useEffect(() => {
-    if (page > pageCount) setPage(pageCount);
-  }, [page, pageCount]);
-
-  const selected =
-    visibleCases.find((reviewCase) => reviewCase.key === selectedKey) ??
-    visibleCases[0];
+  const selected = selectedKey
+    ? visibleCases.find((reviewCase) => reviewCase.key === selectedKey)
+    : undefined;
   const selectedGroupKey = visibleGroups.find((group) => group.cases.some((reviewCase) => reviewCase.key === selected?.key))?.key;
-  const openGroupKey = expandedGroupKey === undefined ? selectedGroupKey : expandedGroupKey;
+  const openGroupKey = expandedGroupKey ?? null;
   const readyForFollowUp = reviewCases.filter(
     (reviewCase) => caseStateByKey.get(reviewCase.key)?.state === "ready-for-follow-up",
   ).length;
@@ -1326,6 +1309,18 @@ const CandidateWorkspace = ({
     (reviewCase) => caseStateByKey.get(reviewCase.key)?.state === "needs-evidence",
   ).length;
   const needsReview = reviewCases.length - readyForFollowUp - needsEvidence - excluded;
+  const coveragePath = coverageTask?.leadingCandidate
+    ? createCoverageReviewPath({
+        providerSlug,
+        problemId: coverageTask.leadingCandidate.problem.id,
+        serviceId: coverageTask.leadingService?.id,
+        providerServiceId: coverageTask.leadingCandidate.providerServiceIds.length === 1 &&
+          coverageTask.leadingCandidate.providerServiceIds[0] !== "*"
+          ? coverageTask.leadingCandidate.providerServiceIds[0]
+          : undefined,
+        returnTo: `/evidence?provider=${encodeURIComponent(providerSlug)}`,
+      })
+    : `/?provider=${encodeURIComponent(providerSlug)}`;
 
   if (error) {
     return (
@@ -1371,7 +1366,12 @@ const CandidateWorkspace = ({
       </div>
     );
   }
-  if (reviewCases.length === 0) {
+  if (reviewCases.length === 0 && !coverageTask) {
+    if (evidenceReadIncomplete) return <div className="evidence-empty evidence-error" role="status">
+      <strong>Cannot determine the next review action.</strong>
+      <span>Grail or Smartscape evidence is incomplete. Resolve the inventory or Problem read limit before treating this as an empty queue.</span>
+      <Button as={Link} to="/settings/watch" size="condensed">Check evidence window</Button>
+    </div>;
     return (
       <div className="evidence-empty">
         <strong>No review cases in this window.</strong>
@@ -1389,33 +1389,34 @@ const CandidateWorkspace = ({
 
   return (
     <div className="evidence-candidates-view">
-      {problemResultLimited ? <div className="evidence-result-limit" role="status">
-        The Problems read reached its {PROBLEMS_RESULT_LIMIT}-record limit. This queue uses {problems.length} parsed Problems{totalProblemCount !== null ? ` from ${totalProblemCount} in the window` : "; the total is unavailable"}. Some cases may be missing. <Link to="/settings/watch">Narrow the evidence window</Link> before treating the list as complete.
+      {evidenceReadIncomplete ? <div className="evidence-result-limit" role="status">
+        Evidence coverage is incomplete. {problemResultLimited
+          ? `The Problems read reached its ${PROBLEMS_RESULT_LIMIT}-record limit and uses ${problems.length} parsed Problems${totalProblemCount !== null ? ` from ${totalProblemCount} in the window` : ""}. `
+          : ""}A Grail count or Smartscape scope may be unavailable or capped. Human completion and local routing are paused. <Link to="/settings/watch">Narrow the evidence window</Link> or resolve the coverage limits.
       </div> : null}
       <dl className="evidence-candidate-summary" aria-label="Evidence review case status">
-        <div><dt>Needs review</dt><dd>{needsReview}</dd></div>
-        <div><dt>Needs evidence</dt><dd>{needsEvidence}</dd></div>
-        <div><dt>Review complete</dt><dd>{readyForFollowUp}</dd></div>
-        <div><dt>Excluded</dt><dd>{excluded}</dd></div>
+        <div><dt>Work items</dt><dd>{(coverageTask ? 1 : 0) + visibleGroups.length}</dd></div>
+        <div><dt>Supporting Problems</dt><dd>{candidates.length}</dd></div>
+        <div><dt>Evidence episodes</dt><dd>{reviewCases.length}</dd></div>
       </dl>
       <div className="evidence-candidate-layout">
         <aside className={`candidate-queue${mobileQueueOpen ? " mobile-open" : ""}`} aria-label="Provider impact review cases">
           <div className="candidate-queue-heading">
-            <strong>Review cases</strong>
-            <span>{reviewCases.length} · {candidates.length} Problems</span>
+            <strong>Next review action</strong>
+            <span>{(coverageTask ? 1 : 0) + visibleGroups.length} work item{(coverageTask ? 1 : 0) + visibleGroups.length === 1 ? "" : "s"} from {candidates.length} provider-linked Problems</span>
             <button type="button" className="candidate-queue-toggle" aria-controls="candidate-queue-content" aria-expanded={mobileQueueOpen} onClick={() => setMobileQueueOpen((open) => !open)}>
-              {mobileQueueOpen ? "Close case picker" : "Choose another case"}
+              {mobileQueueOpen ? "Close work items" : "Show work items"}
             </button>
           </div>
           <div className="candidate-queue-content" id="candidate-queue-content">
-          <div className="candidate-queue-tools">
+          {openGroupKey ? <div className="candidate-queue-tools">
             <label>
               <span className="visually-hidden">Search review cases</span>
               <input
                 type="search"
                 value={queueQuery}
                 onChange={(event) => setQueueQuery(event.target.value)}
-                placeholder="Find a case, Problem, or service"
+                placeholder="Find a product, case, Problem, or service"
               />
             </label>
             <div className="candidate-queue-filters" role="group" aria-label="Filter review cases">
@@ -1442,94 +1443,95 @@ const CandidateWorkspace = ({
                 );
               })}
             </div>
-          </div>
+          </div> : null}
           <div className="candidate-queue-list">
-            {visibleGroups.map((group) => <div key={group.key} className="candidate-day-group">
-              {group.cases.length > 1 ? <button
-                type="button"
-                className="candidate-day-group-toggle"
-                aria-expanded={openGroupKey === group.key}
-                onClick={() => {
-                  setExpandedGroupKey(openGroupKey === group.key ? null : group.key);
-                  setSelectedKey(group.cases[0].key);
-                }}
-              >
-                <strong>{group.dayLabel} · {group.serviceName}</strong>
-                <span>{group.problemCount} Problems in {group.cases.length} separate review cases</span>
-                <small>{group.rootCauseName ? `Shared Davis root cause: ${group.rootCauseName}` : "Davis root cause unverified"}</small>
-                <small>{group.observedWindowMinutes > 0 ? `${group.observedWindowMinutes} min of distinct Problem windows on this date` : "Problem-window duration unavailable"}{group.unmeasuredProblems > 0 ? ` · ${group.unmeasuredProblems} open or incomplete` : ""}</small>
-                <small>{openGroupKey === group.key ? "Hide cases" : "Show cases"}</small>
-              </button> : null}
-              {group.cases.length === 1 || openGroupKey === group.key ? <div className="candidate-day-group-cases">
-                {group.cases.length > 1 ? <p>Grouped for navigation only. Each case keeps its own evidence and decision. Problem windows do not establish provider downtime.</p> : null}
-                {group.cases.map((reviewCase) => {
-              const state = caseStateByKey.get(reviewCase.key) ??
-                resolveEvidenceReviewState(reviewCase, decisionByKey);
-              const candidate = reviewCase.candidates[0];
-              const title = reviewCase.problems.length > 1
-                ? `${reviewCase.providerServiceNames.join(", ") || provider?.provider.name || providerSlug} impact review`
-                : candidate.problem.title;
-              const serviceLabel = reviewCase.affectedServices.length === 1
-                ? reviewCase.affectedServices[0].name
-                : reviewCase.affectedServices.length > 1
-                  ? `${reviewCase.affectedServices.length} affected services`
-                  : reviewCase.providerServiceNames.join(", ") || "Service unresolved";
-              return (
+            {coverageTask ? <button
+              type="button"
+              className={`candidate-coverage-task${selected ? "" : " selected"}`}
+              onClick={() => {
+                setSelectedKey(undefined);
+                setExpandedGroupKey(null);
+                setMobileQueueOpen(false);
+              }}
+              aria-pressed={!selected}
+            >
+              <strong>Resolve {provider.provider.name} product coverage</strong>
+              <span>One mapping task · {coverageTask.problemCount} supporting Problems</span>
+              <small>{coverageTask.leadingService
+                ? `${coverageTask.leadingService.problemCount} affect ${coverageTask.leadingService.name}`
+                : "Affected service unresolved"}</small>
+            </button> : null}
+            <div className="candidate-queue-results">{visibleGroups.length} product investigation{visibleGroups.length === 1 ? "" : "s"} · {filteredCases.length} evidence episode{filteredCases.length === 1 ? "" : "s"} on drilldown</div>
+            {visibleGroups.map((group) => {
+              const isOpen = openGroupKey === group.key;
+              const reviewLabel = `${group.cases.length} review${group.cases.length === 1 ? "" : "s"}`;
+              return <section key={group.key} className="candidate-day-group" aria-label={`${group.name}, ${group.problemCount} Problem${group.problemCount === 1 ? "" : "s"}, ${reviewLabel}`}>
                 <button
                   type="button"
-                  key={reviewCase.key}
-                  className={`candidate-queue-item${selected?.key === reviewCase.key ? " selected" : ""}`}
+                  className="candidate-day-group-toggle"
+                  aria-expanded={isOpen}
                   onClick={() => {
-                    setSelectedKey(reviewCase.key);
-                    setExpandedGroupKey(group.key);
-                    setMobileQueueOpen(false);
-                    window.requestAnimationFrame(() => document.getElementById("candidate-selected-detail")?.scrollIntoView({ block: "start" }));
+                    setExpandedGroupKey(isOpen ? null : group.key);
+                    setSelectedKey(isOpen ? undefined : group.cases[0].key);
                   }}
-                  aria-pressed={selected?.key === reviewCase.key}
                 >
-                  <span>
-                    <strong>{title}</strong>
-                    <small title={serviceLabel}>{serviceLabel}</small>
-                    <small>{formatQueueTime(reviewCase.startedAt)} · {reviewCase.problems.length} Problem{reviewCase.problems.length === 1 ? "" : "s"}</small>
+                  <span className="candidate-day-group-topline">
+                    <span className="candidate-day-group-chevron" aria-hidden="true" />
+                    <strong>{group.name}</strong>
+                    <span className="candidate-day-group-count">{group.problemCount} Problem{group.problemCount === 1 ? "" : "s"}</span>
                   </span>
-                  <CandidateState state={state.state} />
+                  <span className="candidate-day-group-service">{group.affectedServiceCount} affected Dynatrace service{group.affectedServiceCount === 1 ? "" : "s"}</span>
+                  <span className="candidate-day-group-action">{isOpen ? "Hide" : "Inspect"} {reviewLabel}</span>
                 </button>
-              );
-                })}
-              </div> : null}
-            </div>)}
+                {isOpen ? <div className="candidate-day-group-cases">
+                  <p className="candidate-day-group-context">This product view organizes signals for triage. Separate episodes keep separate evidence and decisions. Product sharing alone does not establish one provider outage.</p>
+                  {group.cases.map((reviewCase) => {
+                    const state = caseStateByKey.get(reviewCase.key) ??
+                      resolveEvidenceReviewState(reviewCase, decisionByKey);
+                    const candidate = reviewCase.candidates[0];
+                    const title = reviewCase.problems.length > 1
+                      ? `${reviewCase.providerServiceNames.join(", ") || provider?.provider.name || providerSlug} impact review`
+                      : candidate.problem.title;
+                    const serviceLabel = reviewCase.affectedServices.length === 1
+                      ? reviewCase.affectedServices[0].name
+                      : reviewCase.affectedServices.length > 1
+                        ? `${reviewCase.affectedServices.length} affected services`
+                        : reviewCase.providerServiceNames.join(", ") || "Service unresolved";
+                    return (
+                      <button
+                        type="button"
+                        key={reviewCase.key}
+                        className={`candidate-queue-item${selected?.key === reviewCase.key ? " selected" : ""}`}
+                        onClick={() => {
+                          setSelectedKey(reviewCase.key);
+                          setExpandedGroupKey(group.key);
+                          setMobileQueueOpen(false);
+                          window.requestAnimationFrame(() => document.getElementById("candidate-selected-detail")?.scrollIntoView({ block: "start" }));
+                        }}
+                        aria-pressed={selected?.key === reviewCase.key}
+                      >
+                        <span>
+                          <strong>{title}</strong>
+                          <small title={serviceLabel}>{serviceLabel}</small>
+                          <small>{formatQueueClock(reviewCase.startedAt)} · {reviewCase.problems.length === 1 ? `Problem ${candidate.problem.id}` : `${reviewCase.problems.length} Problems`}</small>
+                        </span>
+                        <CandidateState state={state.state} />
+                      </button>
+                    );
+                  })}
+                </div> : null}
+              </section>;
+            })}
             {filteredCases.length === 0 ? (
               <div className="candidate-queue-empty">
-                <strong>No matching review cases</strong>
+                <strong>No matching product reviews</strong>
                 <span>Clear the search or choose another status.</span>
               </div>
             ) : null}
           </div>
-          <div className="candidate-queue-footer" aria-label="Review case pages">
-            <span>{dayGroups.length > 0
-              ? `Groups ${(page - 1) * EVIDENCE_CASE_PAGE_SIZE + 1}–${Math.min(page * EVIDENCE_CASE_PAGE_SIZE, dayGroups.length)} of ${dayGroups.length} · ${filteredCases.length} review cases`
-              : "Showing 0 of 0"}</span>
-            <div>
-              <Button
-                size="condensed"
-                disabled={page <= 1}
-                onClick={() => { setExpandedGroupKey(undefined); setPage((current) => Math.max(1, current - 1)); }}
-              >
-                Previous
-              </Button>
-              <span>Page {page} of {pageCount}</span>
-              <Button
-                size="condensed"
-                disabled={page >= pageCount}
-                onClick={() => { setExpandedGroupKey(undefined); setPage((current) => Math.min(pageCount, current + 1)); }}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
           </div>
         </aside>
-        {selected ? (
+        {selected && openGroupKey === selectedGroupKey ? (
           <CandidateDetail
             reviewCase={selected}
             reviewState={caseStateByKey.get(selected.key) ??
@@ -1541,9 +1543,39 @@ const CandidateWorkspace = ({
             serviceTelemetry={serviceTelemetry}
             serviceTelemetryLoading={serviceTelemetryLoading}
             serviceTelemetryError={serviceTelemetryError}
+            evidenceReadIncomplete={evidenceReadIncomplete}
             lookbackHours={lookbackHours}
           />
-        ) : null}
+        ) : coverageTask ? <div className="candidate-work-item-detail" id="candidate-selected-detail">
+          <small className="candidate-work-item-eyebrow">1 coverage action</small>
+          <h3>Resolve the provider product first</h3>
+          <p>{coverageTask.problemCount} Dynatrace Problems link to {provider.provider.name}, but their exact provider product has not been verified. They are supporting signals, not {coverageTask.problemCount} cases to file or review one by one.</p>
+          {coverageTask.leadingService ? <div className="candidate-work-item-fact">
+            <strong>Start with {coverageTask.leadingService.name}</strong>
+            <span>{coverageTask.leadingService.problemCount} Problems affect this service. Smartscape and provider tags help identify the relationship; a provider-wide match does not identify the covered product.</span>
+          </div> : null}
+          <Button as={Link} to={coveragePath} variant="emphasized" color="primary" size="condensed">Identify the exact product in Coverage →</Button>
+          {priorUnresolvedDecisions > 0 ? <p className="candidate-work-item-warning">{priorUnresolvedDecisions} saved decision{priorUnresolvedDecisions === 1 ? "" : "s"} remain in history. A completed review under the broad mapping must be checked again after the product is identified.</p> : null}
+          <p>After coverage is resolved, this page organizes eligible evidence by provider product. Davis root cause, time overlap, and contract scope decide whether Problems can share an episode. A shared service or date alone is insufficient.</p>
+          <details className="candidate-work-item-signals">
+            <summary>Inspect {coverageTask.problemCount} supporting Problem{coverageTask.problemCount === 1 ? "" : "s"}</summary>
+            <ul>{coverageTask.candidates.map((candidate) => <li key={candidate.key}>
+              <strong>{candidate.problem.id}</strong> · {candidate.problem.title} · {formatDateTime(candidate.problem.startedAt)}
+            </li>)}</ul>
+          </details>
+        </div> : visibleGroups.length > 0 ? <div className="candidate-work-item-detail" id="candidate-selected-detail">
+          <small className="candidate-work-item-eyebrow">Provider product investigation</small>
+          <h3>{visibleGroups[0].name}</h3>
+          <p>{visibleGroups[0].problemCount} Problems affect {visibleGroups[0].affectedServiceCount} Dynatrace service{visibleGroups[0].affectedServiceCount === 1 ? "" : "s"}. This is one place to triage the product. It is not one outage or one credit request.</p>
+          <Button size="condensed" variant="emphasized" color="primary" onClick={() => {
+            setExpandedGroupKey(visibleGroups[0].key);
+            setSelectedKey(visibleGroups[0].cases[0].key);
+          }}>Inspect the leading evidence review →</Button>
+          {hasScopedCustomTerms ? <p className="candidate-work-item-warning">Host or location custom terms may split the underlying episodes. Confirm the exact contractual scope before recording a decision.</p> : null}
+        </div> : <div className="candidate-detail-placeholder">
+          <strong>No matching product reviews</strong>
+          <span>Clear the search or choose another status.</span>
+        </div>}
       </div>
     </div>
   );

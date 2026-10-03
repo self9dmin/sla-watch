@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.86
+
+- Opens Automate on existing SLOs, actual route and feedback Workflow state, the decision path, and recent recommendations. Service health now shows the bounded native SLO inventory; guarded creation and Workflow instructions live in Setup.
+- Shows one provider-product coverage action when Problems identify a provider but not an exact product. Exact products appear as investigations; individual Problems remain available on drilldown with separate evidence decisions.
+- Treats provider-wide assignments and provider tags as unconfirmed product scope. Earlier completed wildcard reviews become stale, and local routing rejects wildcard products.
+- Pauses completed reviews and local routing when Grail or Smartscape reads are incomplete. Large-tenant query pagination and scale validation remain open.
+
 ## 0.0.85
 
 - Gives day groups and the selected case neutral styling, so they do not imply an approved review or shared root cause.

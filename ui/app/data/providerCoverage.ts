@@ -78,16 +78,20 @@ export const rowServiceIds = (row: CoverageRow): string[] => row.kind === "scope
   ? unique(row.edges.map(serviceEntityIdForEdge))
   : [row.service.id];
 
+const exactProviderProduct = (id?: string): boolean => Boolean(id && id !== "*");
+
 export const rowIsCovered = (row: CoverageRow): boolean => row.kind === "scope"
-  ? !row.mixedAssignments && Boolean(row.assignment || row.observed)
-  : Boolean(row.assignment || row.sourceTag);
+  ? !row.mixedAssignments && (row.assignment
+    ? exactProviderProduct(row.assignment.providerServiceId)
+    : row.observed && exactProviderProduct(row.candidate?.providerServiceId))
+  : exactProviderProduct(row.assignment?.providerServiceId);
 
 export const rowNeedsReview = (row: CoverageRow): boolean => {
   if (row.kind === "scope" && row.mixedAssignments) return true;
   if (rowIsCovered(row)) return false;
-  return row.kind === "scope" && Boolean(
-    row.ambiguous || row.candidate || row.edge.providerSlug,
-  );
+  return row.kind === "scope"
+    ? Boolean(row.assignment || row.ambiguous || row.candidate || row.edge.providerSlug)
+    : Boolean(row.assignment || row.sourceTag);
 };
 
 // Retained for routes that focus one impacted service. Resource rows may contain

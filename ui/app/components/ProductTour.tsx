@@ -20,7 +20,7 @@ const STEPS: TourStep[] = [
     target: '[data-tour="evaluate"]',
     path: "/evidence",
     title: "2. Evaluate the evidence",
-    body: "Evidence brings together customer impact and applicable provider terms. Performance and Provider terms are references. Save Needs evidence when requirements are missing; Evidence review complete requires a complete human review.",
+    body: "Evidence brings together customer impact and applicable provider terms. Save Needs evidence when requirements are missing; Evidence review complete requires a complete human review. Existing SLOs and detailed service health live under Automate.",
   },
   {
     target: '[data-tour="finops"]',

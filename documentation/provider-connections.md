@@ -9,7 +9,7 @@ An installed copy of SLA Review can keep multiple AWS accounts, Azure subscripti
 ## What works without a provider connection
 
 - Published terms load automatically from `sla.directory`. The user does not supply an API key or configure the `sla.directory` MCP server.
-- Coverage, Smartscape-backed SLA matching, Performance, Incidents, Evidence, Directory, custom terms, and Dynatrace telemetry review remain available.
+- Coverage, Smartscape-backed SLA matching, Evidence, Provider terms, Automate > Service health, custom terms, and Dynatrace telemetry review remain available.
 - Google Cloud and OCI can use clearly labeled public status sources. Those feeds are not project- or tenancy-specific.
 - AWS Health events ingested through the tenant's Amazon EventBridge integration are read directly from Grail. This uses the existing `storage:events:read` scope and no SLA Review credential.
 - Azure remains available for published terms and Dynatrace evidence, but subscription-specific provider notices require a configured connection.

@@ -136,7 +136,7 @@ type ReviewStage = "identify" | "evaluate" | "finops";
 const stageForSection = (section: WatchSection): ReviewStage =>
   section === "coverage"
     ? "identify"
-    : section === "finops"
+    : section === "finops" || section === "performance"
       ? "finops"
       : "evaluate";
 
@@ -145,14 +145,18 @@ const STAGES: ReadonlyArray<{ id: ReviewStage; label: string; to: string }> = [
   { id: "evaluate", label: "Evaluate", to: "/evidence" },
   { id: "finops", label: "Automate", to: "/finops" },
 ];
-const STAGE_VIEWS: Record<Exclude<ReviewStage, "finops">, ReadonlyArray<{ section: WatchSection; label: string; to: string }>> = {
+const STAGE_VIEWS: Record<ReviewStage, ReadonlyArray<{ section: WatchSection; label: string; to: string; view?: string }>> = {
   identify: [
     { section: "coverage", label: "Coverage", to: "/" },
   ],
   evaluate: [
     { section: "evidence", label: "Evidence", to: "/evidence" },
-    { section: "performance", label: "Performance", to: "/performance" },
     { section: "directory", label: "Provider terms", to: "/directory" },
+  ],
+  finops: [
+    { section: "finops", label: "Overview", to: "/finops" },
+    { section: "performance", label: "Service health", to: "/performance" },
+    { section: "finops", label: "Setup", to: "/finops?view=setup", view: "setup" },
   ],
 };
 
@@ -161,14 +165,18 @@ const WatchNavigation = ({ section, providerSlug }: { section: WatchSection; pro
   const location = useLocation();
   const toProviderView = (path: string) => {
     const current = new URLSearchParams(location.search);
-    const params = new URLSearchParams({ provider: providerSlug });
+    const [pathname, search] = path.split("?");
+    const params = new URLSearchParams(search);
+    params.set("provider", providerSlug);
     if (path !== "/") {
       const problemId = current.get("problem");
       const caseId = current.get("case");
-      if (problemId) params.set("problem", problemId);
-      if (caseId) params.set("case", caseId);
+      if (["/evidence", "/directory", "/performance"].includes(pathname)) {
+        if (problemId) params.set("problem", problemId);
+        if (caseId) params.set("case", caseId);
+      }
     }
-    return `${path}?${params.toString()}`;
+    return `${pathname}?${params.toString()}`;
   };
   return <div className="journey-navigation">
     <nav className="journey-stages" aria-label="Review stages">
@@ -183,13 +191,13 @@ const WatchNavigation = ({ section, providerSlug }: { section: WatchSection; pro
         <span>{item.label}</span>
       </Link>)}
     </nav>
-    {stage === "evaluate" ? <nav className="journey-views" aria-label="Evaluate views">
+    {stage !== "identify" ? <nav className="journey-views" aria-label={`${stage === "finops" ? "Automate" : "Evaluate"} views`}>
       {STAGE_VIEWS[stage].map((item) => <Link
-        key={item.section}
-        className={`journey-view${section === item.section ? " active" : ""}`}
+        key={item.to}
+        className={`journey-view${section === item.section && (item.view ?? null) === (new URLSearchParams(location.search).get("view") === "setup" ? "setup" : null) ? " active" : ""}`}
         to={toProviderView(item.to)}
-        aria-current={section === item.section ? "page" : undefined}
-        data-tour={item.section}
+        aria-current={section === item.section && (item.view ?? null) === (new URLSearchParams(location.search).get("view") === "setup" ? "setup" : null) ? "page" : undefined}
+        data-tour={item.view ?? item.section}
       >{item.label}</Link>)}
     </nav> : null}
   </div>;
@@ -620,7 +628,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               ? "Confirm coverage here, then choose a Dynatrace Problem case in Evaluate."
               : stageForSection(section) === "evaluate"
                 ? "Review customer impact and provider terms, then record the human decision in Evidence."
-                : "Route a complete human-reviewed case through the configured local workflow."}
+                : "See existing SLOs, the local decision Workflow, and recent outcomes."}
           </Paragraph>
         </div>
       </section>
@@ -639,10 +647,10 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
         ) : null}
       </div>
 
-      {(section === "performance" || section === "directory") && routeProblemId ? (
+      {(section === "directory" || section === "performance") && routeProblemId ? (
         <div className="journey-case-context" role="status">
-          <span>{section === "performance" ? "Customer objectives" : "Provider terms"} are supporting views for {routeProblemId}. The human decision stays in Evidence.</span>
-          <Link to={createEvidenceReviewPath({ providerSlug, problemId: routeProblemId, caseId: routeCaseId })}>Back to case</Link>
+          <span>{section === "performance" ? "Service health" : "Provider terms"} is supporting context for {routeProblemId}. The human decision stays in Evidence.</span>
+          <Link to={createEvidenceReviewPath({ providerSlug, problemId: routeProblemId, caseId: routeCaseId })}>Back to evidence case</Link>
         </div>
       ) : null}
 
@@ -792,6 +800,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
           </Surface>
         ) : section === "finops" ? (
           <FinopsWorkspace
+            view={routeParams.get("view") === "setup" ? "setup" : "overview"}
             providerSlug={selectedProviderSlug}
             provider={directoryData}
             services={services}
@@ -815,10 +824,12 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             serviceTelemetryLoading={incidentMetricsQuery.isLoading}
             serviceTelemetryError={incidentMetricsQuery.error ?? undefined}
             problemResultLimited={problemReadLimited}
+            evidenceReadIncomplete={problemReadLimited || allProblemCount === null || inventoryStatus.incomplete || inventoryStatus.unverified}
             totalProblemCount={allProblemCount}
             lookbackHours={lookbackHours}
             loading={
               problemsLoading ||
+              problemsCountQuery.isLoading ||
               incidentServicesQuery.isLoading ||
               topologyQuery.isLoading ||
               incidentTopologyQuery.isLoading ||

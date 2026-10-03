@@ -130,6 +130,7 @@ export const evidenceDecisionMatchesCandidate = (
   decision: EvidenceDecisionValue,
   candidate: EvidenceCandidate,
 ): boolean =>
+  (decision.status !== "validated" || candidate.scopeConfirmed) &&
   decision.decisionKey === candidate.key &&
   createEvidenceDecisionKey(decision.providerSlug, decision.problemId) ===
     candidate.key &&
@@ -266,8 +267,13 @@ export const buildEvidenceCandidates = ({
         providerServiceById.get(id) ??
         id,
     );
+    const exactProduct = providerServiceIds.length === 1 && providerServiceIds[0] !== "*";
+    const scopeConfirmed = exactProduct &&
+      (mappingBasis === "confirmed-scope" || mappingBasis === "smartscape-observed");
     const mappingEvidence = mappingBasis === "confirmed-scope"
-      ? `${confirmed.length} operator-confirmed SLA match${confirmed.length === 1 ? "" : "es"} overlap the affected services.`
+      ? exactProduct
+        ? `${confirmed.length} operator-confirmed SLA match${confirmed.length === 1 ? "" : "es"} overlap the affected services.`
+        : "The operator confirmed this provider, but an exact provider product is not identified. Choose the product before applying SLA terms."
       : mappingBasis === "provider-tag"
         ? `${tagged.length} affected service${tagged.length === 1 ? " has" : "s have"} the explicit ${providerLabelKey}:${providerSlug} tag.`
         : mappingBasis === "smartscape-observed"
@@ -282,7 +288,7 @@ export const buildEvidenceCandidates = ({
       providerServiceNames,
       mappingBasis,
       mappingEvidence,
-      scopeConfirmed: mappingBasis !== "smartscape-candidate",
+      scopeConfirmed,
     }];
   }).sort((left, right) => {
     const leftActive = left.problem.status.toUpperCase() === "ACTIVE" ? 1 : 0;

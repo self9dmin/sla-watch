@@ -31,6 +31,7 @@ describe("FinOps candidate trigger", () => {
       { ...base, review: { ...base.review, decisionStatus: "not-ready" } },
       { ...base, incidentWindow: { ...base.incidentWindow, ongoing: true } },
       { ...base, provider: { ...base.provider, serviceIds: ["amazon-rds", "amazon-ec2"] } },
+      { ...base, provider: { ...base.provider, serviceIds: ["*"] } },
       { ...base, coverage: { ...base.coverage, confirmed: false } },
       { ...base, customerImpact: { ...base.customerImpact, telemetry: { ...base.customerImpact.telemetry, observedAvailabilityPercent: null } } },
       { ...base, customerImpact: { ...base.customerImpact, telemetry: { ...base.customerImpact.telemetry, observedAvailabilityPercent: 99.95 } } },

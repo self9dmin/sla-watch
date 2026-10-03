@@ -11,8 +11,8 @@ export const finopsRouteBlockers = (artifact: EvidenceReviewArtifact): string[] 
     blockers.push("Wait for the Problem to close.");
   if (artifact.dynatrace.affectedServices.length !== 1)
     blockers.push("Resolve one affected Dynatrace service.");
-  if (artifact.provider.serviceIds.length !== 1)
-    blockers.push("Resolve one provider service.");
+  if (artifact.provider.serviceIds.length !== 1 || artifact.provider.serviceIds[0] === "*")
+    blockers.push("Resolve one exact provider product.");
   if (!artifact.coverage.confirmed)
     blockers.push("Confirm the provider scope in Coverage.");
   if (artifact.customerImpact.telemetry.status !== "collected" ||

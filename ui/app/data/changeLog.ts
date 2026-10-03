@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.85",
+    version: "0.0.86",
     label: "Current release",
+    summary: "Focused Evidence work items and the Automate overview.",
+    details: [
+      "Automate now opens on existing SLOs, actual Workflow state, the decision path, and recent recommendations. Service health and Setup are separate tabs.",
+      "A provider-wide match now creates one coverage action until an exact product is identified.",
+      "Exact products appear as investigations with separate evidence episodes and decisions on drilldown.",
+      "Completed wildcard reviews require rechecking, and incomplete Grail or Smartscape reads pause completion and local routing.",
+    ],
+  },
+  {
+    version: "0.0.85",
+    label: "Previous release",
     summary: "Clarified color meaning in the evidence queue.",
     details: [
       "Day groups and the selected case use neutral colors because grouping and selection are not review outcomes.",

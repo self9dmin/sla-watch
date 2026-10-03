@@ -7,7 +7,7 @@ import { Surface } from "@dynatrace/strato-components/layouts";
 import { Heading, Paragraph } from "@dynatrace/strato-components/typography";
 import { ServiceLevelObjectivesIcon } from "@dynatrace/strato-icons";
 import type { SloEvaluationResult } from "@dynatrace-sdk/client-service-level-objectives";
-import { formatObjectiveTimeframe } from "../data/serviceObjectives";
+import { formatObjectiveTimeframe, isProductScopeObjective } from "../data/serviceObjectives";
 import { useObjectiveEvaluations, type ObjectiveEvaluation } from "../hooks/useObjectiveEvaluations";
 import { useServiceObjectives } from "../hooks/useServiceObjectives";
 
@@ -98,7 +98,7 @@ export const PerformanceWorkspace = ({
   const [selectedId, setSelectedId] = useState<string>();
   const objectives = useServiceObjectives({
     enabled: Boolean(providerSlug),
-    providerSlug,
+    managedOnly: false,
     page,
     pageSize: 8,
   });
@@ -144,10 +144,10 @@ export const PerformanceWorkspace = ({
     <Surface className="panel-card performance-panel">
       <div className="performance-heading">
         <div>
-          <Heading level={2}>Performance</Heading>
+          <Heading level={2}>Service health</Heading>
           <Paragraph>
-            Customer objectives for {providerName}, measured from Dynatrace
-            service-request telemetry.
+            Existing Dynatrace SLOs, including product-scope objectives created by SLA Review.
+            Only verified {providerName} product scopes can support a provider review.
           </Paragraph>
         </div>
         <span className="status-pill status-pill-neutral">
@@ -157,29 +157,29 @@ export const PerformanceWorkspace = ({
         </span>
       </div>
 
-      <div className="overview-facts performance-facts" aria-label="Performance status">
+      <div className="overview-facts performance-facts" aria-label="Service health status">
         <PerformanceFact
           label="Objectives"
           value={objectives.loading ? "Checking" : objectives.totalCount.toLocaleString()}
-          detail={`${providerName} customer services`}
+          detail="tenant inventory"
           tone={objectives.totalCount > 0 ? "positive" : "neutral"}
         />
         <PerformanceFact
           label="Meeting target"
           value={objectives.loading ? "Checking" : meetingTarget.toLocaleString()}
-          detail="on this page"
+          detail="on this page only"
           tone={meetingTarget > 0 ? "positive" : "neutral"}
         />
         <PerformanceFact
           label="Needs attention"
           value={objectives.loading ? "Checking" : needsAttention.toLocaleString()}
-          detail="at risk or below target"
+          detail="on this page only"
           tone={needsAttention > 0 ? "warning" : "neutral"}
         />
         <PerformanceFact
           label="No result"
           value={objectives.loading ? "Checking" : noResult.toLocaleString()}
-          detail="evaluating or unavailable"
+          detail="on this page only"
         />
       </div>
 
@@ -190,7 +190,7 @@ export const PerformanceWorkspace = ({
             <div>
               <strong id="service-objectives-title">Service objectives</strong>
               <span>
-                Dynatrace evaluates customer-observed reliability for covered services.
+                Existing SLOs are shown as monitoring context. Their provider mapping is not assumed.
               </span>
             </div>
           </div>
@@ -209,7 +209,7 @@ export const PerformanceWorkspace = ({
         <div className="scope-map-boundary">
           <strong>How it is used</strong>
           <span>
-            This is the customer objective target, which may differ from the provider SLA target shown in Evidence. Objective status comes from Dynatrace service telemetry; provider reports remain optional corroboration.
+            SLA Review product-scope objectives screen customer impact. Other tenant SLOs are context until their product mapping is verified. A customer objective may differ from the provider SLA in Evidence.
           </span>
         </div>
       </div>
@@ -223,14 +223,14 @@ export const PerformanceWorkspace = ({
       {objectives.loading && objectives.objectives.length === 0 ? (
         <div className="performance-empty">
           <strong>Loading customer objectives</strong>
-          <span>Reading the objectives managed by SLA Review.</span>
+          <span>Reading the existing Dynatrace SLO inventory.</span>
         </div>
       ) : objectives.objectives.length === 0 ? (
         <div className="performance-empty">
-          <strong>No customer objectives for {providerName}</strong>
-          <span>Automate can create one customer screening objective for a verified product, account, and region scope. Nothing is created automatically.</span>
-          <Button as={Link} to={`/finops?provider=${encodeURIComponent(providerSlug)}`} size="condensed" variant="emphasized">
-            Open Automate
+          <strong>No Dynatrace SLOs found</strong>
+          <span>Setup can create one customer screening objective for a verified product, account, and region scope. Nothing is created automatically.</span>
+          <Button as={Link} to={`/finops?view=setup&provider=${encodeURIComponent(providerSlug)}`} size="condensed" variant="emphasized">
+            Open Setup
           </Button>
         </div>
       ) : (
@@ -267,6 +267,7 @@ export const PerformanceWorkspace = ({
                       />
                     </div>
                     <span className="performance-tile-target">
+                      {isProductScopeObjective(objective, providerSlug) ? `${providerName} product scope · ` : "Provider mapping unverified · "}
                       Target {percent(target)} · {formatObjectiveTimeframe(objective.criteria[0]?.timeframeFrom)}
                     </span>
                   </button>
@@ -301,7 +302,7 @@ export const PerformanceWorkspace = ({
               <>
                 <div className="performance-detail-heading">
                   <div>
-                    <span>Customer objective</span>
+                    <span>{isProductScopeObjective(selected, providerSlug) ? `${providerName} product-scope objective` : "Existing tenant SLO · provider mapping unverified"}</span>
                     <Heading level={3}>{selected.name}</Heading>
                   </div>
                   <span className={`status-pill status-pill-${evaluationTone(selectedEvaluation)}`}>

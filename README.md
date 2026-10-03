@@ -6,9 +6,9 @@ The app does not decide fault, label a case as an SLA violation, file a claim, o
 
 ## Project status
 
-SLA Review is a working custom Dynatrace AppEngine app under active development. Version 0.0.80 is the current source version. The latest fully documented target-environment smoke test is for 0.0.76; a local build or a previous deployment does not verify 0.0.80 in another tenant. It is not yet a generally available Dynatrace Hub app.
+SLA Review is a working custom Dynatrace AppEngine app under active development. Version 0.0.86 is the current source version. The release record in [acceptance](documentation/acceptance.md) identifies what has been checked in the target environment; a local build does not verify another tenant. It is not yet a generally available Dynatrace Hub app.
 
-The core Coverage, Performance, Evidence, and Provider terms views have automated tests and earlier target-tenant smoke evidence. The four cloud-provider adapters are implemented, tested with controlled responses, and have been deployed in an earlier release. Live least-privilege credential acceptance for every provider is still open, along with denied-permission and large-environment testing.
+The core Coverage, Service health, Evidence, and Provider terms views have automated tests and earlier target-tenant smoke evidence. The four cloud-provider adapters are implemented, tested with controlled responses, and have been deployed in an earlier release. Live least-privilege credential acceptance for every provider is still open, along with denied-permission and large-environment testing.
 
 The exact evidence and remaining gaps are in [release acceptance](documentation/acceptance.md) and [Hub readiness](documentation/hub-readiness.md).
 
@@ -19,8 +19,8 @@ The app has three stages. **Coverage remains the landing page.** The supporting 
 | Stage | Main action | Supporting views |
 | --- | --- | --- |
 | **1. Identify** | Start in **Coverage** to inspect detected topology and confirm an exact SLA match when needed. Provider presence alone does not match every service. | The native Problems app provides full causal investigation. |
-| **2. Evaluate** | Select a relevant Dynatrace Problem in **Evidence**, check customer impact, applicable terms, exclusions, and required items, then record **Evidence review complete**, **Needs evidence**, or **Excluded from provider follow-up**. Nothing is sent to the provider. | Cases from the same service and day are grouped for navigation, while each review and decision remains separate. **Performance** shows customer-observed objectives. **Provider terms** shows published `sla.directory` terms and environment-owned custom terms. |
-| **3. Automate** | Inspect automation status and create one customer screening objective for an exact provider product, account, and region scope. An authorized operator sets up route and feedback Workflows in Dynatrace Workflows. A person queues an eligible reviewed case after the integration is verified. | A person records the later outcome. Filing is recorded only after a person supplies the provider channel and receipt or ticket reference. |
+| **2. Evaluate** | Follow the one next action in **Evidence**. If only the provider is known, resolve the exact product in Coverage. Otherwise inspect a provider-product investigation and review a supported episode before recording **Evidence review complete**, **Needs evidence**, or **Excluded from provider follow-up**. Nothing is sent to the provider. | Problems remain supporting signals. Separate episodes keep separate evidence and decisions. **Provider terms** shows published `sla.directory` terms and environment-owned custom terms. |
+| **3. Automate** | Open **Overview** to see existing SLOs, the actual Workflow state, and recent decisions. Use **Service health** for detailed native SLO evaluations and **Setup** to prepare one customer screening objective for an exact provider product, account, and region scope. An authorized operator sets up route and feedback Workflows in Dynatrace Workflows. | A person queues an eligible reviewed case after the integration is verified, then records the later outcome. Filing is recorded only after a person supplies the provider channel and receipt or ticket reference. |
 
 Automate can create an explicitly confirmed customer SLO for a verified provider product scope and inspect the route and feedback Workflows. Dynatrace does not allow customer apps to request Workflow write scope, so an authorized operator creates the private, undeployed Workflows in Dynatrace Workflows using the reviewed repository scripts. Configure the private EdgeConnect origin, Credential Vault record ID, and local Laya or Jev-compatible interface there. Inspect the actor and permissions, then verify a synthetic end-to-end case before routing live evidence. Existing FinOps Agent Workflows remain visible until a verified changeover; never deploy two pairs on the same events. Automatic queueing and work-lane assignment are separate settings and both default to off. The model cannot decide credit eligibility or submit a claim. A person may record an external filing only with its channel and receipt or ticket reference. Follow [FinOps routing setup](documentation/finops-agent.md) and a private rollout record before using it with a live case.
 
@@ -62,6 +62,7 @@ The rule we do not bend is simple: provider evidence and customer impact are dif
 
 - Provider infrastructure in Smartscape does not mean every service runs on that provider.
 - A Dynatrace Problem does not prove provider fault.
+- A provider-wide `*` assignment or provider tag does not identify an exact product SLA. Earlier completed decisions under a broad mapping must be rechecked before routing.
 - A provider notice does not prove impact in this tenant.
 - A review case is not an SLA violation or an approved credit.
 - A generated objective aggregates customer request telemetry across the monitored services linked to one exact, unambiguous provider product, account, and region. It is a screening signal, not provider-wide uptime or contractual credit proof.
@@ -69,13 +70,15 @@ The rule we do not bend is simple: provider evidence and customer impact are dif
 
 When data is missing, denied, stale, or truncated, the app says so. It does not turn missing evidence into a healthy result.
 
+Evidence reads remain bounded at 500 Problems, 200 inventory services, and 500 preferred Smartscape relationships, with a second bounded topology read for affected services. In larger tenants, incomplete counts or scope reads pause human completion and local routing. The current client-side review view is not yet validated for a tenant with 20,000 services; a paged or server-side scoped Grail read and scale test are required before such a rollout.
+
 ## Getting started
 
 For an installed copy:
 
 1. **Identify:** Open SLA Review in **Coverage** and review an ambiguous SLA match only when needed.
-2. **Evaluate:** Open **Evidence** to select a case, consult **Performance** or **Provider terms** as needed, and record the human review outcome. The header and **Settings > Getting started** offer an optional three-step tour.
-3. **Automate:** Inspect objective and Workflow status, confirm one product scope objective only when its mapping, terms, and telemetry pass the gates, and set up private Workflow drafts in Dynatrace Workflows. After the separate local integration has been verified, an operator can manually queue a complete reviewed case. Automatic queueing and lane assignment remain off by default.
+2. **Evaluate:** Open **Evidence** to select a case, consult **Provider terms** as needed, and record the human review outcome. The header and **Settings > Getting started** offer an optional three-step tour.
+3. **Automate:** Start on **Overview** to inspect SLOs and Workflow state. Use **Service health** for detailed SLO results and **Setup** to confirm one product scope objective only when its mapping, terms, and telemetry pass the gates. Set up private Workflow drafts in Dynatrace Workflows. After the separate local integration has been verified, an operator can manually queue a complete reviewed case. Automatic queueing and lane assignment remain off by default.
 
 Published terms do not require a provider credential. A tenant administrator must allow `sla.directory` under Dynatrace **Settings > General > External requests**. Dynatrace-ingested AWS Health events also require no app credential. Direct provider connections are optional and are only for customer-scoped reports that are not already available in Grail.
 

@@ -5,11 +5,24 @@ import {
   createServiceObjectiveConfig,
   createServiceObjectiveExternalId,
   formatObjectiveTimeframe,
+  isProductScopeObjective,
   normalizeClassicServiceId,
   parseServiceObjectivePreview,
 } from "../ui/app/data/serviceObjectives";
 
 describe("service objectives", () => {
+  it("distinguishes a product-scope SLO from older service SLOs", () => {
+    expect(isProductScopeObjective({ tags: [
+      "managed-by:sla-review", "provider:aws", "product:amazon-rds", "scope:abcdef0123456789",
+    ] }, "aws")).toBe(true);
+    expect(isProductScopeObjective({ tags: [
+      "managed-by:sla-review", "provider:aws", "service:service-a0b1c2",
+    ] }, "aws")).toBe(false);
+    expect(isProductScopeObjective({ tags: [
+      "managed-by:sla-review", "provider:azure", "product:sql", "scope:abcdef0123456789",
+    ] }, "aws")).toBe(false);
+  });
+
   it("accepts only exact classic service IDs", () => {
     expect(normalizeClassicServiceId(" service-a0b1c2 ")).toBe("SERVICE-A0B1C2");
     expect(normalizeClassicServiceId("SERVICE-1\") | fetch logs")).toBeNull();
