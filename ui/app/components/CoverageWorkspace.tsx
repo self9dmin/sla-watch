@@ -16,8 +16,7 @@ import {
   rowIsCovered,
   rowNeedsReview,
   rowSearchValue,
-  rowServiceId,
-  rowServiceName,
+  rowServiceIds,
   type CoverageFilter,
   type CoverageRow,
   type ProviderCoverageModel,
@@ -25,9 +24,8 @@ import {
 import type { ProviderInfrastructureCandidate } from "../data/providerInfrastructure";
 import type { ProviderInventorySummary } from "../data/providerInventory";
 import {
-  createProviderScopeAssignmentKey,
+  createResourceScopeAssignment,
   createServiceScopeAssignment,
-  isServiceScopeAssignment,
   runtimeEntityIdForEdge,
   serviceEntityIdForEdge,
 } from "../data/providerScopeAssignments";
@@ -35,7 +33,6 @@ import { safeWorkspaceReturnPath } from "../data/reviewRoutes";
 import { buildSmartscapeOverviewHref } from "../data/smartscapeNavigation";
 import { providerDisplayName } from "../data/providers";
 import type { ProviderHostContextSummary } from "../data/topology";
-import { formatSmartscapeRelationship } from "../data/topology";
 import type { ProviderScopeAssignmentsState } from "../hooks/useProviderScopeAssignments";
 import { useContractOverrides } from "../hooks/useContractOverrides";
 import { SetupAdvisor } from "./SetupAdvisor";
@@ -67,6 +64,22 @@ const StatusPill = ({ tone, children }: { tone: Tone; children: React.ReactNode 
 );
 
 const COVERAGE_PAGE_SIZE = 50;
+
+const formatResourceType = (value: string): string => {
+  if (value.toUpperCase() === "HOST") return "Monitored host";
+  return value
+    .replace(/^(AWS|AZURE|GCP|GOOGLE|OCI|ORACLE)_/i, "")
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+};
+
+const impactServicesForRow = (row: CoverageRow): Array<{ id: string; name: string }> => {
+  if (row.kind === "service") return [{ id: row.service.id, name: row.service.name }];
+  const servicesById = new Map<string, string>();
+  row.edges.forEach((edge) => servicesById.set(serviceEntityIdForEdge(edge), edge.serviceName));
+  return Array.from(servicesById, ([id, name]) => ({ id, name }));
+};
 
 export const CoverageWorkspace = ({
   provider,
@@ -157,7 +170,7 @@ export const CoverageWorkspace = ({
     const focusKey = `${providerSlug}:${focusedServiceId}`;
     if (lastFocusedService.current === focusKey) return;
     const targetIndex = coverageRows.findIndex(
-      (row) => rowServiceId(row) === focusedServiceId,
+      (row) => rowServiceIds(row).includes(focusedServiceId),
     );
     if (targetIndex < 0) return;
     lastFocusedService.current = focusKey;
@@ -175,11 +188,18 @@ export const CoverageWorkspace = ({
   }, [loading, provider, scopeSettings.loading, selectedRowKey, visibleRows]);
 
   const selectedRow = coverageRows.find((row) => row.key === selectedRowKey);
+  const selectedAssignments = selectedRow?.kind === "scope"
+    ? selectedRow.assignments
+    : selectedRow?.assignment
+      ? [selectedRow.assignment]
+      : [];
   const selectedAssignment = selectedRow?.assignment;
   const selectedCandidate = selectedRow?.kind === "scope" ? selectedRow.candidate : null;
   const selectedObserved = selectedRow?.kind === "scope" ? selectedRow.observed : false;
   const selectedAmbiguous = selectedRow?.kind === "scope" ? selectedRow.ambiguous : false;
+  const selectedMixedAssignments = selectedRow?.kind === "scope" ? selectedRow.mixedAssignments : false;
   const selectedSourceTag = selectedRow?.sourceTag ?? false;
+  const selectedServiceSourceTag = selectedRow?.kind === "service" && selectedSourceTag;
   const selectedConflict = selectedRow?.kind === "service" ? selectedRow.conflicting : false;
 
   useEffect(() => {
@@ -187,15 +207,15 @@ export const CoverageWorkspace = ({
       setSelectedProviderServiceId("");
     } else if (selectedRow.kind === "scope") {
       setSelectedProviderServiceId(
-        (focusedServiceId === rowServiceId(selectedRow) &&
+        (focusedServiceId && rowServiceIds(selectedRow).includes(focusedServiceId) &&
           focusedProviderServiceId &&
           (focusedProviderServiceId === "*" ||
             provider?.services.some((service) => service.id === focusedProviderServiceId))
           ? focusedProviderServiceId
           : null) ??
-        selectedRow.assignment?.providerServiceId ??
+        (selectedRow.mixedAssignments ? "" : selectedRow.assignment?.providerServiceId) ??
         (selectedRow.ambiguous ? "" : selectedRow.candidate?.providerServiceId) ??
-        (selectedRow.sourceTag ? "*" : ""),
+        "",
       );
     } else {
       setSelectedProviderServiceId(
@@ -215,10 +235,12 @@ export const CoverageWorkspace = ({
   );
   const selectionUsesObservedMatch = selectedObserved && selectionMatchesCandidate && !selectedAssignment;
   const selectedCovered = Boolean(selectedRow && rowIsCovered(selectedRow));
-  const selectedServiceClassicId = selectedRow?.kind === "scope"
-    ? selectedRow.edge.serviceClassicId ?? serviceEntityIdForEdge(selectedRow.edge)
-    : selectedRow?.service.id ?? null;
-  const selectedServiceName = selectedRow ? rowServiceName(selectedRow) : "";
+  const selectedImpactServices = selectedRow ? impactServicesForRow(selectedRow) : [];
+  const selectedImpactService = selectedImpactServices.find(
+    (service) => service.id === focusedServiceId,
+  ) ?? (selectedImpactServices.length === 1 ? selectedImpactServices[0] : null);
+  const selectedServiceClassicId = selectedImpactService?.id ?? null;
+  const selectedServiceName = selectedImpactService?.name ?? "";
   const selectedTerms = useMemo(() => {
     if (!provider || !selectedRow || !selectedProviderService || !selectedCovered) return null;
     return resolveEffectiveContractTerms(provider, contractSettings.overrides, {
@@ -228,55 +250,65 @@ export const CoverageWorkspace = ({
     });
   }, [contractSettings.overrides, provider, providerSlug, selectedCovered, selectedProviderService, selectedRow, selectedServiceClassicId]);
 
-  const assignmentValue = (): ProviderScopeAssignmentValue | null => {
-    if (!selectedRow || !selectedProviderService || selectedConflict) return null;
-    if (selectedRow.kind === "service" || (selectedAssignment && isServiceScopeAssignment(selectedAssignment))) {
-      const service = selectedRow.kind === "service"
-        ? selectedRow.service
-        : { id: serviceEntityIdForEdge(selectedRow.edge), name: selectedRow.edge.serviceName };
-      return createServiceScopeAssignment({
+  const assignmentValues = (): ProviderScopeAssignmentValue[] => {
+    if (!selectedRow || !selectedProviderService || selectedConflict) return [];
+    if (selectedRow.kind === "service") {
+      return [createServiceScopeAssignment({
         providerSlug,
         providerServiceId: selectedProviderService.id,
         providerServiceName: selectedProviderService.name,
-        serviceEntityId: service.id,
-        serviceEntityName: service.name,
-      });
+        serviceEntityId: selectedRow.service.id,
+        serviceEntityName: selectedRow.service.name,
+      })];
     }
 
-    const serviceEntityId = serviceEntityIdForEdge(selectedRow.edge);
-    const runtimeEntityId = runtimeEntityIdForEdge(selectedRow.edge);
-    return {
-      assignmentKey: createProviderScopeAssignmentKey(providerSlug, serviceEntityId, runtimeEntityId),
+    if (selectedRow.assignments.length === 0) {
+      return [createResourceScopeAssignment({
+        providerSlug,
+        providerServiceId: selectedProviderService.id,
+        providerServiceName: selectedProviderService.name,
+        runtimeEntityId: runtimeEntityIdForEdge(selectedRow.edge),
+        runtimeEntityName: selectedRow.edge.targetName,
+        runtimeType: selectedRow.edge.targetType,
+        location: selectedRow.edge.location,
+      })];
+    }
+
+    return selectedRow.assignments.map((assignment) => ({
+      assignmentKey: assignment.assignmentKey,
       providerSlug,
       providerServiceId: selectedProviderService.id,
       providerServiceName: selectedProviderService.name,
-      serviceEntityId,
-      serviceEntityName: selectedRow.edge.serviceName,
-      runtimeEntityId,
-      runtimeEntityName: selectedRow.edge.targetName,
-      runtimeType: selectedRow.edge.targetType,
-      location: selectedRow.edge.location ?? null,
+      serviceEntityId: assignment.serviceEntityId,
+      serviceEntityName: assignment.serviceEntityName,
+      runtimeEntityId: assignment.runtimeEntityId,
+      runtimeEntityName: assignment.runtimeEntityName,
+      runtimeType: assignment.runtimeType,
+      location: assignment.location,
       evidence: selectedCandidate?.providerServiceId === selectedProviderService.id
         ? `Operator confirmed ${selectedCandidate.evidence}.`
-        : `Operator selected ${selectedProviderService.name} for this Smartscape service-to-runtime relationship.`,
+        : `Operator selected ${selectedProviderService.name} for provider resource ${selectedRow.edge.targetName}.`,
       enabled: true,
-    };
+    }));
   };
 
   const saveAssignment = async () => {
-    const value = assignmentValue();
-    if (!value || scopeSettings.mutating) return;
+    const values = assignmentValues();
+    if (values.length === 0 || scopeSettings.mutating) return;
     setFeedback(undefined);
     try {
-      if (selectedAssignment) await scopeSettings.updateAssignment(selectedAssignment, value);
-      else await scopeSettings.createAssignment(value);
+      if (selectedAssignments.length > 0)
+        await scopeSettings.updateAssignments(selectedAssignments, values);
+      else await scopeSettings.createAssignments(values);
       if (focusedProblemId && focusedServiceId) {
         void navigate(returnPath);
         return;
       }
       setFeedback({
         tone: "positive",
-        message: `SLA match saved. ${value.providerServiceName} will be reused for incidents affecting ${value.serviceEntityName}.`,
+        message: selectedRow?.kind === "scope"
+          ? `SLA match saved for ${selectedRow.edge.targetName}. It will be reused when linked services are affected.`
+          : `SLA match saved. ${values[0].providerServiceName} will be reused for incidents affecting ${values[0].serviceEntityName}.`,
       });
     } catch {
       setFeedback({
@@ -287,11 +319,13 @@ export const CoverageWorkspace = ({
   };
 
   const removeAssignment = async () => {
-    if (!selectedAssignment || scopeSettings.mutating || !window.confirm(
-      `Remove the confirmed SLA match between ${selectedAssignment.serviceEntityName} and ${assignmentDisplayName(selectedAssignment)}?`,
+    if (selectedAssignments.length === 0 || scopeSettings.mutating || !window.confirm(
+      selectedRow?.kind === "scope"
+        ? `Remove the confirmed SLA match for ${selectedRow.edge.targetName}?`
+        : `Remove the confirmed SLA match between ${selectedAssignments[0].serviceEntityName} and ${assignmentDisplayName(selectedAssignments[0])}?`,
     )) return;
     try {
-      await scopeSettings.deleteAssignment(selectedAssignment);
+      await scopeSettings.deleteAssignments(selectedAssignments);
       setFeedback({
         tone: "neutral",
         message: "The SLA match was removed. Available evidence remains visible for another review.",
@@ -308,13 +342,18 @@ export const CoverageWorkspace = ({
     const assignment = row.assignment;
     const covered = rowIsCovered(row);
     if (row.kind === "scope") {
+      const impactServices = impactServicesForRow(row);
+      const impactNames = impactServices.map((service) => service.name);
+      const impactSummary = impactNames.length > 2
+        ? `${impactNames.slice(0, 2).join(", ")} +${impactNames.length - 2}`
+        : impactNames.join(", ");
       return (
         <button type="button" role="option" aria-selected={selectedRowKey === row.key} className={`scope-map-row${selectedRowKey === row.key ? " selected" : ""}`} key={row.key} onClick={() => setSelectedRowKey(row.key)}>
-          <span className="scope-node"><ServicesIcon /><span><small>Service</small><strong>{row.edge.serviceName}</strong></span></span>
-          <span className="scope-connector"><span aria-hidden="true" /><small>{formatSmartscapeRelationship(row.edge.relationship)}</small></span>
-          <span className="scope-node"><HostsIcon /><span><small>{row.edge.targetType.replaceAll("_", " ")}</small><strong>{row.edge.targetName}</strong></span></span>
-          <span className="scope-connector"><span aria-hidden="true" /><small>{row.evidenceCount > 1 ? `${row.evidenceCount} signals` : "Smartscape"}</small></span>
-          <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{assignment ? "Confirmed" : row.sourceTag ? "Source tag" : row.observed ? "Observed" : row.ambiguous ? "Ambiguous" : row.problemCount > 0 ? `${row.problemCount} recent Problems` : row.candidate ? "Recommended" : "Needs review"}</small><strong>{assignment ? assignmentDisplayName(assignment) : row.sourceTag ? "Provider identified" : row.observed ? row.candidate?.providerServiceName : row.ambiguous ? "Review SLA match" : row.candidate?.providerServiceName ?? "Select provider service"}</strong></span></span>
+          <span className="scope-node">{row.edge.targetType === "HOST" ? <HostsIcon /> : <SmartscapeIcon />}<span><small>{formatResourceType(row.edge.targetType)}</small><strong>{row.edge.targetName}</strong></span></span>
+          <span className="scope-connector"><span aria-hidden="true" /><small>used by</small></span>
+          <span className="scope-node"><ServicesIcon /><span><small>{impactServices.length} dependent service{impactServices.length === 1 ? "" : "s"}</small><strong>{impactSummary}</strong></span></span>
+          <span className="scope-connector"><span aria-hidden="true" /><small>SLA terms</small></span>
+          <span className={`scope-node scope-location${covered ? "" : " missing"}`}><span><small>{row.mixedAssignments ? "Conflicting matches" : assignment ? "Confirmed resource" : row.observed ? "Observed resource" : row.ambiguous ? "Ambiguous" : row.problemCount > 0 ? `${row.problemCount} recent Problems` : row.candidate ? "Recommended" : "Needs review"}</small><strong>{row.mixedAssignments ? "Review saved terms" : assignment ? assignmentDisplayName(assignment) : row.observed ? row.candidate?.providerServiceName : row.ambiguous ? "Review SLA match" : row.candidate?.providerServiceName ?? "Select provider service"}</strong></span></span>
         </button>
       );
     }
@@ -337,14 +376,18 @@ export const CoverageWorkspace = ({
     </React.Fragment>
   ) : null;
 
-  const stateTone: Tone = selectedAssignment || selectedSourceTag || selectionUsesObservedMatch
+  const stateTone: Tone = selectedMixedAssignments || selectedConflict || selectedAmbiguous
+    ? "warning"
+    : selectedAssignment || selectedServiceSourceTag || selectionUsesObservedMatch
     ? "positive"
-    : selectedConflict || selectedAmbiguous || selectionMatchesCandidate
+    : selectionMatchesCandidate
       ? "warning"
       : "neutral";
-  const stateLabel = selectedAssignment
+  const stateLabel = selectedMixedAssignments
+    ? "Conflicting saved matches"
+    : selectedAssignment
     ? "Confirmed SLA match"
-    : selectedSourceTag
+    : selectedServiceSourceTag
       ? "Source tag"
       : selectionUsesObservedMatch
         ? "Observed topology"
@@ -359,9 +402,11 @@ export const CoverageWorkspace = ({
               ? "New SLA match"
               : "No SLA match"
             : "Needs review";
-  const stateTitle = selectedAssignment
+  const stateTitle = selectedMixedAssignments
+    ? "This resource has conflicting saved terms"
+    : selectedAssignment
     ? `Confirmed SLA match: ${assignmentDisplayName(selectedAssignment)}`
-    : selectedSourceTag
+    : selectedServiceSourceTag
       ? `Matched by ${providerTagKey}:${providerSlug}`
       : selectionUsesObservedMatch
         ? `Observed provider service: ${selectedProviderService?.name}`
@@ -375,11 +420,13 @@ export const CoverageWorkspace = ({
             ? `No ${providerName} service relationship found`
           : selectedProviderService
             ? `Selected provider service: ${selectedProviderService.name}`
-            : "Choose the provider service for this Dynatrace service";
-  const stateDetail = selectedAssignment?.evidence
+            : "Choose the provider service for this resource";
+  const stateDetail = selectedMixedAssignments
+    ? "Older service-level decisions disagree for this resource. Review its terms before applying one resource-level match."
+    : selectedAssignment?.evidence
     ?? (selectedConflict && selectedRow?.kind === "service"
       ? `Detected tags: ${selectedRow.values.join(", ")}. Review the matching rule before assigning ${providerName}.`
-      : selectedSourceTag
+      : selectedServiceSourceTag
         ? "The source-owned tag confirms the provider. SLA Review does not change it."
         : selectionUsesObservedMatch
           ? `${selectedCandidate?.evidence}. SLA Review can use this provider-native topology without a manual confirmation.`
@@ -398,7 +445,7 @@ export const CoverageWorkspace = ({
     selectedProviderService &&
     !selectedConflict &&
     !selectionUsesObservedMatch &&
-    (!selectedSourceTag || selectedAssignment || selectedProviderService.id !== "*"),
+    (!selectedServiceSourceTag || selectedAssignment || selectedProviderService.id !== "*"),
   );
   const topologyTypeCounts = providerInventory?.nodeTypeCounts ?? [];
   const smartscapeHref = buildSmartscapeOverviewHref(
@@ -475,22 +522,22 @@ export const CoverageWorkspace = ({
           )}
           <div className="coverage-topology-boundary">
             <div>
-              <strong>{coveredRows.length > 0 ? `${coveredRows.length.toLocaleString()} verified SLA match${coveredRows.length === 1 ? "" : "es"}` : `No ${providerName} SLA matches found`}</strong>
+            <strong>{coveredRows.length > 0 ? `${coveredRows.length.toLocaleString()} SLA match${coveredRows.length === 1 ? "" : "es"}` : `No ${providerName} SLA matches found`}</strong>
               <span>{coveredRows.length > 0
-                ? `SLA matches are shown separately because provider inventory does not establish which Dynatrace service inherits ${providerName} terms.`
-                : `${coverageRows.length.toLocaleString()} environment service${coverageRows.length === 1 ? " was" : "s were"} checked. None is attributed from provider presence alone.`}</span>
+                ? `Review linked provider resources and any direct service fallbacks separately. Provider inventory alone does not establish impact.`
+                : `No exact resource or source-tag match was found. Provider presence alone does not assign an SLA to a service.`}</span>
             </div>
           </div>
         </section>
       ) : !provider ? (
         <div className="contract-empty"><strong>Provider terms are unavailable</strong><span>Load the selected provider before reviewing SLA matches.</span></div>
       ) : coverageRows.length === 0 ? (
-        <div className="contract-empty"><strong>No services returned</strong><span>Check service detection and entity access before creating an SLA match.</span></div>
+        <div className="contract-empty"><strong>No exact SLA match scope found</strong><span>Smartscape has not returned a provider-linked resource or source-tagged service for this provider. Check provider topology before creating a match.</span></div>
       ) : (
         <div className="scope-map-layout" id="service-coverage-list">
           <div className="coverage-worklist">
             <div className="coverage-list-toolbar">
-              <input type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Find a service or runtime" aria-label="Search provider coverage" />
+              <input type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Find a resource or dependent service" aria-label="Search provider coverage" />
               <div className="coverage-filter-tabs" role="group" aria-label="Coverage worklist views">
                 {([
                   ["all", "All", coverageRows.length],
@@ -519,9 +566,9 @@ export const CoverageWorkspace = ({
                 </>
               ) : (
                 <div className="coverage-list-empty">
-                  <strong>{coverageFilter === "review" ? "No evidence-backed exceptions in the loaded inventory" : "No matching services"}</strong>
-                  <span>{inventory.incomplete ? "This is not a complete-coverage result because the inventory is bounded." : coverageFilter === "review" ? "Choose All to inspect covered services and services without an SLA match." : "Change the view or search to review another service."}</span>
-                  {coverageFilter === "review" && coveredRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("covered")}>Inspect covered services</Button> : coverageFilter === "review" && coverageRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("all")}>View all loaded services</Button> : null}
+                  <strong>{coverageFilter === "review" ? "No resource match needs review" : "No matching resources or direct service matches"}</strong>
+                  <span>{inventory.incomplete ? "This is not a complete-coverage result because the inventory is bounded." : coverageFilter === "review" ? "Choose All to inspect every linked resource and direct service match." : "Change the view or search to review another resource."}</span>
+                  {coverageFilter === "review" && coveredRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("covered")}>Inspect covered scopes</Button> : coverageFilter === "review" && coverageRows.length > 0 ? <Button size="condensed" onClick={() => setCoverageFilter("all")}>View all linked scopes</Button> : null}
                 </div>
               )}
             </div>
@@ -533,7 +580,7 @@ export const CoverageWorkspace = ({
               </div>
             </div>
           </div>
-          <aside className="scope-detail" aria-label="SLA match for selected service">
+          <aside className="scope-detail" aria-label="SLA match for selected scope">
             {selectedRow ? (
               <>
                 <label className="field-label">{selectedRow.kind === "service" && !selectedAssignment && !selectedSourceTag ? "Match to provider service" : "Provider service"}
@@ -548,9 +595,9 @@ export const CoverageWorkspace = ({
                   <span>{stateDetail}</span>
                 </div>
                 <div className="scope-selection">
-                  <span>{selectedRow.kind === "scope" ? "Selected Dynatrace scope" : "Selected Dynatrace service"}</span>
-                  <strong>{selectedRow.kind === "scope" ? `${selectedRow.edge.serviceName} → ${selectedRow.edge.targetName}` : selectedRow.service.name}</strong>
-                  <small>{selectedRow.kind === "scope" ? selectedRow.edge.location ?? "No location field returned" : selectedRow.problemCount > 0 ? `${selectedRow.problemCount} recent Problem${selectedRow.problemCount === 1 ? "" : "s"}` : "No Smartscape runtime relationship returned"}</small>
+                  <span>{selectedRow.kind === "scope" ? "Selected provider resource" : "Selected Dynatrace service"}</span>
+                  <strong>{selectedRow.kind === "scope" ? selectedRow.edge.targetName : selectedRow.service.name}</strong>
+                  <small>{selectedRow.kind === "scope" ? `${selectedImpactServices.length} dependent service${selectedImpactServices.length === 1 ? "" : "s"}: ${selectedImpactServices.map((service) => service.name).join(", ")}${selectedRow.edge.location ? ` · ${selectedRow.edge.location}` : ""}` : selectedRow.problemCount > 0 ? `${selectedRow.problemCount} recent Problem${selectedRow.problemCount === 1 ? "" : "s"}` : "No Smartscape runtime relationship returned"}</small>
                 </div>
                 <div className="scope-detail-actions">
                   {selectedConflict ? <Link className="text-action" to="/settings/watch">Review matching rules</Link> : null}
@@ -574,7 +621,7 @@ export const CoverageWorkspace = ({
               <div className="scope-mapping-state">
                 <StatusPill tone="positive">No exceptions</StatusPill>
                 <strong>No SLA match needs review</strong>
-                <span>Choose Covered to inspect automatic SLA matches, or All to match a service without provider topology.</span>
+                <span>Choose Covered to inspect observed provider resources, or All to review exact links and direct service matches.</span>
               </div>
             )}
             <div className="coverage-detail-checks">

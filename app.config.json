@@ -3,13 +3,16 @@
   "environmentUrl": "https://your-environment.apps.dynatrace.com/",
   "app": {
     "name": "SLA Review",
-    "version": "0.0.76",
+    "version": "0.0.78",
     "icon": "ui/assets/sla-review-icon.svg",
     "description": "Review provider terms against Dynatrace evidence and service ownership",
     "id": "my.sla",
     "scopes": [
       { "name": "environment-api:credentials:read", "comment": "Read an administrator-selected AppEngine credential for an optional provider incident connection" },
       { "name": "storage:events:read", "comment": "Read problem events that can affect SLA posture" },
+      { "name": "storage:buckets:read", "comment": "Read the Grail buckets behind the Davis Problems view" },
+      { "name": "openpipeline:bizevents:ingest", "comment": "Queue an operator-approved FinOps review for a completed evidence package" },
+      { "name": "storage:bizevents:read", "comment": "Show FinOps routing outcomes in SLA Review" },
       { "name": "storage:metrics:read", "comment": "Read service health signals for SLA evaluation" },
       { "name": "storage:logs:read", "comment": "Check whether correlated log telemetry exists" },
       { "name": "storage:spans:read", "comment": "Check whether distributed tracing telemetry exists" },

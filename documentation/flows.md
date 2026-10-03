@@ -32,9 +32,21 @@ Actor: user with `state:app-states:write`.
 
 Deny behavior: saving provider defaults never writes to Dynatrace entity settings or telemetry. A user without app-state write access can still inspect the app but cannot create a shared configuration. Failed discovery does not enable the entire provider catalog. Switching the active provider changes only the focused view.
 
-## Configure AWS provider notices
+## Read Dynatrace-ingested AWS provider notices
 
-Actor: administrator with App Settings write access, access to the selected Credential Vault record, an AWS Health API eligible support plan, and permission to configure AWS IAM.
+Actor: SRE reader with `storage:events:read`.
+
+1. The existing Dynatrace AWS connection enables Amazon EventBridge event ingest with source `aws.health` for the monitored account and intended regions.
+2. Evidence runs one bounded Grail query for Dynatrace event-ingest records whose source is `aws.health`.
+3. The app retains the AWS account, region, Health event timing, provider service, explicit affected resources, and Smartscape source context returned by Dynatrace.
+4. An event with no explicit affected resource remains provider-level corroboration. It is not matched to a service merely because Dynatrace linked it to the AWS account node.
+5. Evidence compares explicit affected-resource identifiers with compatible Smartscape runtime identifiers and keeps provider evidence separate from customer-observed impact.
+
+Deny or degraded behavior: denied event access is unavailable, not zero. An empty result says that no matching event was found or that EventBridge health ingestion is not enabled. It never establishes that the monitored services were healthy.
+
+## Configure the optional direct AWS provider source
+
+Actor: administrator with App Settings write access, access to the selected Credential Vault record, an AWS Health API eligible support plan, and permission to configure AWS IAM. This is a fallback for API lookback, not the default AWS path.
 
 1. The administrator creates a dedicated AWS role with only `health:DescribeEvents`, `health:DescribeEventDetails`, and `health:DescribeAffectedEntities`.
 2. The administrator creates or selects a dedicated base identity with `sts:AssumeRole` permission only for that role, then configures the role to trust that principal.

@@ -229,8 +229,9 @@ export const Header = ({
             <p>
               Review defaults changes the focused provider, source-tag convention,
               and evidence window. Custom terms are for private agreements.
-              Provider connections require provider IAM, Credential Vault, and
-              approved External requests.
+              AWS Health events already ingested into Grail need no app credential.
+              Other direct provider connections require provider IAM, Credential
+              Vault, and approved External requests.
             </p>
           </section>
           <div className="help-drawer-actions">

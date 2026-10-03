@@ -10,7 +10,9 @@ import type {
 import { providerTagValue } from "./providerTags";
 import {
   inferProviderServiceCandidate,
+  isResourceScopeAssignment,
   resolveProviderServiceCandidates,
+  runtimeEntityIdForEdge,
   serviceEntityIdForEdge,
 } from "./providerScopeAssignments";
 
@@ -194,12 +196,6 @@ export const buildEvidenceCandidates = ({
     const affectedServices = problem.affectedEntityIds
       .map((id) => serviceById.get(id))
       .filter((service): service is ServiceRecord => Boolean(service));
-    const confirmed = assignments.filter(
-      (assignment) =>
-        assignment.enabled &&
-        assignment.providerSlug === providerSlug &&
-        affectedIds.has(assignment.serviceEntityId),
-    );
     const tagged = affectedServices.filter((service) =>
       service.tags.some(
         (tag) =>
@@ -210,6 +206,17 @@ export const buildEvidenceCandidates = ({
       (edge) =>
         affectedIds.has(serviceEntityIdForEdge(edge)) &&
         edge.providerSlug === providerSlug,
+    );
+    const relevantRuntimeIds = new Set(
+      relevantTopology.map(runtimeEntityIdForEdge),
+    );
+    const confirmed = assignments.filter(
+      (assignment) =>
+        assignment.enabled &&
+        assignment.providerSlug === providerSlug &&
+        (affectedIds.has(assignment.serviceEntityId) ||
+          (isResourceScopeAssignment(assignment) &&
+            relevantRuntimeIds.has(assignment.runtimeEntityId))),
     );
     const suggested = relevantTopology
       .flatMap((edge) => {

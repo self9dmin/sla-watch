@@ -10,6 +10,7 @@ import {
   SMARTSCAPE_PROVIDER_INVENTORY_QUERY,
   SMARTSCAPE_RESULT_LIMIT,
   SMARTSCAPE_SERVICE_RUNTIME_QUERY,
+  createAwsHealthEventsQuery,
   createIncidentServiceMetricsQuery,
   createIncidentServicesQuery,
   createIncidentSmartscapeQuery,
@@ -17,6 +18,18 @@ import {
 } from "../ui/app/data/queries";
 
 describe("bounded inventory queries", () => {
+  it("loads only Dynatrace-ingested AWS Health events with bounded detail fields", () => {
+    const query = createAwsHealthEventsQuery(5_000);
+
+    expect(query).toContain("fetch events, from:-2160h");
+    expect(query).toContain('dt.da.source == "aws-event-ingest"');
+    expect(query).toContain('source == "aws.health"');
+    expect(query).toContain("event_arn = jsonData[`eventArn`]");
+    expect(query).toContain("affected_entities = jsonData[`affectedEntities`]");
+    expect(query).toContain("smartscape_source_id = dt.smartscape_source.id");
+    expect(query).toContain("limit 200");
+  });
+
   it("uses stable Smartscape Problem fields with compatibility fallbacks", () => {
     const query = createProblemsQuery(168);
 
