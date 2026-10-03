@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check public source for secrets and tenant identifiers
+        run: npm run audit:public
+
       - name: Typecheck
         run: npm run typecheck
 

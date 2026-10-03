@@ -1,6 +1,5 @@
-# Local Dynatrace App Toolkit cache, auth tokens, logs, and generated schemas
-.dt-app/*
-!/.dt-app/deployment.json
+# Local Dynatrace App Toolkit cache, auth tokens, logs, deployment IDs, and generated schemas
+/.dt-app/
 
 # Local agent operating instructions are not part of the public product source
 /AGENTS.md
@@ -32,6 +31,13 @@
 .env
 .env.*
 !.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+
+# Tenant rollout evidence is private operational data
+/documentation/finops-rollout-status.md
 
 # IDEs and editors
 /.idea

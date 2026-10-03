@@ -48,7 +48,7 @@ The app is suitable for continued hardening as a custom AppEngine app. The revie
 The release owner should not request Hub review until all of the following are true:
 
 - The final app ID, name, description, icon, publisher, and support URL are approved.
-- The public repository at [self9dmin/sla-watch](https://github.com/self9dmin/sla-watch) has a clean history, license, security policy, contribution guidance, CI, and no tenant-specific secrets or auth state.
+- Review the public repository at [self9dmin/sla-watch](https://github.com/self9dmin/sla-watch), including its history, for tenant-specific identifiers, secrets, and auth state before Hub submission.
 - The public repository uses `DT_APP_ENVIRONMENT_URL` or an explicit deployment flag for contributor and CI targets rather than relying on a private tenant default.
 - `npm run verify` and `npm audit --omit=dev` pass on Node 24.
 - A clean tenant install passes the browser smoke path in both themes.

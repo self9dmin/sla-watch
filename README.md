@@ -6,7 +6,7 @@ The app does not decide fault, label a case as an SLA violation, file a claim, o
 
 ## Project status
 
-SLA Review is a working custom Dynatrace AppEngine app under active development. Release 0.0.78 is the current source release. It is not yet a generally available Dynatrace Hub app.
+SLA Review is a working custom Dynatrace AppEngine app under active development. Release 0.0.79 is the current source release. It is not yet a generally available Dynatrace Hub app.
 
 The core Coverage, Performance, Incidents, Evidence, and Directory views have automated tests and target-tenant smoke evidence. The four cloud-provider adapters are implemented, tested with controlled responses, and deployed. Live least-privilege credential acceptance for every provider is still open, along with denied-permission and large-environment testing.
 
@@ -22,7 +22,7 @@ The exact evidence and remaining gaps are in [release acceptance](documentation/
 | **Evidence** | Carries the case forward with Problems, request telemetry, objectives, applicable terms, and optional provider reports. The SRE records **Ready for follow-up**, **Needs evidence**, or **Excluded from provider follow-up**, then can copy or download the review package. Nothing is submitted. |
 | **Directory** | Shows published `sla.directory` terms, service-level coverage, support options, filing instructions, and environment-owned custom terms. |
 
-FinOps Agent is a controlled routing workflow for reviewed evidence. A person can queue one complete case for a local decision model. Automatic queueing and work-lane assignment are separate settings and both default to off. The model cannot decide credit eligibility or submit a claim. A person may record an external filing only with its channel and receipt or ticket reference. See [FinOps Agent setup](documentation/finops-agent.md) and the [SAL rollout status](documentation/finops-rollout-status.md) before using it with a live case.
+FinOps Agent is a controlled routing workflow for reviewed evidence. A person can queue one complete case for a local decision model. Automatic queueing and work-lane assignment are separate settings and both default to off. The model cannot decide credit eligibility or submit a claim. A person may record an external filing only with its channel and receipt or ticket reference. See [FinOps Agent setup](documentation/finops-agent.md) and your private rollout record before using it with a live case.
 
 Settings is not another required workflow. Administrators use it for optional provider connections, custom terms, the source-tag convention, the evidence window, and appearance.
 

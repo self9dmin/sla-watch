@@ -3,11 +3,14 @@
 import { execution } from "@dynatrace-sdk/automation-utils";
 import { businessEventsClient, credentialVaultClient } from "@dynatrace-sdk/client-classic-environment-v2";
 
-const ROUTER_URL = "http://private-router.example.invalid:8787/route";
+// Replace privately in the Workflow with the approved EdgeConnect URL.
+const ROUTER_URL = "REPLACE_WITH_PRIVATE_EDGE_CONNECT_URL/route";
 const REVIEW_GATE_URL = "/apps/my.sla/api/finopsReviewGate";
 const BRIDGE_CREDENTIAL_ID = "CREDENTIALS_VAULT-REPLACE_ME";
 
 export default async function () {
+  if (ROUTER_URL.includes("REPLACE_WITH") || BRIDGE_CREDENTIAL_ID.includes("REPLACE_ME"))
+    throw new Error("Configure the private router URL and Credential Vault ID before running.");
   const ex = await execution();
   const event = ex.params.event;
   if (event?.["event.type"] !== "sla.finops.review.ready") throw new Error("Unexpected trigger event.");

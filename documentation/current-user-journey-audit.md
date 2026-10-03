@@ -1,7 +1,7 @@
 # SLA Review current user journey audit
 
 Audit date: 2026-09-12  
-Environment: production app in designated Dynatrace environment (`example`)  
+Environment: designated Dynatrace target app
 Observed app version: `0.0.51`  
 Observed source revision: `ecbd2a3626453ec7b48b236cdc6695d116d0684c`
 
@@ -300,7 +300,7 @@ Use the following prompt with a Chrome-capable ChatGPT or Claude extension. Run 
 ```text
 Act as a senior SRE and product usability auditor. Use my existing signed-in Chrome session and audit the installed SLA Review app at:
 
-https://example.apps.dynatrace.com/ui/apps/my.sla/
+Open the installed `my.sla` app from the target Dynatrace environment.
 
 This is a read-only audit. Do not save settings, create or remove mappings, create objectives, add or edit custom terms, add provider connections, validate or dismiss evidence, delete anything, or send anything outside the tenant. If a step would mutate state, inspect the screen up to that action and record what would happen without confirming it.
 

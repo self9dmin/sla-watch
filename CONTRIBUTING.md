@@ -2,7 +2,7 @@
 
 ## Before opening a change
 
-1. Read `AGENTS.md`, [`documentation/dynatrace-sources.md`](documentation/dynatrace-sources.md), and the architecture, permissions, and tests documents.
+1. Read [`documentation/dynatrace-sources.md`](documentation/dynatrace-sources.md), and the architecture, permissions, and tests documents.
 2. Keep the app read-mostly. Any new write to Dynatrace data needs an explicit product and permission review.
 3. Prefer Strato components and design tokens. Do not add a new dependency for a small helper that can be implemented locally.
 4. Keep external calls inside AppEngine functions and validate all external input and output.
@@ -20,7 +20,7 @@ npm audit --omit=dev
 
 For a release candidate, use `npm run verify:release` as the single gate. It includes CI-style coverage and the production dependency audit.
 
-Authenticated browser checks can be run separately with `DT_APP_E2E_URL`, `DT_APP_E2E_AUTH_STATE`, and `npm run test:e2e`. The repository's E2E workflow is manual-only because tenant credentials and browser state must never be embedded in pull requests.
+Authenticated browser checks can be run locally or in private CI with `DT_APP_E2E_URL`, `DT_APP_E2E_AUTH_STATE`, and `npm run test:e2e`. Do not publish their logs, reports, screenshots, videos, traces, or browser state from a public repository.
 
 If a change affects DQL, permissions, app state, external calls, or a user-visible claim, update the relevant documentation and tests in the same change.
 
