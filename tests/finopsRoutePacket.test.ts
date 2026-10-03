@@ -1,4 +1,4 @@
-import { finopsRoutePacket } from "../ui/app/data/finopsRoutePacket";
+import { finopsRouteBlockers, finopsRoutePacket } from "../ui/app/data/finopsRoutePacket";
 import type { EvidenceReviewArtifact } from "../ui/app/data/evidenceReviewArtifact";
 
 const artifact = (): EvidenceReviewArtifact => ({
@@ -37,5 +37,21 @@ describe("FinOps candidate trigger", () => {
       { ...base, requirements: { ...base.requirements, missing: ["Provider requirement"] } },
     ];
     for (const value of changes) expect(finopsRoutePacket(value as EvidenceReviewArtifact)).toBeNull();
+  });
+
+  it("explains each missing routing gate without weakening the packet", () => {
+    const base = artifact();
+    const incomplete = {
+      ...base,
+      incidentWindow: { ongoing: true },
+      dynatrace: { ...base.dynatrace, problems: [{ id: "P-1" }, { id: "P-2" }] },
+      requirements: { missing: ["Resource ARN"] },
+    } as unknown as EvidenceReviewArtifact;
+    expect(finopsRouteBlockers(incomplete)).toEqual(expect.arrayContaining([
+      "This pilot routes one Dynatrace Problem per request.",
+      "Wait for the Problem to close.",
+      "Confirm all required provider evidence items.",
+    ]));
+    expect(finopsRoutePacket(incomplete)).toBeNull();
   });
 });

@@ -143,6 +143,14 @@ smartscapeNodes SERVICE
 `;
 };
 
+export const PROBLEMS_RESULT_LIMIT = 500;
+
+export const createProblemsCountQuery = (lookbackHours: number): string => `
+fetch dt.davis.problems, from:-${lookbackHours}h, to:now()
+| filter not(dt.davis.is_duplicate)
+| summarize problem_count = count()
+`;
+
 export const createProblemsQuery = (lookbackHours: number): string => `
 fetch dt.davis.problems, from:-${lookbackHours}h, to:now()
 | filter not(dt.davis.is_duplicate)
@@ -157,7 +165,7 @@ fetch dt.davis.problems, from:-${lookbackHours}h, to:now()
     affected_entity_ids,
     root_cause_entity_id,
     root_cause_entity_name
-| limit 100
+| limit ${PROBLEMS_RESULT_LIMIT}
 `;
 
 export const createAwsHealthEventsQuery = (lookbackHours: number): string => {

@@ -8,7 +8,7 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 
 ## Journey map
 
-The primary navigation has three stages: **Identify** (Coverage and Incident cases), **Evaluate** (Evidence with Performance and Provider terms as references), and **Automate** (the local FinOps route after a complete human review). Coverage is always the landing page. A focused case carries its context into supporting views and returns to Evidence for the human decision.
+The primary navigation has three stages: **Identify** (Coverage), **Evaluate** (Evidence with Performance and Provider terms as references), and **Automate** (the local FinOps route after a complete human review). Coverage is always the landing page. Evidence is the only case queue. A focused case carries its context into supporting views and returns to Evidence for the human decision.
 
 | Stage | Touchpoint | User action | Likely reaction | Main risk | Product response |
 | --- | --- | --- | --- | --- | --- |

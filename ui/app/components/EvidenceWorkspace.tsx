@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { getAppLink } from "@dynatrace-sdk/navigation";
 import type { Slo } from "@dynatrace-sdk/client-service-level-objectives";
 import { businessEventsClient } from "@dynatrace-sdk/client-classic-environment-v2";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -32,15 +33,16 @@ import { formatObjectiveTimeframe } from "../data/serviceObjectives";
 import {
   createCoverageReviewPath,
   createEvidenceReviewPath,
-  createIncidentReviewPath,
 } from "../data/reviewRoutes";
+import { groupReviewCasesByDay } from "../data/reviewDayGroups";
+import { PROBLEMS_RESULT_LIMIT } from "../data/queries";
 import {
   buildIncidentReviewCases,
   incidentReviewCaseForProblem,
   type IncidentReviewCase,
 } from "../data/incidentReviewCases";
 import { formatDavisImpact } from "../data/problems";
-import { finopsRoutePacket } from "../data/finopsRoutePacket";
+import { finopsRouteBlockers, finopsRoutePacket } from "../data/finopsRoutePacket";
 import {
   buildEvidenceReviewArtifact,
   evidenceReviewArtifactFilename,
@@ -92,6 +94,8 @@ type EvidenceWorkspaceProps = {
   serviceTelemetry: ServiceTelemetryMap;
   serviceTelemetryLoading: boolean;
   serviceTelemetryError?: Error;
+  problemResultLimited: boolean;
+  totalProblemCount: number | null;
   lookbackHours: EvidenceLookbackHours;
   loading: boolean;
   error?: Error;
@@ -258,6 +262,7 @@ const CandidateDetail = ({
   const [artifactFeedback, setArtifactFeedback] = useState<string>();
   const [finopsQueueing, setFinopsQueueing] = useState(false);
   const [queuedRequestId, setQueuedRequestId] = useState<string>();
+  const [queueError, setQueueError] = useState<string>();
   const finopsRouting = useFinopsRouting();
   const affectedEntityIds = useMemo(
     () => Array.from(new Set(
@@ -303,6 +308,7 @@ const CandidateDetail = ({
     );
     setSaveError(undefined);
     setArtifactFeedback(undefined);
+    setQueueError(undefined);
   }, [
     reviewCase.key,
     decision?.acknowledgedEvidence,
@@ -406,11 +412,6 @@ const CandidateDetail = ({
   const appliedTermsLabel = terms.appliedOverrides.map((override) =>
     `${override.sourceReference} (${override.scopeKind} scope${override.effectiveTo ? `, ${override.effectiveFrom} to ${override.effectiveTo}` : `, from ${override.effectiveFrom}`})`
   ).join("; ");
-  const incidentPath = createIncidentReviewPath({
-    providerSlug: provider.provider.slug,
-    problemId: candidate.problem.id,
-    caseId: reviewCase.key,
-  });
   const evidencePath = createEvidenceReviewPath({
     providerSlug: provider.provider.slug,
     problemId: candidate.problem.id,
@@ -598,13 +599,16 @@ const CandidateDetail = ({
   const routePacket = currentDecision?.status === "validated"
     ? finopsRoutePacket(artifact)
     : null;
+  const routeBlockers = currentDecision?.status === "validated"
+    ? finopsRouteBlockers(artifact)
+    : [];
   const queueFinopsReview = async (
     packet: NonNullable<ReturnType<typeof finopsRoutePacket>>,
     triggerMode: "manual" | "automatic",
   ) => {
     if (!finopsRouting.reliable || finopsQueueing || queuedRequestId === packet.requestId) return;
     setFinopsQueueing(true);
-    setArtifactFeedback(undefined);
+    setQueueError(undefined);
     try {
       await businessEventsClient.ingest({
         type: "application/json; charset=utf-8",
@@ -619,9 +623,8 @@ const CandidateDetail = ({
         },
       });
       setQueuedRequestId(packet.requestId);
-      setArtifactFeedback("FinOps routing queued. Review the agent result in Dynatrace before any provider contact.");
     } catch {
-      setArtifactFeedback("FinOps routing could not be queued. The evidence review remains saved.");
+      setQueueError("Local routing could not be queued. The evidence review remains saved.");
     } finally {
       setFinopsQueueing(false);
     }
@@ -757,7 +760,33 @@ const CandidateDetail = ({
         </dl>
       </section>
 
-      <section className={`candidate-next-action${readyEnough ? " ready" : ""}`} aria-labelledby="candidate-next-action-title">
+      {currentDecision?.status === "validated" ? <section className="candidate-handoff" aria-label="Next step after evidence review">
+        <div className="candidate-handoff-mark" aria-hidden="true">✓</div>
+        <div className="candidate-handoff-content">
+          <span className="candidate-handoff-step">Coverage checked · Evidence reviewed · Local route next</span>
+          <strong>Evidence review complete</strong>
+          <p>Required items were confirmed for {reviewCase.problems.length} Problem{reviewCase.problems.length === 1 ? "" : "s"}. Nothing has been sent to the provider.</p>
+          {queuedRequestId === routePacket?.requestId ? <p className="candidate-handoff-queued">Queued for local routing · Request ID: <code>{queuedRequestId}</code></p> : null}
+          <div className="candidate-handoff-actions">
+            {queuedRequestId === routePacket?.requestId ? <Button as={Link} to={`/finops?provider=${encodeURIComponent(provider.provider.slug)}`} variant="emphasized" color="primary" size="condensed">View in Automate</Button>
+              : !routePacket ? <Button size="condensed" onClick={() => {
+                const evidence = document.getElementById("candidate-supporting-evidence") as HTMLDetailsElement | null;
+                if (evidence) {
+                  evidence.open = true;
+                  evidence.scrollIntoView({ block: "start" });
+                }
+              }}>Review routing evidence</Button>
+                : !finopsRouting.reliable ? <Button as={Link} to="/settings/finops" variant="emphasized" color="primary" size="condensed">Set up Automate</Button>
+                  : <Button variant="emphasized" color="primary" size="condensed" disabled={finopsQueueing} onClick={() => void queueFinopsReview(routePacket, "manual")}>{finopsQueueing ? "Queueing local review" : "Queue local route review"}</Button>}
+            <Button size="condensed" disabled={!settings.canWrite || settings.mutating} onClick={() => void resetDecision()}>Reopen review</Button>
+          </div>
+          {routePacket ? <small>Queues a Dynatrace event for the configured local routing Workflow. The model recommends an internal next step. No provider claim is submitted.</small>
+            : <ul className="candidate-handoff-blockers">{routeBlockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul>}
+          {queueError ? <span className="candidate-decision-error" role="alert">{queueError}</span> : null}
+        </div>
+      </section> : null}
+
+      {currentDecision?.status !== "validated" ? <section className={`candidate-next-action${readyEnough ? " ready" : ""}`} aria-labelledby="candidate-next-action-title">
         <div>
           <strong id="candidate-next-action-title">{currentDecision ? "Human decision recorded" : readyEnough ? "Ready for human review" : "What needs attention"}</strong>
           <p>{currentDecision
@@ -771,8 +800,8 @@ const CandidateDetail = ({
                   : "Required evidence checks are complete. Review and record the SRE decision below. Provider eligibility remains undetermined."}</p>
         </div>
         {!currentDecision && !scopeConfirmed ? <Link to={coveragePath}>Open Coverage</Link> : null}
-        {!currentDecision && scopeConfirmed && structuralGaps.length > 0 ? <Link to={incidentPath}>Open incident</Link> : null}
-      </section>
+        {!currentDecision && scopeConfirmed && structuralGaps.length > 0 ? <a href={getAppLink("dynatrace.davis.problems")} target="_blank" rel="noreferrer">Investigate in Problems</a> : null}
+      </section> : null}
 
       {requiredEvidence.length > 0 ? <section className="candidate-required-items" id="candidate-requirements" aria-labelledby="candidate-required-items-title">
         <div className="candidate-required-items-heading">
@@ -803,7 +832,7 @@ const CandidateDetail = ({
         <div className="candidate-review-heading">
           <div>
             <strong>Human evidence review</strong>
-            <span>Record evidence completeness. Nothing is submitted.</span>
+            <span>Record evidence completeness. Nothing is sent to the provider.</span>
           </div>
           {decision ? (
             <span className="candidate-reviewed-at">
@@ -811,17 +840,15 @@ const CandidateDetail = ({
             </span>
           ) : null}
         </div>
-        {currentDecision ? (
+        {currentDecision?.status === "validated" ? (
+          <p className="candidate-review-record">Saved {reviewTime ? formatDateTime(reviewTime) : "review"}{currentDecision.decisionNote ? ` · Note: ${currentDecision.decisionNote}` : ""}. Reopen the review above if the evidence changes.</p>
+        ) : currentDecision ? (
           <div className={`candidate-completion candidate-completion-${currentDecision.status}`} role="status">
-            <strong>Human review saved: {currentDecision.status === "validated"
-              ? "Evidence review complete"
-              : currentDecision.status === "not-ready"
+            <strong>Human review saved: {currentDecision.status === "not-ready"
                 ? "Needs evidence"
                 : "Excluded from follow-up"}</strong>
             <small>Case {reviewCase.key}{reviewTime ? ` · Updated ${formatDateTime(reviewTime)}` : ""}</small>
-            <span>{currentDecision.status === "validated"
-              ? `Evidence review is complete for ${reviewCase.problems.length} Problem${reviewCase.problems.length === 1 ? "" : "s"}. The provider agreement owner can decide the next action.`
-              : currentDecision.status === "not-ready"
+            <span>{currentDecision.status === "not-ready"
                 ? "The case remains open with its confirmed items and note."
                 : `${reviewCase.problems.length} Problem${reviewCase.problems.length === 1 ? " remains" : "s remain"} in Dynatrace and will not appear as provider follow-up work.`}</span>
             <small>Nothing has been sent to the provider. Provider fault and credit eligibility remain undetermined.</small>
@@ -829,18 +856,6 @@ const CandidateDetail = ({
             <Button size="condensed" disabled={!settings.canWrite || settings.mutating} onClick={() => void resetDecision()}>
               Reopen review
             </Button>
-            {currentDecision.status === "validated" ? (
-              <Button size="condensed" disabled={!routePacket || !finopsRouting.reliable || finopsQueueing || queuedRequestId === routePacket.requestId}
-                onClick={() => { if (routePacket) void queueFinopsReview(routePacket, "manual"); }}>
-                {finopsQueueing ? "Queueing" : queuedRequestId === routePacket?.requestId ? "Queued" : "Send to Automate"}
-              </Button>
-            ) : null}
-            {currentDecision.status === "validated" && routePacket ? (
-              <small>Optional. The local model recommends an internal route only. It does not determine credit eligibility or submit a claim.</small>
-            ) : null}
-            {currentDecision.status === "validated" && !routePacket ? (
-              <small>FinOps routing needs one closed Problem, one affected service, one provider service, confirmed scope, customer availability below the SLA target, and no missing requirements.</small>
-            ) : null}
           </div>
         ) : (
           <>
@@ -896,8 +911,8 @@ const CandidateDetail = ({
                   Resolve coverage
                 </Button>
               ) : structuralGaps.length > 0 ? (
-                <Button as={Link} to={incidentPath} variant="emphasized" color="primary" size="condensed">
-                  Review incident evidence
+                <Button as="a" href={getAppLink("dynatrace.davis.problems")} target="_blank" rel="noreferrer" variant="emphasized" color="primary" size="condensed">
+                  Investigate in Problems
                 </Button>
               ) : null}
               <Button
@@ -932,7 +947,7 @@ const CandidateDetail = ({
         </div>
       </section>
 
-      <details key={reviewCase.key} className="candidate-supporting-evidence">
+      <details key={reviewCase.key} id="candidate-supporting-evidence" className="candidate-supporting-evidence">
         <summary>Supporting evidence and terms</summary>
         <div className="candidate-supporting-evidence-body">
           <dl className="candidate-facts">
@@ -963,7 +978,7 @@ const CandidateDetail = ({
               {reviewCase.problems.length > 1 ? "Correlated case" : formatMappingBasis(candidate)}
             </StatusPill>
             <nav aria-label="Case references">
-              <Link to={incidentPath}>Open incident</Link>
+              <a href={getAppLink("dynatrace.davis.problems")} target="_blank" rel="noreferrer">Open Problems app</a>
               <Link to={coveragePath}>Review coverage</Link>
               <Link to={supportingReviewPath("/directory")}>Review terms</Link>
             </nav>
@@ -999,11 +1014,7 @@ const CandidateDetail = ({
                     <span>
                       <strong>{problem.title}</strong>
                       <small>
-                        <Link to={createIncidentReviewPath({
-                          providerSlug: provider.provider.slug,
-                          problemId: problem.id,
-                          caseId: reviewCase.key,
-                        })}>{problem.id}</Link>
+                        {problem.id}
                         {` · ${problem.category}`}
                       </small>
                     </span>
@@ -1136,6 +1147,8 @@ const CandidateWorkspace = ({
   serviceTelemetry,
   serviceTelemetryLoading,
   serviceTelemetryError,
+  problemResultLimited,
+  totalProblemCount,
   lookbackHours,
   loading,
   error,
@@ -1144,6 +1157,7 @@ const CandidateWorkspace = ({
   const routeParams = new URLSearchParams(location.search);
   const requestedProblemId = routeParams.get("problem");
   const requestedCaseId = routeParams.get("case");
+  const requestedSelectionKey = `${providerSlug}|${requestedCaseId ?? ""}|${requestedProblemId ?? ""}`;
   const lastRequestedSelection = useRef<string | null>(null);
   const settings = useEvidenceDecisions();
   const contractSettings = useContractOverrides();
@@ -1191,6 +1205,7 @@ const CandidateWorkspace = ({
   const [queueQuery, setQueueQuery] = useState("");
   const [queueFilter, setQueueFilter] = useState<EvidenceQueueFilter>("all");
   const [page, setPage] = useState(1);
+  const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>();
   const queueInitialized = useRef(false);
   const caseStateByKey = useMemo(() => new Map(
     reviewCases.map((reviewCase) => [
@@ -1225,22 +1240,24 @@ const CandidateWorkspace = ({
       return searchable.includes(query);
     });
   }, [caseStateByKey, queueFilter, queueQuery, reviewCases]);
+  const dayGroups = useMemo(() => groupReviewCasesByDay(filteredCases), [filteredCases]);
   const pageCount = Math.max(
     1,
-    Math.ceil(filteredCases.length / EVIDENCE_CASE_PAGE_SIZE),
+    Math.ceil(dayGroups.length / EVIDENCE_CASE_PAGE_SIZE),
   );
-  const visibleCases = useMemo(
-    () => filteredCases.slice(
+  const visibleGroups = useMemo(
+    () => dayGroups.slice(
       (page - 1) * EVIDENCE_CASE_PAGE_SIZE,
       page * EVIDENCE_CASE_PAGE_SIZE,
     ),
-    [filteredCases, page],
+    [dayGroups, page],
   );
+  const visibleCases = useMemo(() => visibleGroups.flatMap((group) => group.cases), [visibleGroups]);
 
   useEffect(() => {
     if (
       (requestedCaseId || requestedProblemId) &&
-      `${requestedCaseId ?? ""}|${requestedProblemId ?? ""}` !== lastRequestedSelection.current
+      requestedSelectionKey !== lastRequestedSelection.current
     ) {
       const requested = reviewCases.find((reviewCase) =>
         reviewCase.key === requestedCaseId) ??
@@ -1248,25 +1265,36 @@ const CandidateWorkspace = ({
           ? incidentReviewCaseForProblem(reviewCases, requestedProblemId)
           : undefined);
       if (requested) {
-        lastRequestedSelection.current = `${requestedCaseId ?? ""}|${requestedProblemId ?? ""}`;
-        const requestedIndex = reviewCases.findIndex((reviewCase) =>
-          reviewCase.key === requested.key);
-        setQueueQuery("");
-        setQueueFilter("all");
-        setPage(Math.floor(requestedIndex / EVIDENCE_CASE_PAGE_SIZE) + 1);
+        if (queueFilter !== "all" || queueQuery) {
+          setQueueQuery("");
+          setQueueFilter("all");
+          return;
+        }
+        lastRequestedSelection.current = requestedSelectionKey;
+        const requestedIndex = dayGroups.findIndex((group) =>
+          group.cases.some((reviewCase) => reviewCase.key === requested.key));
+        if (requestedIndex >= 0) setPage(Math.floor(requestedIndex / EVIDENCE_CASE_PAGE_SIZE) + 1);
         setSelectedKey(requested.key);
+        setExpandedGroupKey(dayGroups[requestedIndex]?.key);
         return;
       }
     }
     if (
       visibleCases.length > 0 &&
       !visibleCases.some((reviewCase) => reviewCase.key === selectedKey)
-    ) setSelectedKey(visibleCases[0].key);
+    ) {
+      setSelectedKey(visibleCases[0].key);
+      setExpandedGroupKey(undefined);
+    }
     if (reviewCases.length === 0) setSelectedKey(undefined);
   }, [
     requestedCaseId,
     requestedProblemId,
+    requestedSelectionKey,
     reviewCases,
+    dayGroups,
+    queueFilter,
+    queueQuery,
     selectedKey,
     visibleCases,
   ]);
@@ -1276,8 +1304,8 @@ const CandidateWorkspace = ({
       queueInitialized.current = true;
       return;
     }
-    setPage(1);
-  }, [providerSlug, queueFilter, queueQuery]);
+    if (!requestedCaseId && !requestedProblemId) setPage(1);
+  }, [providerSlug, queueFilter, queueQuery, requestedCaseId, requestedProblemId]);
 
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
@@ -1286,6 +1314,8 @@ const CandidateWorkspace = ({
   const selected =
     visibleCases.find((reviewCase) => reviewCase.key === selectedKey) ??
     visibleCases[0];
+  const selectedGroupKey = visibleGroups.find((group) => group.cases.some((reviewCase) => reviewCase.key === selected?.key))?.key;
+  const openGroupKey = expandedGroupKey === undefined ? selectedGroupKey : expandedGroupKey;
   const readyForFollowUp = reviewCases.filter(
     (reviewCase) => caseStateByKey.get(reviewCase.key)?.state === "ready-for-follow-up",
   ).length;
@@ -1352,7 +1382,6 @@ const CandidateWorkspace = ({
         </span>
         <div className="evidence-empty-actions">
           <Button as={Link} to={`/?provider=${encodeURIComponent(providerSlug)}`} size="condensed">Review coverage</Button>
-          <Button as={Link} to={`/incidents?provider=${encodeURIComponent(providerSlug)}`} size="condensed">Open incidents</Button>
         </div>
       </div>
     );
@@ -1360,6 +1389,9 @@ const CandidateWorkspace = ({
 
   return (
     <div className="evidence-candidates-view">
+      {problemResultLimited ? <div className="evidence-result-limit" role="status">
+        The Problems read reached its {PROBLEMS_RESULT_LIMIT}-record limit. This queue uses {problems.length} parsed Problems{totalProblemCount !== null ? ` from ${totalProblemCount} in the window` : "; the total is unavailable"}. Some cases may be missing. <Link to="/settings/watch">Narrow the evidence window</Link> before treating the list as complete.
+      </div> : null}
       <dl className="evidence-candidate-summary" aria-label="Evidence review case status">
         <div><dt>Needs review</dt><dd>{needsReview}</dd></div>
         <div><dt>Needs evidence</dt><dd>{needsEvidence}</dd></div>
@@ -1412,7 +1444,25 @@ const CandidateWorkspace = ({
             </div>
           </div>
           <div className="candidate-queue-list">
-            {visibleCases.map((reviewCase) => {
+            {visibleGroups.map((group) => <div key={group.key} className="candidate-day-group">
+              {group.cases.length > 1 ? <button
+                type="button"
+                className="candidate-day-group-toggle"
+                aria-expanded={openGroupKey === group.key}
+                onClick={() => {
+                  setExpandedGroupKey(openGroupKey === group.key ? null : group.key);
+                  setSelectedKey(group.cases[0].key);
+                }}
+              >
+                <strong>{group.dayLabel} · {group.serviceName}</strong>
+                <span>{group.problemCount} Problems in {group.cases.length} separate review cases</span>
+                <small>{group.rootCauseName ? `Shared Davis root cause: ${group.rootCauseName}` : "Davis root cause unverified"}</small>
+                <small>{group.observedWindowMinutes > 0 ? `${group.observedWindowMinutes} min of distinct Problem windows on this date` : "Problem-window duration unavailable"}{group.unmeasuredProblems > 0 ? ` · ${group.unmeasuredProblems} open or incomplete` : ""}</small>
+                <small>{openGroupKey === group.key ? "Hide cases" : "Show cases"}</small>
+              </button> : null}
+              {group.cases.length === 1 || openGroupKey === group.key ? <div className="candidate-day-group-cases">
+                {group.cases.length > 1 ? <p>Grouped for navigation only. Each case keeps its own evidence and decision. Problem windows do not establish provider downtime.</p> : null}
+                {group.cases.map((reviewCase) => {
               const state = caseStateByKey.get(reviewCase.key) ??
                 resolveEvidenceReviewState(reviewCase, decisionByKey);
               const candidate = reviewCase.candidates[0];
@@ -1431,6 +1481,7 @@ const CandidateWorkspace = ({
                   className={`candidate-queue-item${selected?.key === reviewCase.key ? " selected" : ""}`}
                   onClick={() => {
                     setSelectedKey(reviewCase.key);
+                    setExpandedGroupKey(group.key);
                     setMobileQueueOpen(false);
                     window.requestAnimationFrame(() => document.getElementById("candidate-selected-detail")?.scrollIntoView({ block: "start" }));
                   }}
@@ -1444,7 +1495,9 @@ const CandidateWorkspace = ({
                   <CandidateState state={state.state} />
                 </button>
               );
-            })}
+                })}
+              </div> : null}
+            </div>)}
             {filteredCases.length === 0 ? (
               <div className="candidate-queue-empty">
                 <strong>No matching review cases</strong>
@@ -1453,14 +1506,14 @@ const CandidateWorkspace = ({
             ) : null}
           </div>
           <div className="candidate-queue-footer" aria-label="Review case pages">
-            <span>{filteredCases.length > 0
-              ? `Showing ${(page - 1) * EVIDENCE_CASE_PAGE_SIZE + 1}–${Math.min(page * EVIDENCE_CASE_PAGE_SIZE, filteredCases.length)} of ${filteredCases.length}`
+            <span>{dayGroups.length > 0
+              ? `Groups ${(page - 1) * EVIDENCE_CASE_PAGE_SIZE + 1}–${Math.min(page * EVIDENCE_CASE_PAGE_SIZE, dayGroups.length)} of ${dayGroups.length} · ${filteredCases.length} review cases`
               : "Showing 0 of 0"}</span>
             <div>
               <Button
                 size="condensed"
                 disabled={page <= 1}
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                onClick={() => { setExpandedGroupKey(undefined); setPage((current) => Math.max(1, current - 1)); }}
               >
                 Previous
               </Button>
@@ -1468,7 +1521,7 @@ const CandidateWorkspace = ({
               <Button
                 size="condensed"
                 disabled={page >= pageCount}
-                onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+                onClick={() => { setExpandedGroupKey(undefined); setPage((current) => Math.min(pageCount, current + 1)); }}
               >
                 Next
               </Button>
@@ -1561,7 +1614,7 @@ export const EvidenceWorkspace = ({
     <div className="evidence-boundary">
       <strong>Review boundary</strong>
       <span>
-        Review readiness records an SRE decision only. Nothing is submitted.
+        Review readiness records an SRE decision only. Nothing is sent to the provider.
         The provider determines fault, eligibility, and any service credit.
       </span>
     </div>

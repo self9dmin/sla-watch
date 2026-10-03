@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.83
+
+- Makes Evidence the only case queue. Identify now opens Coverage directly; old incident links retain their Problem and case context when redirected to Evidence.
+- Groups same-day, same-service review cases visually, with individual case decisions intact and unverified Davis root causes labeled. Distinct observed Problem windows are shown without claiming provider downtime.
+- Makes the local routing handoff visible immediately after a complete human review. Queuing reports an accepted request ID, not a completed model decision or provider claim.
+- Raises the bounded Problems read to 500 and warns when the result is incomplete.
+
 ## 0.0.82
 
 - Shows the installed release and Automate changes in the in-app change log. Version 0.0.81 installed successfully; its change log still showed 0.0.79 as current.

@@ -118,7 +118,7 @@ export const CoverageWorkspace = ({
   const focusedProblemId = routeParams.get("problem");
   const returnPath = safeWorkspaceReturnPath(
     routeParams.get("return"),
-    focusedProblemId ? `/incidents?provider=${encodeURIComponent(providerSlug)}&problem=${encodeURIComponent(focusedProblemId)}` : "/incidents",
+    focusedProblemId ? `/evidence?provider=${encodeURIComponent(providerSlug)}&problem=${encodeURIComponent(focusedProblemId)}` : "/evidence",
   );
   const assignmentDisplayName = (assignment: ProviderScopeAssignmentRecord): string =>
     assignment.providerServiceId === "*" ? `${providerName} default terms` : assignment.providerServiceName;
@@ -510,7 +510,7 @@ export const CoverageWorkspace = ({
           ><Button.Prefix><SmartscapeIcon /></Button.Prefix>Open Smartscape</Button>
         </div>
       </div>
-      <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed SLA matches, and matching source tags identify the provider service. Incidents and Evidence then resolve the applicable terms automatically. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>
+      <div className="scope-map-boundary"><strong>How it is used</strong><span>Provider-native topology, confirmed SLA matches, and matching source tags identify the provider service. Evidence then brings the matched terms into each Problem review. Coverage does not establish provider fault, local impact, or credit eligibility.</span></div>
       {hasProviderTopology ? (
         <div className="coverage-evidence-tabs" role="group" aria-label="Coverage evidence views">
           <button type="button" className={evidenceView === "topology" ? "active" : ""} aria-pressed={evidenceView === "topology"} onClick={() => setEvidenceView("topology")}>

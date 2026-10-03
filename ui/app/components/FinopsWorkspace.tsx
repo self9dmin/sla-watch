@@ -244,7 +244,7 @@ export const FinopsWorkspace = ({
       {query.error ? <Paragraph>Routing recommendations are unavailable. Check business event read access.</Paragraph> : null}
       {!query.isLoading && !query.error && visible.length === 0
         ? <div className="finops-empty">
-          <Paragraph>No cases have been routed for this provider in the last 30 days. Complete an eligible case in Evidence, then choose Send to Automate on its saved human review. Internal routing recommendations and later human outcomes appear here.</Paragraph>
+          <Paragraph>No cases have been routed for this provider in the last 30 days. Complete an eligible case in Evidence, then choose Queue local route review on its saved human review. Internal routing recommendations and later human outcomes appear here.</Paragraph>
           <Button as={Link} to={`/evidence?provider=${encodeURIComponent(providerSlug)}`} size="condensed">Review cases in Evidence</Button>
         </div> : null}
       {visible.length > 0 ? <ul>{visible.map((row) => <RouteReview key={`${row.spanId}`} row={row} />)}</ul> : null}

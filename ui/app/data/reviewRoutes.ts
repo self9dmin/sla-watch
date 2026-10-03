@@ -19,16 +19,6 @@ const withParams = (pathname: string, values: Record<string, string | undefined>
   return search ? `${pathname}?${search}` : pathname;
 };
 
-export const createIncidentReviewPath = ({
-  providerSlug,
-  problemId,
-  caseId,
-}: ProblemRouteContext): string => withParams("/incidents", {
-  provider: providerSlug.toLowerCase(),
-  problem: problemId,
-  case: caseId,
-});
-
 export const createEvidenceReviewPath = ({
   providerSlug,
   problemId,
@@ -55,7 +45,7 @@ export const createCoverageReviewPath = ({
 
 export const safeWorkspaceReturnPath = (
   value: string | null,
-  fallback = "/incidents",
+  fallback = "/evidence",
 ): string => value && value.startsWith("/") && !value.startsWith("//")
   ? value
   : fallback;

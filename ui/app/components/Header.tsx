@@ -185,11 +185,11 @@ export const Header = ({
           </p>
           <section>
             <h3>1. Identify</h3>
-            <p>Coverage opens first. Confirm only uncertain SLA matches, then choose a Dynatrace Problem in Incident cases. Provider detection alone does not prove coverage.</p>
+            <p>Coverage opens first. Confirm uncertain SLA matches, then choose a Dynatrace Problem in Evaluate &gt; Evidence. Provider detection alone does not prove coverage.</p>
           </section>
           <section>
             <h3>2. Evaluate</h3>
-            <p>Evidence carries the case, customer impact, and applicable terms into one human decision. Performance and Provider terms are supporting views. Save Needs evidence when requirements are missing. Nothing is submitted.</p>
+            <p>Evidence carries the case, customer impact, and applicable terms into one human decision. Performance and Provider terms are supporting views. Save Needs evidence when requirements are missing. Nothing is sent to the provider.</p>
           </section>
           <section>
             <h3>3. Automate</h3>

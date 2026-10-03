@@ -14,7 +14,7 @@ const STEPS: TourStep[] = [
     target: '[data-tour="identify"]',
     path: "/",
     title: "1. Identify a case",
-    body: "Coverage is the landing page. Confirm the SLA match, then open Incident cases to choose a Dynatrace Problem. A detected provider alone does not prove service coverage.",
+    body: "Coverage is the landing page. Confirm the SLA match, then open Evaluate to choose a Dynatrace Problem in Evidence. A detected provider alone does not prove service coverage.",
   },
   {
     target: '[data-tour="evaluate"]',

@@ -7,8 +7,19 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.82",
+    version: "0.0.83",
     label: "Current release",
+    summary: "Moved case review into one Evidence queue.",
+    details: [
+      "Identify now opens Coverage directly. Legacy incident links redirect to the matching Evidence case.",
+      "Cases from the same service and day appear together for navigation, while evidence and human decisions remain separate.",
+      "A completed human review now has a clear local routing handoff and shows its queued request ID.",
+      "The Problems read is bounded at 500 and the app warns when the review queue may be incomplete.",
+    ],
+  },
+  {
+    version: "0.0.82",
+    label: "Previous release",
     summary: "Brought product-scope automation into SLA Review.",
     details: [
       "Identify, Evaluate, and Automate now guide the review, with Coverage as the landing page and a shorter Evidence layout.",

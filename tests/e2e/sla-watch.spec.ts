@@ -40,7 +40,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expect(stageNavigation.getByRole("link", { name: /Identify/ })).toBeVisible();
     await expect(stageNavigation.getByRole("link", { name: /Evaluate/ })).toBeVisible();
     await expect(stageNavigation.getByRole("link", { name: "3 Automate" })).toBeVisible();
-    await expect(app.getByRole("navigation", { name: "Identify views" }).getByRole("link")).toHaveText(["Coverage", "Incident cases"]);
+    await expect(app.getByRole("navigation", { name: "Identify views" })).toHaveCount(0);
     await expect(
       app.locator(".sla-header").getByRole("link", { name: "Coverage" }),
     ).toHaveCount(0);
@@ -198,47 +198,7 @@ test.describe("SLA Review deployed smoke", () => {
     await expectNoPageScroll(app);
 
     await stageNavigation.getByRole("link", { name: /Identify/ }).click();
-    await app.getByRole("navigation", { name: "Identify views" }).getByRole("link", { name: "Incident cases" }).click();
-    await expect(app.getByRole("heading", { name: "Incidents" })).toBeVisible();
-    const lookback = app.getByRole("combobox", {
-      name: "Incident evidence lookback",
-    });
-    await expect(lookback).toBeVisible();
-    await expect(lookback.locator("option")).toHaveCount(7);
-    await expect(
-      app.getByLabel("Incident status").locator(".overview-fact"),
-    ).toHaveCount(4);
-    await expect(app.getByText("Needs evidence review", { exact: true })).toBeVisible();
-    await expect(app.getByText("Dynatrace Problems", { exact: true })).toBeVisible();
-    await expect(
-      app.getByRole("button", { name: /Select multiple \(\d+\)/ }),
-    ).toBeVisible();
-    const openProblems = app.getByRole("link", { name: "Open Problems app" });
-    await expect(openProblems).toBeVisible();
-    await expect(openProblems).toHaveAttribute("target", "_blank");
-    const problemsRegion = app.getByRole("region", { name: "Provider impact review cases" });
-    const emptyProblems = app.getByText(/No Problems in the last/);
-    await expect(problemsRegion.or(emptyProblems)).toBeVisible();
-    if (await problemsRegion.count()) {
-      const visibleProblemCount = await problemsRegion.locator(".incident-tile").count();
-      expect(visibleProblemCount).toBeGreaterThan(0);
-      expect(visibleProblemCount).toBeLessThanOrEqual(16);
-      await expect(app.getByLabel("Review case pages")).toBeVisible();
-      await expect(
-        problemsRegion.locator(".incident-tile-root").first(),
-      ).toBeVisible();
-    }
-    await expect(app.getByRole("combobox", { name: "Provider service" })).toHaveCount(0);
-    await expect(app.getByRole("combobox", { name: "Dynatrace scope" })).toHaveCount(0);
-    await expect(
-      app.getByText(
-        /The provider determines fault, eligibility, and any service credit/i,
-      ),
-    ).toHaveCount(0);
-    await expect(
-      app.getByText("Filing window reference", { exact: true }),
-    ).toHaveCount(0);
-    await expect(app.getByText(/maximum credit/i)).toHaveCount(0);
+    await expect(app.getByRole("heading", { name: "Coverage" })).toBeVisible();
     await expectNoPageScroll(app);
 
     await stageNavigation.getByRole("link", { name: /Evaluate/ }).click();
@@ -258,7 +218,7 @@ test.describe("SLA Review deployed smoke", () => {
       await expect(
         evidenceQueue.getByRole("group", { name: "Filter review cases" }),
       ).toBeVisible();
-      expect(await evidenceQueue.locator(".candidate-queue-item").count()).toBeLessThanOrEqual(5);
+      expect(await evidenceQueue.locator(".candidate-day-group").count()).toBeLessThanOrEqual(5);
       await expect(app.getByText("Review readiness", { exact: true })).toBeVisible();
       await expect(app.getByText("What needs attention", { exact: true })).toBeVisible();
       const reviewScroll = await app.locator(".candidate-detail").evaluate((detail) => ({

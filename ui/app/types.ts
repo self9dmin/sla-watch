@@ -2,7 +2,6 @@ export type WatchSection =
   | "coverage"
   | "performance"
   | "directory"
-  | "incidents"
   | "evidence"
   | "finops";
 export type SlaThemePreference = "system" | "light" | "dark";

@@ -29,6 +29,11 @@ const LegacyCoverageRedirect = () => {
   return <Navigate to={`/${location.search}`} replace />;
 };
 
+const LegacyIncidentRedirect = () => {
+  const location = useLocation();
+  return <Navigate to={`/evidence${location.search}`} replace />;
+};
+
 const AppShell = ({
   theme,
   onToggleTheme,
@@ -54,11 +59,11 @@ const AppShell = ({
           <Route path="/" element={<Dashboard />} />
           <Route path="/setup" element={<LegacyCoverageRedirect />} />
           <Route path="/performance" element={<Dashboard initialSection="performance" />} />
-          <Route path="/incidents" element={<Dashboard initialSection="incidents" />} />
+          <Route path="/incidents" element={<LegacyIncidentRedirect />} />
           <Route path="/provider-notices" element={<Navigate to="/evidence?view=provider-reports" replace />} />
           <Route path="/evidence" element={<Dashboard initialSection="evidence" />} />
           <Route path="/finops" element={<Dashboard initialSection="finops" />} />
-          <Route path="/review" element={<Navigate to="/incidents" replace />} />
+          <Route path="/review" element={<LegacyIncidentRedirect />} />
           <Route path="/directory" element={<Dashboard initialSection="directory" />} />
           <Route path="/changes" element={<ChangeLogPage />} />
           <Route path="/settings/:page?" element={<SettingsPage />} />

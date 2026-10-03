@@ -1,6 +1,7 @@
 import {
   INCIDENT_SERVICE_FILTER_LIMIT,
   INCIDENT_SMARTSCAPE_RESULT_LIMIT,
+  PROBLEMS_RESULT_LIMIT,
   PROVIDER_INVENTORY_RESULT_LIMIT,
   PROVIDER_HOST_CONTEXT_RESULT_LIMIT,
   SERVICE_RESULT_LIMIT,
@@ -15,6 +16,7 @@ import {
   createIncidentServicesQuery,
   createIncidentSmartscapeQuery,
   createProblemsQuery,
+  createProblemsCountQuery,
 } from "../ui/app/data/queries";
 
 describe("bounded inventory queries", () => {
@@ -42,6 +44,9 @@ describe("bounded inventory queries", () => {
     expect(query).toContain("affected_entity_ids");
     expect(query).toContain("root_cause_entity_id");
     expect(query).toContain("from:-168h");
+    expect(query).toContain(`limit ${PROBLEMS_RESULT_LIMIT}`);
+    expect(createProblemsCountQuery(168)).toContain("problem_count = count()");
+    expect(createProblemsCountQuery(168)).toContain("filter not(dt.davis.is_duplicate)");
   });
 
   it("keeps the global inventory bounded and focused on coverage anchors", () => {

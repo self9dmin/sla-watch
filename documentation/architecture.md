@@ -6,7 +6,7 @@ SLA Review is a read-mostly Dynatrace AppEngine application. Its shared writes i
 
 The application has no database of its own, in-app scheduler, webhook receiver, email sender, or embedded model. Automate shows Dynatrace Workflow deployment state, actor, and last execution. An authorized operator creates the private, undeployed event-triggered drafts in Dynatrace Workflows using the reviewed scripts. They call a separately operated local gateway only after an operator configures and deploys them. Installing the app does not activate them. See [Automate setup](finops-agent.md).
 
-The user-facing operating shell has three stages. Identify starts in Coverage and includes Incident cases. Evaluate centers on Evidence, with Performance and Provider terms as references. Automate contains local FinOps routing after a human review. A case-specific detour carries the selected Problem and service where the destination supports them; the native Problems app opens separately for full investigation.
+The user-facing operating shell has three stages. Identify opens Coverage. Evaluate owns the Evidence case queue, with Performance and Provider terms as references. Automate contains local FinOps routing after a human review. A case-specific detour carries the selected Problem and service where the destination supports them; the native Problems app opens separately for full investigation. Legacy `/incidents` and `/review` links redirect to Evidence with their query context preserved.
 
 ## Stack and entry points
 

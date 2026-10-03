@@ -8,7 +8,6 @@ import {
 } from "@dynatrace/strato-components/typography";
 import { EvidenceWorkspace } from "../components/EvidenceWorkspace";
 import { FinopsWorkspace } from "../components/FinopsWorkspace";
-import { IncidentReview } from "../components/IncidentReview";
 import { CoverageWorkspace } from "../components/CoverageWorkspace";
 import { PerformanceWorkspace } from "../components/PerformanceWorkspace";
 import { ProviderDirectoryWorkspace } from "../components/ProviderDirectoryWorkspace";
@@ -44,6 +43,7 @@ import {
 import {
   INCIDENT_SERVICE_FILTER_LIMIT,
   INCIDENT_SMARTSCAPE_RESULT_LIMIT,
+  PROBLEMS_RESULT_LIMIT,
   SERVICE_INVENTORY_COUNT_QUERY,
   SERVICE_RESULT_LIMIT,
   SMARTSCAPE_HOST_CLOUD_CONTEXT_QUERY,
@@ -55,6 +55,7 @@ import {
   createIncidentSmartscapeQuery,
   createLogsCountQuery,
   createProblemsQuery,
+  createProblemsCountQuery,
   createServiceMetricsQuery,
   createSpansCountQuery,
   SERVICES_QUERY,
@@ -133,7 +134,7 @@ const OverviewFact = ({
 
 type ReviewStage = "identify" | "evaluate" | "finops";
 const stageForSection = (section: WatchSection): ReviewStage =>
-  section === "coverage" || section === "incidents"
+  section === "coverage"
     ? "identify"
     : section === "finops"
       ? "finops"
@@ -147,7 +148,6 @@ const STAGES: ReadonlyArray<{ id: ReviewStage; label: string; to: string }> = [
 const STAGE_VIEWS: Record<Exclude<ReviewStage, "finops">, ReadonlyArray<{ section: WatchSection; label: string; to: string }>> = {
   identify: [
     { section: "coverage", label: "Coverage", to: "/" },
-    { section: "incidents", label: "Incident cases", to: "/incidents" },
   ],
   evaluate: [
     { section: "evidence", label: "Evidence", to: "/evidence" },
@@ -175,7 +175,7 @@ const WatchNavigation = ({ section, providerSlug }: { section: WatchSection; pro
       {STAGES.map((item, index) => <Link
         key={item.id}
         className={`journey-stage${stage === item.id ? " active" : ""}`}
-        to={toProviderView(item.id === "identify" && new URLSearchParams(location.search).has("problem") ? "/incidents" : item.to)}
+        to={toProviderView(item.to)}
         aria-current={stage === item.id ? "step" : undefined}
         data-tour={item.id}
       >
@@ -183,7 +183,7 @@ const WatchNavigation = ({ section, providerSlug }: { section: WatchSection; pro
         <span>{item.label}</span>
       </Link>)}
     </nav>
-    {stage !== "finops" ? <nav className="journey-views" aria-label={`${stage === "identify" ? "Identify" : "Evaluate"} views`}>
+    {stage === "evaluate" ? <nav className="journey-views" aria-label="Evaluate views">
       {STAGE_VIEWS[stage].map((item) => <Link
         key={item.section}
         className={`journey-view${section === item.section ? " active" : ""}`}
@@ -219,6 +219,10 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     () => createProblemsQuery(lookbackHours),
     [lookbackHours],
   );
+  const problemsCountQueryText = useMemo(
+    () => createProblemsCountQuery(lookbackHours),
+    [lookbackHours],
+  );
   const logsQuery = useMemo(
     () => createLogsCountQuery(lookbackHours),
     [lookbackHours],
@@ -242,6 +246,8 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     error: problemError,
     isLoading: problemsLoading,
   } = useDql({ query: problemsQuery });
+  const problemsCountQuery = useDql({ query: problemsCountQueryText });
+  const allProblemCount = firstCount(problemsCountQuery.data, "problem_count");
   const {
     data: logsData,
     error: logsError,
@@ -270,6 +276,8 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
     () => parseProblemRecords(problemData),
     [problemData],
   );
+  const problemReadLimited = resultRecordCount(problemData) >= PROBLEMS_RESULT_LIMIT &&
+    (allProblemCount === null || allProblemCount > problems.length);
 
   const allAffectedServiceIds = useMemo(
     () => Array.from(new Set(
@@ -609,7 +617,7 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
           <Heading level={1}>Provider review</Heading>
           <Paragraph className="hero-copy">
             {stageForSection(section) === "identify"
-              ? "Confirm coverage, then select a Dynatrace Problem case."
+              ? "Confirm coverage here, then choose a Dynatrace Problem case in Evaluate."
               : stageForSection(section) === "evaluate"
                 ? "Review customer impact and provider terms, then record the human decision in Evidence."
                 : "Route a complete human-reviewed case through the configured local workflow."}
@@ -710,7 +718,9 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
                 }
                 detail={problemError
                   ? "Problem query could not be completed"
-                  : `${problems.length} observed in ${formatEvidenceLookback(lookbackHours)}`}
+                  : problemReadLimited
+                    ? `${problems.length} usable; read capped at ${PROBLEMS_RESULT_LIMIT}${allProblemCount !== null ? ` of ${allProblemCount}` : ""} in ${formatEvidenceLookback(lookbackHours)}`
+                    : `${problems.length} observed in ${formatEvidenceLookback(lookbackHours)}`}
                 tone={
                   problemsLoading
                     ? "neutral"
@@ -791,25 +801,6 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
               !inventoryUnverified && !scopeSettings.incomplete && !serviceError &&
               !topologyQuery.error && !scopeSettings.error}
           />
-        ) : section === "incidents" ? (
-          <IncidentReview
-            provider={directoryData}
-            providerLabelKey={providerLabelKey}
-            problems={problems}
-            services={services}
-            topology={providerEvidence}
-            topologyLoading={topologyQuery.isLoading || incidentTopologyQuery.isLoading}
-            topologyError={topologyQuery.error ?? incidentTopologyQuery.error ?? undefined}
-            providerContextIncomplete={
-              incidentTopologyIncomplete || scopeSettings.incomplete
-            }
-            lookbackHours={lookbackHours}
-            onLookbackChange={(value) =>
-              void updatePreferences({ lookbackHours: value })
-            }
-            loading={problemsLoading || incidentServicesQuery.isLoading}
-            error={problemError ?? incidentServicesQuery.error ?? undefined}
-          />
         ) : (
           <EvidenceWorkspace
             view={evidenceView}
@@ -823,6 +814,8 @@ export const Dashboard = ({ initialSection = "coverage" }: DashboardProps) => {
             serviceTelemetry={serviceTelemetry}
             serviceTelemetryLoading={incidentMetricsQuery.isLoading}
             serviceTelemetryError={incidentMetricsQuery.error ?? undefined}
+            problemResultLimited={problemReadLimited}
+            totalProblemCount={allProblemCount}
             lookbackHours={lookbackHours}
             loading={
               problemsLoading ||
