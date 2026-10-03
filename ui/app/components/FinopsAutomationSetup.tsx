@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { openApp } from "@dynatrace-sdk/navigation";
 import { Button } from "@dynatrace/strato-components/buttons";
@@ -8,7 +8,6 @@ import {
   workflowLocalRouter,
   workflowNeedsInspection,
   type FinopsWorkflowKind,
-  type LocalRouter,
 } from "../data/finopsAutomation";
 import { useFinopsRouting } from "../hooks/useFinopsRouting";
 import { useFinopsWorkflows } from "../hooks/useFinopsWorkflows";
@@ -41,30 +40,9 @@ export const FinopsAutomationSetup = ({
 }: Props) => {
   const routing = useFinopsRouting();
   const workflows = useFinopsWorkflows();
-  const [gatewayOrigin, setGatewayOrigin] = useState("");
-  const [credentialId, setCredentialId] = useState("");
-  const [router, setRouter] = useState<LocalRouter>("laya");
-  const [confirming, setConfirming] = useState(false);
-  const [workflowFeedback, setWorkflowFeedback] = useState<string>();
   const draftsPresent = Boolean(workflows.workflows.route && workflows.workflows.feedback);
   const anyConfigured = Boolean(workflows.workflows.route || workflows.workflows.feedback);
   const legacyActive = WORKFLOW_KINDS.some((kind) => workflows.legacy[kind]?.isDeployed);
-
-  useEffect(() => {
-    setConfirming(false);
-    setWorkflowFeedback(undefined);
-  }, [providerSlug]);
-
-  const createDrafts = async () => {
-    setWorkflowFeedback(undefined);
-    try {
-      await workflows.createDrafts({ origin: gatewayOrigin, credentialId, router });
-      setConfirming(false);
-      setWorkflowFeedback("Private Workflow drafts created. Inspect their actor, permissions, and trigger in Workflows before deployment.");
-    } catch (error) {
-      setWorkflowFeedback(error instanceof Error ? error.message : "Workflow drafts could not be created.");
-    }
-  };
 
   return (
     <section className="finops-setup" aria-labelledby="finops-setup-title">
@@ -93,7 +71,7 @@ export const FinopsAutomationSetup = ({
           </div>
           <p>One tenant-wide pair handles reviewed cases, with no Workflow per dependent service. The route Workflow rechecks the saved review, calls the private local gateway, and writes the decision to Grail. The feedback Workflow records the later human outcome for Phoenix.</p>
           {workflows.error ? <p className="finops-setup-warning" role="alert">{workflows.error}</p> : null}
-          {workflows.collision ? <p className="finops-setup-warning" role="alert">A Workflow has the expected title but is not an SLA Review draft. Inspect it in Workflows before creating another.</p> : null}
+          {workflows.collision ? <p className="finops-setup-warning" role="alert">A Workflow has the expected title but does not match the reviewed template. Inspect it in Workflows before proceeding.</p> : null}
           {legacyActive ? <p className="finops-setup-warning" role="status">Earlier FinOps Agent Workflows are active. Keep the replacement drafts off. Verify a synthetic route and feedback, then retire the old triggers before enabling the replacement. Both pairs must never handle the same event.</p> : null}
           <div className="finops-workflow-list">
             {WORKFLOW_KINDS.map((kind) => {
@@ -127,45 +105,15 @@ export const FinopsAutomationSetup = ({
               })}
             </details>
           ) : null}
-          {!draftsPresent && workflows.canRead === true && !workflows.collision ? (
+          {!draftsPresent ? (
             <div className="finops-workflow-form">
-              <label className="field-label" htmlFor="finops-router-model">Local decision interface
-                <select id="finops-router-model" value={router}
-                  onChange={(event) => { setRouter(event.target.value as LocalRouter); setConfirming(false); }}>
-                  <option value="laya">Laya typed decision model</option>
-                  <option value="jev">Jev-compatible local model</option>
-                </select>
-              </label>
-              <p>This choice guards the Workflow response. The gateway must already use the matching local model; this app does not install or switch it.</p>
-              <label className="field-label" htmlFor="finops-edge-origin">Private EdgeConnect origin
-                <input id="finops-edge-origin" type="url" inputMode="url" autoComplete="off" spellCheck={false}
-                  placeholder="Private HTTPS EdgeConnect origin" value={gatewayOrigin}
-                  onChange={(event) => { setGatewayOrigin(event.target.value); setConfirming(false); }} />
-              </label>
-              <label className="field-label" htmlFor="finops-vault-id">Credential Vault record ID
-                <input id="finops-vault-id" type="text" autoComplete="off" spellCheck={false}
-                  placeholder="CREDENTIALS_VAULT-…" value={credentialId}
-                  onChange={(event) => { setCredentialId(event.target.value); setConfirming(false); }} />
-                <small>Enter the record ID only. Do not paste a bearer token.</small>
-              </label>
-              {confirming ? (
-                <div className="finops-workflow-confirm">
-                  <span>Create {anyConfigured ? "the missing" : "two"} private, undeployed Workflow drafts for this tenant?</span>
-                  <Button size="condensed" onClick={() => setConfirming(false)}>Cancel</Button>
-                  <Button size="condensed" variant="emphasized" disabled={workflows.creating}
-                    onClick={() => void createDrafts()}>{workflows.creating ? "Creating" : "Create drafts"}</Button>
-                </div>
-              ) : (
-                <Button size="condensed" variant="emphasized"
-                  disabled={workflows.loading || workflows.creating || workflows.canWrite !== true}
-                  onClick={() => setConfirming(true)}>Prepare Workflow drafts</Button>
-              )}
-              {workflows.canWrite === false ? <small className="finops-setup-warning">Workflow write access is required to create drafts.</small> : null}
+              <strong>Set up in Dynatrace Workflows</strong>
+              <p>Dynatrace reserves Workflow write access for Dynatrace-provided apps. An authorized operator must create the tenant-wide route and feedback Workflows in Workflows from the reviewed scripts in the repository. Configure the private EdgeConnect origin, Credential Vault record ID, and local Laya or Jev-compatible gateway there. Keep new event triggers undeployed while the earlier pair is active.</p>
+              <Button size="condensed" onClick={() => openApp("dynatrace.automations")}>Set up in Workflows</Button>
             </div>
           ) : null}
-          {workflows.canRead === false ? <p className="finops-setup-warning">Workflow read access is required to show and safely create the drafts.</p> : null}
-          {workflowFeedback ? <p className="finops-workflow-feedback" role="status">{workflowFeedback}</p> : null}
-          <p className="finops-setup-boundary">Drafts do not run or incur Workflow executions. Review the actor, Credential Vault access, EdgeConnect route, and one synthetic case in Workflows before deploying. Phoenix stays outside the decision path.</p>
+          {workflows.canRead === false ? <p className="finops-setup-warning">Workflow status is unavailable. Check read access in Workflows before setting up another pair.</p> : null}
+          <p className="finops-setup-boundary">Inspect the actor, Credential Vault access, EdgeConnect route, and one synthetic case before changing live triggers. Phoenix stays outside the decision path.</p>
         </section>
       </div>
     </section>

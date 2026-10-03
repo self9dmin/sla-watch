@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { workflowsClient, type Workflow } from "@dynatrace-sdk/client-automation";
-import { effectivePermissionsClient } from "@dynatrace-sdk/client-platform-management-service";
 import {
-  createFinopsWorkflowDraft,
   FINOPS_WORKFLOWS,
   LEGACY_FINOPS_WORKFLOW_TITLES,
   matchingWorkflow,
   type FinopsWorkflowKind,
-  type PrivateGatewaySettings,
 } from "../data/finopsAutomation";
 
 type WorkflowState = Partial<Record<FinopsWorkflowKind, Workflow>>;
@@ -46,9 +43,7 @@ export const useFinopsWorkflows = () => {
   const [legacy, setLegacy] = useState<WorkflowState>({});
   const [collision, setCollision] = useState(false);
   const [canRead, setCanRead] = useState<boolean | null>(null);
-  const [canWrite, setCanWrite] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>();
   const request = useRef(0);
 
@@ -56,20 +51,12 @@ export const useFinopsWorkflows = () => {
     const current = ++request.current;
     setLoading(true);
     setError(undefined);
-    const [permissions, list] = await Promise.allSettled([
-      effectivePermissionsClient.resolveEffectivePermissions({
-        body: { permissions: [
-          { permission: "automation:workflows:read" },
-          { permission: "automation:workflows:write" },
-        ] },
-      }),
-      inspectWorkflowList(),
-    ]);
+    const list = await inspectWorkflowList().then(
+      (value) => ({ value, error: undefined }),
+      (error: unknown) => ({ value: undefined, error }),
+    );
     if (current !== request.current) return;
-    setCanWrite(permissions.status === "fulfilled"
-      ? permissions.value.find((item) => item.permission === "automation:workflows:write")?.granted === "true"
-      : false);
-    if (list.status === "fulfilled") {
+    if (list.value) {
       setCanRead(true);
       setWorkflows(list.value.workflows);
       setLegacy(list.value.legacy);
@@ -79,7 +66,7 @@ export const useFinopsWorkflows = () => {
       setWorkflows({});
       setLegacy({});
       setCollision(false);
-      setError(list.reason instanceof Error ? list.reason.message : "Workflows could not be checked.");
+      setError(list.error instanceof Error ? list.error.message : "Workflows could not be checked.");
     }
     setLoading(false);
   }, []);
@@ -89,31 +76,5 @@ export const useFinopsWorkflows = () => {
     return () => { request.current += 1; };
   }, [refresh]);
 
-  const createDrafts = async (settings: PrivateGatewaySettings): Promise<void> => {
-    if (creating || loading || canRead !== true || canWrite !== true || collision)
-      throw new Error("Workflow access or state is not ready for draft creation.");
-    // Validate both scripts and all operator-provided values before the first mutation.
-    const drafts = {
-      route: createFinopsWorkflowDraft("route", settings),
-      feedback: createFinopsWorkflowDraft("feedback", settings),
-    };
-    setCreating(true);
-    setError(undefined);
-    try {
-      const latest = await inspectWorkflowList();
-      if (latest.collision) throw new Error("A Workflow with a matching title needs manual inspection.");
-      for (const kind of KINDS) {
-        if (latest.workflows[kind]) continue;
-        await workflowsClient.createWorkflow({ body: drafts[kind] });
-      }
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Workflow drafts could not be created.");
-      throw createError;
-    } finally {
-      setCreating(false);
-      await refresh();
-    }
-  };
-
-  return { workflows, legacy, collision, canRead, canWrite, loading, creating, error, refresh, createDrafts };
+  return { workflows, legacy, collision, canRead, loading, error, refresh };
 };

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.81
+
+- Keeps the three-step Automate experience and guarded product-scope SLO creation.
+- Removes in-app Workflow draft creation after Dynatrace rejected `automation:workflows:write` for a customer app. Automate shows Workflow status and links to Dynatrace Workflows for separately authorized setup.
+- Updates onboarding and permissions to match the supported deployment. Version 0.0.80 was pushed as source but was not installed in SAL.
+
 ## 0.0.80
 
 - Organizes the SRE journey as Identify, Evaluate, and Automate, with Coverage still the landing page and a shorter Evidence review layout.

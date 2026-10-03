@@ -6,7 +6,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const route = await readFile(path.join(root, "finops-agent", "dynatrace-route.workflow.js"), "utf8");
 const feedback = await readFile(path.join(root, "finops-agent", "dynatrace-feedback.workflow.js"), "utf8");
 const output = `// Generated from finops-agent/*.workflow.js by scripts/sync-finops-workflows.mjs.
-// Edit the source scripts and regenerate. Runtime values are injected only when a private draft is created.
+// Edit the source scripts and regenerate. Runtime values belong only in private Workflow configuration.
 // eslint-disable-next-line noSecrets/no-secrets
 export const ROUTE_WORKFLOW_SCRIPT = ${JSON.stringify(route)};
 // eslint-disable-next-line noSecrets/no-secrets
