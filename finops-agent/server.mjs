@@ -60,7 +60,6 @@ export async function exportRouteTrace(packet, result, endpoint, fetchImpl = fet
     throw new TypeError("OTLP endpoint must be a local /v1/traces URL.");
   const start = (BigInt(startedAtMs) * 1000000n).toString();
   const end = (BigInt(Date.now()) * 1000000n).toString();
-  const caseHash = createHash("sha256").update(packet.caseId).digest("hex").slice(0, 24);
   const body = {
     resourceSpans: [{
       resource: { attributes: [attr("service.name", "sla-finops-router")] },
@@ -75,11 +74,7 @@ export async function exportRouteTrace(packet, result, endpoint, fetchImpl = fet
           endTimeUnixNano: end,
           attributes: [
             attr("openinference.span.kind", "CHAIN"),
-            attr("finops.case_hash", caseHash),
             attr("finops.request_hash", requestHash),
-            attr("finops.provider", packet.providerSlug),
-            attr("finops.observed_availability_percent", packet.observedAvailabilityPercent ?? "unknown"),
-            attr("finops.sla_target_percent", packet.slaTargetPercent ?? "unknown"),
             attr("finops.route", result.route),
             attr("output.value", result.route),
             attr("finops.reason", result.reason),
