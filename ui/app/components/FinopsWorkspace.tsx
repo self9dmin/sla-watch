@@ -209,7 +209,7 @@ export const FinopsWorkspace = ({ providerSlug }: { providerSlug: string }) => {
   return (
     <Surface className="panel-card">
       <Heading level={2}>FinOps Agent</Heading>
-      <Paragraph>Reviewed SLA cases are routed for internal follow-up. A person confirms the outcome, which Phoenix uses to score the router.</Paragraph>
+      <Paragraph>When the optional local gateway and Workflows are configured, complete reviewed SLA cases can be routed for internal follow-up. A person confirms the later outcome for Phoenix evaluation.</Paragraph>
       {query.isLoading ? <Paragraph>Loading router decisions…</Paragraph> : null}
       {query.error ? <Paragraph>Router decisions are unavailable. Check business event read access.</Paragraph> : null}
       {!query.isLoading && !query.error && visible.length === 0

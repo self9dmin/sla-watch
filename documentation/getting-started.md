@@ -25,6 +25,7 @@ Each source fails independently. If a user lacks a read permission or an upstrea
 | Tenant installer | Dynatrace AppEngine, a deployment identity with `app-engine:apps:install` and `app-engine:apps:run`, approval for the scopes in `app.config.json`, and `sla.directory` allowed under **Settings > General > External requests**. |
 | SRE reader | Access to run the app and the Dynatrace read grants needed for the views they use. A complete review uses Smartscape, Problems, metrics, logs, spans, objectives, App Settings, and app-state reads. |
 | SRE reviewer | Reader access plus App Settings write access to save SLA matches, custom terms, and Evidence decisions. Objective write access is needed only when the user explicitly creates a customer objective. |
+| FinOps operator, optional | Reviewer access plus `openpipeline:bizevents:ingest` to queue a complete reviewed case or record later human feedback, and `storage:bizevents:read` to see route outcomes. A tenant administrator must separately configure and verify the local gateway, EdgeConnect, and Dynatrace Workflows before queueing. |
 | Direct provider connection administrator | Reviewer access, permission to use the selected Credential Vault record, the provider's least-privilege IAM grants, and the exact outbound hosts for that adapter. Dynatrace-ingested AWS Health does not need this role. |
 | Developer or deployer | Node.js 24, npm, the repository, and a deployment identity for the target environment. |
 
@@ -39,7 +40,17 @@ The exact scope-to-feature behavior is documented in [Permissions](permissions.m
 5. Use **Performance** for continuous customer posture and **Incidents** for current or recent review cases.
 6. Finish in **Evidence**. Save **Ready for follow-up**, **Needs evidence**, or **Excluded from provider follow-up**.
 
-Evidence is the human review gate. A saved review can be copied or downloaded for an external handoff. A complete, closed, single-service case may be manually queued for the FinOps Agent. Automatic queueing and lane assignment are separate settings that start off. The local model recommends an internal route; SLA Review does not decide provider fault or credit eligibility or submit a claim. See [FinOps Agent setup](finops-agent.md).
+Evidence is the human review gate. A saved review can be copied or downloaded for an external handoff. After the optional local FinOps integration is configured and verified, a complete, closed, single-service case may be manually queued for the FinOps Agent. Automatic queueing and lane assignment are separate settings that start off. The local model recommends an internal route; SLA Review does not decide provider fault or credit eligibility or submit a claim. See [FinOps Agent setup](finops-agent.md).
+
+## Check a new installation without changing data
+
+1. Open the installed app. It should land in **Coverage** without a setup wizard. A tenant with no detected provider may show an empty or access-incomplete state; that is not a successful detection.
+2. Open **Settings > Getting started**, then **Show quick tour**. The five steps point to Coverage, Performance, Incidents, Evidence, and Directory. Closing the tour should not change any saved setting or review.
+3. Open **Directory**. Published terms should load when `sla.directory` is allowed, or the view should state why they are unavailable. No provider credential is needed for this check.
+4. Open **Incidents** and **Evidence**. Confirm that returned Problems and review cases appear, or that an empty, denied, or unavailable state is explained. Do not save a decision just to complete this check.
+5. If using FinOps, open **FinOps Agent** and **Settings > FinOps routing**. Both automatic controls should be off until a separate synthetic end-to-end verification is complete. The presence of this view alone does not mean the gateway, Workflows, Bindplane, or Phoenix are operating.
+
+For a clean local development run, set `DT_APP_ENVIRONMENT_URL` to a real environment you may use, then run `npm ci`, `npm run verify:release`, and `npm run start` from the repository root. The checked-in URL is a placeholder. Local development and deployment may require interactive Dynatrace sign-in. See the [README](../README.md#install-or-develop) for commands; a passing local gate does not verify an installed version in the target tenant.
 
 ## Configure only when needed
 

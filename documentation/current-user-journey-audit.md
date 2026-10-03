@@ -1,9 +1,11 @@
-# SLA Review current user journey audit
+# SLA Review user journey audit (historical snapshot)
 
 Audit date: 2026-09-12  
 Environment: designated Dynatrace target app
 Observed app version: `0.0.51`  
 Observed source revision: `ecbd2a3626453ec7b48b236cdc6695d116d0684c`
+
+This document records what was observed in version `0.0.51` and the changes proposed or completed around that audit. Its “current” and “future” labels refer to that historical snapshot. For the present first-run path and optional FinOps pilot, use [Getting started](getting-started.md) and [FinOps Agent setup](finops-agent.md).
 
 ## Audit scope
 

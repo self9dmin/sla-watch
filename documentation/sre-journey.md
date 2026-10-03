@@ -12,12 +12,12 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 | --- | --- | --- | --- | --- | --- |
 | Install and open | Dynatrace Apps | Open SLA Review | “Show me what this environment already knows.” | A wizard delays evidence and repeats automatic detection | Open directly in Coverage and start read-only detection |
 | Provider detection | Coverage status | Review detected providers and SLA-matched services | Confidence when the result reflects the environment | “Detected” could be mistaken for a confirmed SLA match | Label environment detection separately from provider terms, fault, and eligibility |
-| Coverage review | Service coverage | See all loaded services, then focus Covered or Needs review | Complete context without hidden states | Large environments become an unbounded checklist | Default to All, keep visible filters, search, paging, and incomplete-inventory disclosure |
+| Coverage review | Detected topology and SLA matches | Inspect provider topology first, then open SLA matches and focus All, Covered, or Needs review when a service relationship needs attention | Complete context without hidden states | Large environments become an unbounded checklist | Start on Detected topology, keep the SLA-match filters, search, paging, and incomplete-inventory disclosure |
 | Review defaults | Settings | Choose the focused provider, tag convention, and evidence lookback | Consistent review behavior without duplicating provider setup | A stale focus could be mistaken for current evidence | Constrain the chooser to providers discovered from evidence, confirmed SLA matches, or enabled connections |
 | Incident connection | Settings | Optionally connect account-specific provider notices | Useful only when customer-scoped provider evidence is needed | Credentials and IAM setup interrupt first value | Ask for credentials only after the user chooses a provider connection |
 | Incident triage | Incidents | Review active and provider-relevant cases, inspect the root-cause and affected-service context, then choose Coverage, Evidence, native Problems, or a guarded bulk exclusion | Fewer review units without losing the source records | Same-vendor signals could be over-grouped or mistaken for a confirmed violation | Group only on provider service, effective terms scope, bounded time, and shared service or exact root cause; keep one audit record per Problem and reuse the Evidence state everywhere |
 | Evidence review | Evidence | Search or filter review cases, inspect readiness, customer telemetry, objective posture, terms, exclusions, and optional provider corroboration, then save Ready for follow-up, Needs evidence, or Excluded from provider follow-up | One bounded decision with every underlying signal retained, a portable artifact, and a clear stop | Provider silence could be mistaken for proof against customer impact, or readiness for submission | Keep provider corroboration supporting only, persist the same outcome per included Problem, surface mixed or unavailable state, and state that nothing is sent and the provider determines fault, eligibility, and credit |
-| Follow-up | Directory and future FinOps Agent | Review filing requirements or hand off later | Clear next action | Planned automation could imply an available capability | Keep the agent disabled until a verified implementation exists |
+| Follow-up | Directory and optional FinOps Agent | Review filing requirements; after a complete human review, optionally queue an internal route when the local gateway and Workflows have been configured and verified | Clear next action | A model recommendation could be mistaken for credit eligibility or provider submission | Keep automatic queueing and lane assignment off by default; require a person to record the later outcome and any external filing reference |
 
 ## Product decisions
 
@@ -25,7 +25,7 @@ The first useful moment is not completing setup. It is seeing every loaded servi
 - Make Coverage the first screen for every new and returning user.
 - Keep provider additions and optional incident connections in Settings.
 - Keep the quick tour optional, replayable, and non-mutating.
-- End the SRE path in Evidence with an explicit ready-for-follow-up, needs-evidence, or excluded state. Keep submission outside the current product.
+- End the SRE path in Evidence with an explicit ready-for-follow-up, needs-evidence, or excluded state. Keep the optional local FinOps route separate and provider submission outside the app.
 - Measure success by time to evidence, resolved coverage exceptions, and repeat incident review, not onboarding completion.
 
 ## Critical checks

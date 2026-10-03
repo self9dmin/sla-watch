@@ -6,9 +6,9 @@ The app does not decide fault, label a case as an SLA violation, file a claim, o
 
 ## Project status
 
-SLA Review is a working custom Dynatrace AppEngine app under active development. Release 0.0.79 is the current source release. It is not yet a generally available Dynatrace Hub app.
+SLA Review is a working custom Dynatrace AppEngine app under active development. Version 0.0.79 is the current source version. The latest fully documented target-environment smoke test is for 0.0.76; a local build or a previous deployment does not verify 0.0.79 in another tenant. It is not yet a generally available Dynatrace Hub app.
 
-The core Coverage, Performance, Incidents, Evidence, and Directory views have automated tests and target-tenant smoke evidence. The four cloud-provider adapters are implemented, tested with controlled responses, and deployed. Live least-privilege credential acceptance for every provider is still open, along with denied-permission and large-environment testing.
+The core Coverage, Performance, Incidents, Evidence, and Directory views have automated tests and earlier target-tenant smoke evidence. The four cloud-provider adapters are implemented, tested with controlled responses, and have been deployed in an earlier release. Live least-privilege credential acceptance for every provider is still open, along with denied-permission and large-environment testing.
 
 The exact evidence and remaining gaps are in [release acceptance](documentation/acceptance.md) and [Hub readiness](documentation/hub-readiness.md).
 
@@ -22,7 +22,7 @@ The exact evidence and remaining gaps are in [release acceptance](documentation/
 | **Evidence** | Carries the case forward with Problems, request telemetry, objectives, applicable terms, and optional provider reports. The SRE records **Ready for follow-up**, **Needs evidence**, or **Excluded from provider follow-up**, then can copy or download the review package. Nothing is submitted. |
 | **Directory** | Shows published `sla.directory` terms, service-level coverage, support options, filing instructions, and environment-owned custom terms. |
 
-FinOps Agent is a controlled routing workflow for reviewed evidence. A person can queue one complete case for a local decision model. Automatic queueing and work-lane assignment are separate settings and both default to off. The model cannot decide credit eligibility or submit a claim. A person may record an external filing only with its channel and receipt or ticket reference. See [FinOps Agent setup](documentation/finops-agent.md) and your private rollout record before using it with a live case.
+FinOps Agent is an optional, separately configured routing workflow for reviewed evidence. When the local gateway and Dynatrace Workflows are configured and verified, a person can queue one complete case for a local decision model. Automatic queueing and work-lane assignment are separate settings and both default to off. The model cannot decide credit eligibility or submit a claim. A person may record an external filing only with its channel and receipt or ticket reference. Follow [FinOps Agent setup](documentation/finops-agent.md) and a private rollout record before using it with a live case.
 
 Settings is not another required workflow. Administrators use it for optional provider connections, custom terms, the source-tag convention, the evidence window, and appearance.
 
@@ -73,9 +73,9 @@ When data is missing, denied, stale, or truncated, the app says so. It does not 
 
 For an installed copy:
 
-1. Open SLA Review. It lands in **Coverage** and starts with the provider topology Dynatrace can see.
+1. Open SLA Review. It lands in **Coverage** and starts with the provider topology Dynatrace can see. The header and **Settings > Getting started** offer an optional five-step quick tour.
 2. Review **SLA matches** only when the app cannot safely resolve a service relationship.
-3. Use **Incidents** to narrow Dynatrace Problems, then finish the human decision in **Evidence**.
+3. Use **Incidents** to narrow Dynatrace Problems. Resolve an uncertain service relationship in Coverage, then record the human decision in **Evidence** when a review case is available.
 
 Published terms do not require a provider credential. A tenant administrator must allow `sla.directory` under Dynatrace **Settings > General > External requests**. Dynatrace-ingested AWS Health events also require no app credential. Direct provider connections are optional and are only for customer-scoped reports that are not already available in Grail.
 
@@ -83,7 +83,7 @@ The [getting started and configuration guide](documentation/getting-started.md) 
 
 ### Install or develop
 
-You need Dynatrace AppEngine in the target environment, a deployment identity with `app-engine:apps:install` and `app-engine:apps:run`, the scopes declared in [`app.config.json`](app.config.json), and Node.js 24.
+You need Dynatrace AppEngine in the target environment, a deployment identity with `app-engine:apps:install` and `app-engine:apps:run`, the scopes declared in [`app.config.json`](app.config.json), and Node.js 24. Work from the repository root. The App Toolkit uses the signed-in user's Dynatrace access for local development and deployment.
 
 Install dependencies and run the release gate:
 
@@ -92,23 +92,24 @@ npm ci
 npm run verify:release
 ~~~
 
-Start a local development session:
+Set a real target environment URL in your shell before starting a local development session. Replace the placeholder with an environment you are authorized to use; do not commit its URL or credentials:
 
-~~~text
+~~~powershell
+$env:DT_APP_ENVIRONMENT_URL = "https://<your-environment>.apps.dynatrace.com/"
 npm run start
 ~~~
 
-Deploy to a target environment:
+After the release gate passes, deploy only to an approved target environment:
 
 ~~~text
 npx dt-app deploy --environment-url https://your-environment.apps.dynatrace.com/
 ~~~
 
-`app.config.json` contains a safe placeholder environment URL. You can also set `DT_APP_ENVIRONMENT_URL` in the shell or CI environment. Follow the provider connection guide instead of placing a secret in the repository or App Settings.
+`app.config.json` and `.env.example` contain safe placeholders, not working target configuration. The CLI may request interactive sign-in. `DT_APP_ENVIRONMENT_URL` can also be set in CI. For a first installation, have an administrator approve the app scopes and allow `sla.directory` under **Settings > General > External requests**. Use the [getting-started guide](documentation/getting-started.md) to check the installed app without changing tenant data. Follow the provider connection guide instead of placing a secret in the repository or App Settings.
 
 ## Permissions and data
 
-The manifest requests read access to the Dynatrace data used by the review, plus narrow write access for shared app settings, user/app state, and an explicitly confirmed objective creation. It does not request entity-write, Problem-write, ticketing, or Credential Vault write access. The full scope map and deny behavior are in [permissions](documentation/permissions.md).
+The manifest requests read access to the Dynatrace data used by the review, plus narrow write access for shared app settings, user/app state, an explicitly confirmed objective creation, and operator-approved FinOps business events. FinOps also reads its routing events from Grail. It does not request entity-write, Problem-write, ticketing, or Credential Vault write access. The full scope map and deny behavior are in [permissions](documentation/permissions.md).
 
 Provider connection settings contain identifiers, not secrets. App Settings records are shared operational data and can be read by authenticated app users, so do not put credentials, confidential agreement text, personal data, or unrelated incident details in them.
 

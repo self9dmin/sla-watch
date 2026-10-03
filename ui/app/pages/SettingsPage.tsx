@@ -708,9 +708,9 @@ const IntroSettings = () => {
       <div className="settings-summary-grid">
         <NavLink to="/settings/watch" className="settings-summary"><span className="eyebrow">Optional</span><strong>Change review defaults.</strong><span>Choose the focused provider, source-tag convention, or evidence window.</span></NavLink>
         <NavLink to="/settings/sla-overrides" className="settings-summary"><span className="eyebrow">When terms differ</span><strong>Add custom terms.</strong><span>Use an explicit scope and agreement reference for negotiated or private terms.</span></NavLink>
-        <NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Administrator</span><strong>Connect provider reports.</strong><span>AWS Health events in Grail are automatic. Add direct provider APIs only when the environment source is not enough.</span></NavLink>
+        <NavLink to="/settings/provider-connections" className="settings-summary"><span className="eyebrow">Administrator</span><strong>Connect provider reports.</strong><span>When AWS EventBridge health ingest is enabled, those events appear in Grail without an app credential. Add direct provider APIs only when that source is not enough.</span></NavLink>
       </div>
-      <div className="settings-callout"><strong>Evidence is the handoff point</strong><span>The SRE records Ready for follow-up, Needs evidence, or Excluded from provider follow-up. A complete ready case can be queued for FinOps routing. SLA Review does not submit a claim, send email, or decide fault or credit.</span></div>
+      <div className="settings-callout"><strong>Evidence is the handoff point</strong><span>The SRE records Ready for follow-up, Needs evidence, or Excluded from provider follow-up. A complete ready case can be queued only after the optional local FinOps integration is configured. SLA Review does not submit a claim, send email, or decide fault or credit.</span></div>
       <div className="settings-callout"><strong>The quick tour changes nothing</strong><span>It does not change providers, connections, SLA matches, telemetry, tags, terms, objectives, or evidence decisions.</span></div>
     </section>
   );

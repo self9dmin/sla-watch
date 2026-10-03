@@ -7,8 +7,17 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.78",
+    version: "0.0.79",
     label: "Current release",
+    summary: "Clarified setup and permissions for the optional FinOps pilot.",
+    details: [
+      "Getting started now separates the core review from the separately configured local FinOps gateway and Workflows.",
+      "The public permissions guide names the business-event scopes used to queue and read FinOps decisions.",
+    ],
+  },
+  {
+    version: "0.0.78",
+    label: "Previous release",
     summary: "Added controlled local FinOps routing for reviewed SLA evidence.",
     details: [
       "A reviewer can manually queue a complete, closed, single-service evidence case for a local routing recommendation.",

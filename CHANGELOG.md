@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.79
+
+- Clarifies the first-run path, required Dynatrace permissions, and the separately configured local FinOps pilot.
+- Aligns the in-app Getting started and FinOps copy with those boundaries and updates the public repository guidance.
+
 ## 0.0.78
 
 - Adds a manual FinOps route for one human-reviewed, complete SLA evidence case. Automatic queueing and work-lane assignment are separate controls and default to off.

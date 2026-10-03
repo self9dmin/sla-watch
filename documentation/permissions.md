@@ -10,6 +10,7 @@ Start with [Getting started and configuration](getting-started.md) for the opera
 | --- | --- |
 | Reader | Run the app and read the Dynatrace sources used by the views they need. Denied sources stay explicitly unavailable. |
 | Reviewer | Reader access plus App Settings write access for SLA matches, custom terms, and Evidence decisions. Add `slo:slos:write` only when the user should create an objective. |
+| FinOps operator, optional | Reviewer access plus business-event ingest and read access. The local gateway and Workflows must be separately configured; the manifest scopes alone do not activate routing. |
 | Direct provider connection administrator | Reviewer access plus permission to use the selected Credential Vault record, provider-side least-privilege IAM, and the adapter's exact External requests hosts. Dynatrace-ingested AWS Health does not require this profile. |
 | Deployer | Separate `app-engine:apps:install` and `app-engine:apps:run` access for local or CI deployment. Runtime data access still follows the app and current user. |
 
@@ -21,6 +22,8 @@ These profiles describe product responsibilities, not prebuilt Dynatrace groups.
 | --- | --- | --- |
 | `storage:events:read` | Read Davis Problems and Dynatrace-ingested AWS Health events | Show the Problem or provider-event check as unavailable; do not claim there are no Problems or provider events |
 | `storage:buckets:read` | Read the Grail buckets behind `dt.davis.problems` | Show Problems as unavailable; do not claim the tenant has no Problems |
+| `openpipeline:bizevents:ingest` | Queue a manually approved or explicitly enabled automatic FinOps review, and record later human feedback or an operator-attested external filing | The event is not queued; the app reports the failed action without changing the saved Evidence decision |
+| `storage:bizevents:read` | Read FinOps route, feedback, and filing events from Grail | Show router decisions as unavailable; do not claim no cases were routed |
 | `storage:metrics:read` | Read service request time series | Show metrics as unavailable; do not claim that traffic is absent |
 | `storage:logs:read` | Count recent log records | Show log count as unavailable |
 | `storage:spans:read` | Count recent spans | Show span count as unavailable |
@@ -52,6 +55,8 @@ These profiles describe product responsibilities, not prebuilt Dynatrace groups.
 | Provider connection metadata | Authenticated app users with App Settings read access | Users with App Settings write access for `provider-connections` | Provider secrets remain in Credential Vault; settings contain only provider, scope, optional AWS role ARN, region, and credential IDs |
 | SLA matches | Authenticated app users with App Settings read access | Users with App Settings write access for `provider-scope-assignments` | Exact Smartscape service/runtime IDs or direct service IDs are retained and take precedence over read-only observed topology; ambiguous candidates remain unresolved until confirmed in Coverage |
 | Human evidence decisions | Authenticated app users with App Settings read access | Users with App Settings write access for `evidence-decisions` | Decisions retain a bounded Problem snapshot and concise operational note; they do not establish provider fault or credit eligibility |
+| FinOps routing settings | Authenticated app users with App Settings read access | Users with App Settings write access for `finops-routing` | Automatic queueing and lane assignment are separate, off by default, and fail closed when settings cannot be read |
+| FinOps business events | Current-user business-event read access | Operator-approved ingest; separate Workflow actor access is required for Workflow output | The app can queue a reviewed case and later human records, then display returned routes; a local model recommendation does not prove eligibility or submit a claim |
 | Credential Vault | Selected AppEngine credential only | None | The app cannot create, edit, list, rotate, or delete provider credentials |
 | Custom terms | All authenticated users of the app with App Settings read access | Users with App Settings write access for `contract-overrides` | Published terms remain unchanged; unavailable or denied settings fall back conservatively to those published terms |
 | User app state | User state read | User state write | Personal preferences remain local when denied |
