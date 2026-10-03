@@ -22,7 +22,7 @@
     "test:e2e": "playwright test",
     "assets:providers": "node scripts/vendor-provider-logos.mjs",
     "analyze": "dt-app analyze",
-    "audit:production": "npm audit --omit=dev",
+    "audit:production": "node scripts/audit-production.mjs",
     "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run analyze",
     "verify:release": "npm run typecheck && npm run lint && npm run test:ci && npm run build && npm run analyze && npm run audit:production"
   },
