@@ -768,7 +768,7 @@ const CandidateDetail = ({
           <p>Required items were confirmed for {reviewCase.problems.length} Problem{reviewCase.problems.length === 1 ? "" : "s"}. Nothing has been sent to the provider.</p>
           {queuedRequestId === routePacket?.requestId ? <p className="candidate-handoff-queued">Queued for local routing · Request ID: <code>{queuedRequestId}</code></p> : null}
           <div className="candidate-handoff-actions">
-            {queuedRequestId === routePacket?.requestId ? <Button as={Link} to={`/finops?provider=${encodeURIComponent(provider.provider.slug)}`} variant="emphasized" color="primary" size="condensed">View in Automate</Button>
+            {queuedRequestId === routePacket?.requestId ? <Button as={Link} to={`/finops?provider=${encodeURIComponent(provider.provider.slug)}`} variant="emphasized" color="primary" className="candidate-handoff-primary">View in Automate →</Button>
               : !routePacket ? <Button size="condensed" onClick={() => {
                 const evidence = document.getElementById("candidate-supporting-evidence") as HTMLDetailsElement | null;
                 if (evidence) {
@@ -776,8 +776,8 @@ const CandidateDetail = ({
                   evidence.scrollIntoView({ block: "start" });
                 }
               }}>Review routing evidence</Button>
-                : !finopsRouting.reliable ? <Button as={Link} to="/settings/finops" variant="emphasized" color="primary" size="condensed">Set up Automate</Button>
-                  : <Button variant="emphasized" color="primary" size="condensed" disabled={finopsQueueing} onClick={() => void queueFinopsReview(routePacket, "manual")}>{finopsQueueing ? "Queueing local review" : "Queue local route review"}</Button>}
+                : !finopsRouting.reliable ? <Button as={Link} to="/settings/finops" variant="emphasized" color="primary" className="candidate-handoff-primary">Set up Automate →</Button>
+                  : <Button variant="emphasized" color="primary" className="candidate-handoff-primary" disabled={finopsQueueing} onClick={() => void queueFinopsReview(routePacket, "manual")}>{finopsQueueing ? "Queueing local review" : "Queue local route review →"}</Button>}
             <Button size="condensed" disabled={!settings.canWrite || settings.mutating} onClick={() => void resetDecision()}>Reopen review</Button>
           </div>
           {routePacket ? <small>Queues a Dynatrace event for the configured local routing Workflow. The model recommends an internal next step. No provider claim is submitted.</small>

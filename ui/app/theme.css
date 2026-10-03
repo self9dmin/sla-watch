@@ -1312,6 +1312,9 @@ a { color: var(--sla-accent); }
 .candidate-handoff-content p { margin: 0; color: var(--sla-text); font-size: 12px; line-height: 1.45; }
 .candidate-handoff-content small { color: var(--sla-muted); font-size: 11px; line-height: 1.45; }
 .candidate-handoff-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 3px 0; }
+.candidate-handoff-actions .candidate-handoff-primary { min-height: 40px; border: 1px solid var(--sla-action-bg); border-radius: 6px; padding: 0 16px; background: var(--sla-action-bg); color: var(--sla-action-text); font-size: 13px; font-weight: 700; box-shadow: 0 2px 6px rgba(9, 31, 39, .14); }
+.candidate-handoff-actions .candidate-handoff-primary:hover:not(:disabled) { border-color: var(--sla-accent-strong); background: var(--sla-accent-strong); color: var(--sla-surface); }
+.candidate-handoff-actions .candidate-handoff-primary:disabled { opacity: .65; box-shadow: none; }
 .candidate-handoff-actions > a:not([class]) { color: var(--sla-accent-strong); font-size: 12px; font-weight: 700; }
 .candidate-handoff-queued code { overflow-wrap: anywhere; }
 .candidate-handoff-blockers { margin: 0; padding-left: 18px; color: var(--sla-muted); font-size: 11px; line-height: 1.5; }

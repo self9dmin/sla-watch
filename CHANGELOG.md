@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.84
+
+- Makes the completed-review handoff a prominent primary action. It names the local routing step and gives a direct path to Automate after queueing.
+
 ## 0.0.83
 
 - Makes Evidence the only case queue. Identify now opens Coverage directly; old incident links retain their Problem and case context when redirected to Evidence.

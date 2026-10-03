@@ -7,8 +7,17 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.83",
+    version: "0.0.84",
     label: "Current release",
+    summary: "Made the reviewed-case handoff easier to find.",
+    details: [
+      "A completed evidence review now presents local routing as a prominent next action.",
+      "After queueing, the handoff offers a direct link to Automate. It still does not submit a provider claim.",
+    ],
+  },
+  {
+    version: "0.0.83",
+    label: "Previous release",
     summary: "Moved case review into one Evidence queue.",
     details: [
       "Identify now opens Coverage directly. Legacy incident links redirect to the matching Evidence case.",
