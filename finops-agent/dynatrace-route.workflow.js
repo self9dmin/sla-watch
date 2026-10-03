@@ -2,9 +2,9 @@
 // business event type sla.finops.review.ready. Set the credential ID below.
 import { execution } from "@dynatrace-sdk/automation-utils";
 import { businessEventsClient, credentialVaultClient } from "@dynatrace-sdk/client-classic-environment-v2";
-import { appSettingsObjectsClient } from "@dynatrace-sdk/client-app-settings-v2";
 
 const ROUTER_URL = "http://sla-finops-router.internal:8787/route";
+const REVIEW_GATE_URL = "/apps/my.sla/api/finopsReviewGate";
 const BRIDGE_CREDENTIAL_ID = "CREDENTIALS_VAULT-REPLACE_ME";
 
 export default async function () {
@@ -23,40 +23,20 @@ export default async function () {
       packet.missingRequirementsCount !== 0 ||
       packet.requestId !== `${packet.caseId}|${packet.reviewedAt}`)
     throw new Error("Ready event does not contain one complete current review.");
-  const routing = await appSettingsObjectsClient.getAppSettingsObjects({
-    schemaId: "finops-routing", addFields: "value", pageSize: 2,
+  const gateResponse = await fetch(REVIEW_GATE_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      providerSlug: packet.providerSlug,
+      problemId: packet.problemId,
+      providerServiceId: packet.providerServiceId,
+      reviewedAt: packet.reviewedAt,
+      triggerMode: event["finops.trigger_mode"],
+      autoAssignLane: event["finops.auto_assign_lane"],
+    }),
   });
-  if (routing.error || routing.nextPageKey || routing.totalCount > 1 ||
-      !Array.isArray(routing.items) || routing.items.length !== routing.totalCount)
-    throw new Error("Current FinOps routing settings are unavailable or ambiguous.");
-  const controls = routing.items.length === 0
-    ? { autoQueueAfterReady: false, autoAssignLane: false }
-    : routing.items[0].value;
-  if (routing.items.length > 0 &&
-      (controls?.configurationKey !== "workspace" ||
-       typeof controls.autoQueueAfterReady !== "boolean" ||
-       typeof controls.autoAssignLane !== "boolean"))
-    throw new Error("Current FinOps routing settings are invalid.");
-  if ((event["finops.trigger_mode"] === "automatic" && !controls.autoQueueAfterReady) ||
-      event["finops.auto_assign_lane"] !== controls.autoAssignLane)
-    throw new Error("Automatic routing or lane assignment is not currently enabled.");
-  const decisions = await appSettingsObjectsClient.getAppSettingsObjects({
-    schemaId: "evidence-decisions", addFields: "value", pageSize: 500,
-  });
-  if (decisions.error || decisions.nextPageKey ||
-      !Array.isArray(decisions.items) || decisions.items.length !== decisions.totalCount)
-    throw new Error("Current evidence decisions are unavailable or incomplete.");
-  const current = decisions.items.filter(({ value }) =>
-    value?.decisionKey === `${packet.providerSlug}|${packet.problemId}`.toLowerCase());
-  const decision = current.length === 1 ? current[0].value : null;
-  if (!decision || decision.status !== "validated" ||
-      decision.reviewedAt !== packet.reviewedAt ||
-      decision.providerSlug !== packet.providerSlug ||
-      decision.problemId !== packet.problemId ||
-      !Array.isArray(decision.providerServiceIds) ||
-      decision.providerServiceIds.length !== 1 ||
-      decision.providerServiceIds[0] !== packet.providerServiceId)
-    throw new Error("The reviewed evidence decision is stale or contradictory.");
+  if (!gateResponse.ok || (await gateResponse.json())?.verified !== true)
+    throw new Error("Current reviewed FinOps evidence is unavailable or invalid.");
   const credential = await credentialVaultClient.getCredentialsDetails({ id: BRIDGE_CREDENTIAL_ID });
   const response = await fetch(ROUTER_URL, {
     method: "POST",
