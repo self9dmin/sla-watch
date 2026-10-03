@@ -9,12 +9,36 @@ const BRIDGE_CREDENTIAL_ID = "CREDENTIALS_VAULT-REPLACE_ME";
 export default async function () {
   const ex = await execution();
   const event = ex.params.event;
-  if (event?.["event.type"] !== "sla.finops.feedback") throw new Error("Unexpected trigger event.");
+  if (event?.["event.type"] !== "sla.finops.feedback" ||
+      event["event.provider"] !== "sla-review") throw new Error("Unexpected trigger event.");
   if (!/^[0-9a-f]{24}$/.test(event.finops_request_hash) ||
       !/^[0-9a-f]{32}$/.test(event.finops_trace_id) ||
       !/^[0-9a-f]{16}$/.test(event.finops_span_id) ||
+      typeof event.finops_request_id !== "string" ||
+      event.finops_request_id.length > 360 ||
+      typeof event.finops_case_id !== "string" ||
+      event.finops_case_id.length > 160 ||
+      !["prepare_provider_draft", "internal_only", "human_review"].includes(event.finops_recommended_route) ||
       !["prepare_provider_draft", "internal_only", "human_review"].includes(event.finops_correct_route))
     throw new Error("Invalid human outcome.");
+  const query = `fetch bizevents, from:now()-30d
+| filter event.type == "sla.finops.route" and finops_request_hash == "${event.finops_request_hash}" and finops_trace_id == "${event.finops_trace_id}" and finops_span_id == "${event.finops_span_id}"
+| fields finops_request_id, finops_case_id, finops_route, finops_provider_submission
+| limit 2`;
+  const routeResponse = await fetch("/platform/storage/query/v1/query:execute", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query, requestTimeoutMilliseconds: 30000 }),
+  });
+  if (!routeResponse.ok) throw new Error("Original route could not be verified in Grail.");
+  const routeResult = await routeResponse.json();
+  const routes = routeResult?.result?.records;
+  if (routeResult.state !== "SUCCEEDED" || !Array.isArray(routes) || routes.length !== 1 ||
+      routes[0].finops_request_id !== event.finops_request_id ||
+      routes[0].finops_case_id !== event.finops_case_id ||
+      routes[0].finops_route !== event.finops_recommended_route ||
+      routes[0].finops_provider_submission !== "not_sent")
+    throw new Error("Human outcome does not match one original route.");
   const credential = await credentialVaultClient.getCredentialsDetails({ id: BRIDGE_CREDENTIAL_ID });
   const response = await fetch(FEEDBACK_URL, {
     method: "POST",
