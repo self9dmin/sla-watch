@@ -711,7 +711,7 @@ const CandidateDetail = ({
             <strong id="evidence-readiness-title">Review readiness</strong>
             <span>What is ready, optional, and still missing.</span>
           </div>
-          <StatusPill tone={readyEnough ? "positive" : "warning"}>
+          <StatusPill tone={readyEnough ? "neutral" : "warning"}>
             {readyEnough
               ? "No required gaps"
               : `${packageGaps.length} required gap${packageGaps.length === 1 ? "" : "s"}`}

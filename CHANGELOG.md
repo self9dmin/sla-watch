@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.85
+
+- Gives day groups and the selected case neutral styling, so they do not imply an approved review or shared root cause.
+- Uses a neutral readiness indicator when the evidence checklist has no required gaps. The completed human-review handoff retains the success treatment.
+
 ## 0.0.84
 
 - Makes the completed-review handoff a prominent primary action. It names the local routing step and gives a direct path to Automate after queueing.

@@ -7,8 +7,17 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.84",
+    version: "0.0.85",
     label: "Current release",
+    summary: "Clarified color meaning in the evidence queue.",
+    details: [
+      "Day groups and the selected case use neutral colors because grouping and selection are not review outcomes.",
+      "The checklist uses a neutral no-gaps indicator. The completed human review remains the clear success signal.",
+    ],
+  },
+  {
+    version: "0.0.84",
+    label: "Previous release",
     summary: "Made the reviewed-case handoff easier to find.",
     details: [
       "A completed evidence review now presents local routing as a prominent next action.",

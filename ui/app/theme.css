@@ -26,6 +26,9 @@
   --sla-danger-bg: #fff0f0;
   --sla-action-bg: #263149;
   --sla-action-text: #ffffff;
+  --sla-group-bg: #e8edf1;
+  --sla-group-hover-bg: #e0e8ed;
+  --sla-selection-marker: #3c5269;
   --sla-shadow: 0 7px 22px rgba(25, 45, 50, .06);
   --sla-overlay: rgba(9, 19, 22, .54);
   --dt-colors-background-base-default: var(--sla-bg);
@@ -68,6 +71,9 @@
   --sla-danger-bg: #482626;
   --sla-action-bg: #63d9cc;
   --sla-action-text: #09201d;
+  --sla-group-bg: #222a3c;
+  --sla-group-hover-bg: #2a3448;
+  --sla-selection-marker: #b5c5d6;
   --sla-shadow: 0 18px 42px rgba(0, 0, 0, .28);
   --sla-overlay: rgba(3, 8, 11, .78);
   --dt-colors-background-base-default: var(--sla-bg);
@@ -778,7 +784,7 @@ a { color: var(--sla-accent); }
 .candidate-queue-list { height: calc(100% - 34px); overflow-y: auto; scrollbar-color: var(--sla-border) transparent; scrollbar-width: thin; }
 .candidate-queue-item { display: flex; align-items: center; justify-content: space-between; gap: 9px; width: 100%; min-height: 58px; padding: 8px 10px; border: 0; border-bottom: 1px solid var(--sla-border-soft); color: var(--sla-text); background: transparent; cursor: pointer; text-align: left; }
 .candidate-queue-item:hover { background: var(--sla-surface); }
-.candidate-queue-item.selected { background: var(--sla-accent-soft); box-shadow: inset 2px 0 0 var(--sla-accent); }
+.candidate-queue-item.selected { background: var(--sla-surface); box-shadow: inset 3px 0 0 var(--sla-selection-marker); }
 .candidate-queue-item > span:first-child { min-width: 0; }
 .candidate-queue-item strong, .candidate-queue-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .candidate-queue-item strong { font-size: 11px; line-height: 1.3; }
@@ -1286,11 +1292,12 @@ a { color: var(--sla-accent); }
 .candidate-queue-filters button span { margin-left: 3px; font-variant-numeric: tabular-nums; }
 .candidate-queue-list, .provider-notice-queue-list { flex: 1 1 auto; height: auto; min-height: 0; }
 .candidate-queue-item { min-height: 78px; padding: 10px 12px; }
-.candidate-day-group-toggle { display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 3px; border: 0; border-bottom: 1px solid var(--sla-border); padding: 12px; color: var(--sla-text); background: var(--sla-accent-soft); cursor: pointer; text-align: left; font: inherit; }
+.candidate-day-group-toggle { display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 3px; border: 0; border-bottom: 1px solid var(--sla-border); padding: 12px; color: var(--sla-text); background: var(--sla-group-bg); cursor: pointer; text-align: left; font: inherit; }
+.candidate-day-group-toggle:hover { background: var(--sla-group-hover-bg); }
 .candidate-day-group-toggle strong { font-size: 13px; }
 .candidate-day-group-toggle span { font-size: 12px; font-weight: 700; }
 .candidate-day-group-toggle small { color: var(--sla-muted); font-size: 11px; line-height: 1.35; }
-.candidate-day-group-toggle small:last-child { color: var(--sla-accent-strong); font-weight: 700; }
+.candidate-day-group-toggle small:last-child { color: var(--sla-text); font-weight: 700; text-decoration: underline; }
 .candidate-day-group-cases > p { margin: 0; border-bottom: 1px solid var(--sla-border-soft); padding: 8px 12px; color: var(--sla-muted); font-size: 11px; line-height: 1.4; }
 .candidate-day-group-cases .candidate-queue-item { width: 100%; }
 .candidate-day-group-cases .candidate-queue-item small { overflow-wrap: anywhere; }
@@ -1333,7 +1340,7 @@ a { color: var(--sla-accent); }
 .evidence-readiness-grid dt span { margin-left: 3px; color: var(--sla-muted); font-size: 9px; letter-spacing: 0; text-transform: none; }
 .evidence-readiness-grid dd { margin: 4px 0 0; color: var(--sla-text); font-size: 13px; font-weight: 700; }
 .evidence-readiness-grid small { display: block; margin-top: 3px; color: var(--sla-muted); font-size: 11px; line-height: 1.35; }
-.evidence-readiness-grid .ready { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--sla-positive) 70%, transparent); }
+.evidence-readiness-grid .ready { box-shadow: inset 0 2px 0 var(--sla-border); }
 .evidence-readiness-grid .attention { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--sla-warning) 75%, transparent); }
 .evidence-readiness-grid .optional { box-shadow: inset 0 2px 0 var(--sla-border); }
 .candidate-next-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; border: 1px solid color-mix(in srgb, var(--sla-warning) 35%, var(--sla-border)); border-radius: 7px; padding: 11px 12px; background: color-mix(in srgb, var(--sla-warning-bg) 42%, var(--sla-surface)); }
