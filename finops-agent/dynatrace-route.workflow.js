@@ -1,9 +1,9 @@
 // Paste into a Run JavaScript task in a standard Workflow triggered by the
-// business event type sla.finops.review.ready. Set the two constants below.
+// business event type sla.finops.review.ready. Set the credential ID below.
 import { execution } from "@dynatrace-sdk/automation-utils";
 import { businessEventsClient, credentialVaultClient } from "@dynatrace-sdk/client-classic-environment-v2";
 
-const ROUTER_URL = "https://ROUTER_HOST/route";
+const ROUTER_URL = "http://sla-finops-router.internal:8787/route";
 const BRIDGE_CREDENTIAL_ID = "CREDENTIALS_VAULT-REPLACE_ME";
 
 export default async function () {

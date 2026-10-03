@@ -3,7 +3,7 @@
 import { execution } from "@dynatrace-sdk/automation-utils";
 import { businessEventsClient, credentialVaultClient } from "@dynatrace-sdk/client-classic-environment-v2";
 
-const FEEDBACK_URL = "https://ROUTER_HOST/feedback";
+const FEEDBACK_URL = "http://sla-finops-router.internal:8787/feedback";
 const BRIDGE_CREDENTIAL_ID = "CREDENTIALS_VAULT-REPLACE_ME";
 
 export default async function () {
