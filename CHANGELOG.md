@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.0.78
+
+- Adds a manual FinOps route for one human-reviewed, complete SLA evidence case. Automatic queueing and work-lane assignment are separate controls and default to off.
+- Routes through a local Laya-compatible gateway and records decisions in Grail. A separate Bindplane-to-Phoenix trace supports later evaluation after identity verification.
+- Keeps provider eligibility undetermined and provider submission unsent. Only a person can record a filed case with an external channel and receipt or ticket reference.
+- Includes the 0.0.77 Dynatrace-ingested AWS Health source and Problems-read permission change.
+
+## 0.0.77
+
+- Reads Dynatrace-ingested `aws.health` EventBridge records from Grail as the default AWS provider-evidence source, with no app credential or account-specific configuration.
+- Preserves exact account, region, affected-resource, event timing, service, and Smartscape context while keeping provider reports separate from customer-observed impact.
+- Keeps the direct AWS Health API and request-local role-assumption adapter as an optional historical-lookback fallback.
+- Explains when an empty result means no matching event versus EventBridge ingestion not being enabled.
+
 ## 0.0.74
 
 - Opens Settings on a concise Getting started page that explains what works immediately, what an administrator must provide, and which configuration is optional.

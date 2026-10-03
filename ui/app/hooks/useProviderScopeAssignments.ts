@@ -47,24 +47,46 @@ export const useProviderScopeAssignments = () => {
   const totalCount = query.data?.totalCount ?? assignments.length;
   const incomplete = Boolean(query.data?.error || query.data?.nextPageKey || totalCount > assignments.length);
 
-  const createAssignment = async (value: ProviderScopeAssignmentValue): Promise<void> => {
-    await create.execute({ body: { schemaId: PROVIDER_SCOPE_ASSIGNMENTS_SCHEMA_ID, value } });
+  const createAssignments = async (values: ProviderScopeAssignmentValue[]): Promise<void> => {
+    for (const value of values) {
+      await create.execute({ body: { schemaId: PROVIDER_SCOPE_ASSIGNMENTS_SCHEMA_ID, value } });
+    }
     await query.refetch();
   };
 
-  const updateAssignment = async (record: ProviderScopeAssignmentRecord, value: ProviderScopeAssignmentValue): Promise<void> => {
-    await update.execute({
-      objectId: record.objectId,
-      optimisticLockingVersion: record.version,
-      body: { value },
-    });
+  const createAssignment = async (value: ProviderScopeAssignmentValue): Promise<void> =>
+    createAssignments([value]);
+
+  const updateAssignments = async (
+    records: ProviderScopeAssignmentRecord[],
+    values: ProviderScopeAssignmentValue[],
+  ): Promise<void> => {
+    if (records.length !== values.length)
+      throw new Error("Each SLA match update requires one existing record and one value.");
+    for (let index = 0; index < records.length; index += 1) {
+      await update.execute({
+        objectId: records[index].objectId,
+        optimisticLockingVersion: records[index].version,
+        body: { value: values[index] },
+      });
+    }
     await query.refetch();
   };
 
-  const deleteAssignment = async (record: ProviderScopeAssignmentRecord): Promise<void> => {
-    await remove.execute({ objectId: record.objectId, optimisticLockingVersion: record.version });
+  const updateAssignment = async (
+    record: ProviderScopeAssignmentRecord,
+    value: ProviderScopeAssignmentValue,
+  ): Promise<void> => updateAssignments([record], [value]);
+
+  const deleteAssignments = async (records: ProviderScopeAssignmentRecord[]): Promise<void> => {
+    for (const record of records) {
+      await remove.execute({ objectId: record.objectId, optimisticLockingVersion: record.version });
+    }
     await query.refetch();
   };
+
+  const deleteAssignment = async (record: ProviderScopeAssignmentRecord): Promise<void> =>
+    deleteAssignments([record]);
 
   return {
     assignments,
@@ -76,8 +98,11 @@ export const useProviderScopeAssignments = () => {
     incomplete,
     error: query.error ?? permissions.error,
     createAssignment,
+    createAssignments,
     updateAssignment,
+    updateAssignments,
     deleteAssignment,
+    deleteAssignments,
     refetch: query.refetch,
   };
 };

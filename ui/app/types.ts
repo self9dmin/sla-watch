@@ -3,7 +3,8 @@ export type WatchSection =
   | "performance"
   | "directory"
   | "incidents"
-  | "evidence";
+  | "evidence"
+  | "finops";
 export type SlaThemePreference = "system" | "light" | "dark";
 export type RecommendationPriority = "high" | "medium" | "low";
 export type EvidenceLookbackHours = 24 | 72 | 168 | 360 | 720 | 1440 | 2160;
@@ -166,6 +167,7 @@ export type ProviderNoticesResponse = {
   fetchedAt: string;
   source: "personalized" | "public";
   connectionState: "connected" | "public" | "fallback";
+  delivery?: "dynatrace" | "provider-api" | "public";
   projectId?: string;
   scopeLabel?: string;
   message: string;

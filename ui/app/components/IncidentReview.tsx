@@ -747,25 +747,25 @@ export const IncidentReview = ({
         <StatusPill tone={activeProblems > 0 ? "warning" : "neutral"}>
           {loading
             ? "Loading Problems"
-            : `${problems.length.toLocaleString()} observed`}
+            : error ? "Problems unavailable" : `${problems.length.toLocaleString()} observed`}
         </StatusPill>
       </div>
 
       <div className="overview-facts incidents-facts" aria-label="Incident status">
         <IncidentFact
           label="Active cases"
-          value={loading ? "Checking" : activeCases.toLocaleString()}
-          detail={`${activeProblems.toLocaleString()} open Dynatrace Problems`}
+          value={loading ? "Checking" : error ? "Unavailable" : activeCases.toLocaleString()}
+          detail={error ? "Problem query could not be completed" : `${activeProblems.toLocaleString()} open Dynatrace Problems`}
           tone={activeCases > 0 ? "warning" : "neutral"}
         />
         <IncidentFact
           label="Needs evidence review"
-          value={matchingLoading || reviewStateLoading
+          value={error ? "Unavailable" : matchingLoading || reviewStateLoading
             ? "Checking"
             : reviewStateUnavailable
               ? "Unavailable"
             : unresolvedCandidateCases.toLocaleString()}
-          detail={reviewStateUnavailable
+          detail={error ? "Problem query could not be completed" : reviewStateUnavailable
             ? "Saved review decisions could not be read"
             : `${candidates.length.toLocaleString()} Problems grouped into ${providerRelevantCases.toLocaleString()} provider-relevant cases`}
           tone={reviewStateUnavailable
@@ -776,7 +776,7 @@ export const IncidentReview = ({
         />
         <IncidentFact
           label="Affected services"
-          value={loading ? "Checking" : affectedServiceCount.toLocaleString()}
+          value={loading ? "Checking" : error ? "Unavailable" : affectedServiceCount.toLocaleString()}
           detail="unique services in this window"
           tone={affectedServiceCount > 0 ? "positive" : "neutral"}
         />
@@ -917,7 +917,7 @@ export const IncidentReview = ({
         </div>
       ) : null}
 
-      {error ? (
+      {error && problems.length > 0 ? (
         <div className="error-box incidents-error">
           The Problem query is incomplete. Check the current user's event access.
         </div>
@@ -931,7 +931,12 @@ export const IncidentReview = ({
         </div>
       ) : null}
 
-      {loading && problems.length === 0 ? (
+      {error && problems.length === 0 ? (
+        <div className="incidents-empty" role="alert">
+          <strong>Dynatrace Problems are unavailable</strong>
+          <span>The query did not complete. Check event and bucket read access for this app and your user account.</span>
+        </div>
+      ) : loading && problems.length === 0 ? (
         <div className="incidents-empty" role="status">
           <strong>Reading Dynatrace Problems</strong>
           <span>Loading the selected tenant window.</span>

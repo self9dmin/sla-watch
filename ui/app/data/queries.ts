@@ -160,6 +160,35 @@ fetch dt.davis.problems, from:-${lookbackHours}h, to:now()
 | limit 100
 `;
 
+export const createAwsHealthEventsQuery = (lookbackHours: number): string => {
+  const boundedLookback = Math.min(2_160, Math.max(1, Math.round(lookbackHours)));
+  return `
+fetch events, from:-${boundedLookback}h, to:now()
+| filter dt.da.source == "aws-event-ingest" and source == "aws.health"
+| fields timestamp,
+    event_id = id,
+    source_account = account,
+    source_region = region,
+    event_arn = jsonData[\`eventArn\`],
+    service = jsonData[\`service\`],
+    event_type_code = jsonData[\`eventTypeCode\`],
+    event_type_category = jsonData[\`eventTypeCategory\`],
+    event_scope_code = jsonData[\`eventScopeCode\`],
+    status_code = jsonData[\`statusCode\`],
+    event_start = jsonData[\`startTime\`],
+    event_end = jsonData[\`endTime\`],
+    event_updated = jsonData[\`lastUpdatedTime\`],
+    event_region = jsonData[\`eventRegion\`],
+    affected_account = jsonData[\`affectedAccount\`],
+    event_description = jsonData[\`eventDescription\`][0][\`latestDescription\`],
+    affected_entities = jsonData[\`affectedEntities\`],
+    resources,
+    smartscape_source_id = dt.smartscape_source.id
+| sort timestamp desc
+| limit 200
+`;
+};
+
 export const createLogsCountQuery = (lookbackHours: number): string => `
 fetch logs, from:-${lookbackHours}h, to:now()
 | summarize log_count = count()

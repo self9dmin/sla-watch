@@ -2,7 +2,7 @@ import {
   credentialVaultClient,
   type CredentialsDetailsTokenResponseElement,
 } from "@dynatrace-sdk/client-classic-environment-v2";
-import { mapAwsServiceToDirectoryIds } from "./awsNoticeMappings";
+import { mapAwsServiceToDirectoryIds } from "../ui/app/data/awsNoticeMappings";
 
 type RequestPayload = {
   accountId?: string;

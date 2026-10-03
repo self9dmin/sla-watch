@@ -7,8 +7,29 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.76",
+    version: "0.0.78",
     label: "Current release",
+    summary: "Added controlled local FinOps routing for reviewed SLA evidence.",
+    details: [
+      "A reviewer can manually queue a complete, closed, single-service evidence case for a local routing recommendation.",
+      "Automatic queueing and work-lane assignment are separate controls that default to off.",
+      "Provider credit eligibility remains undetermined; only a person can record an external filing with a channel and receipt or ticket reference.",
+      "The prior release's Dynatrace-ingested AWS Health source and Problems-read correction are included.",
+    ],
+  },
+  {
+    version: "0.0.77",
+    label: "Previous release",
+    summary: "Made Dynatrace-ingested AWS Health the default evidence source.",
+    details: [
+      "Evidence now reads aws.health EventBridge records already present in Grail without an app credential or hardcoded AWS account.",
+      "Affected resources, account scope, provider service, event timing, and Smartscape context remain separate from customer-observed impact.",
+      "The direct AWS Health API and role-assumption path remains available as an optional historical-lookback fallback.",
+    ],
+  },
+  {
+    version: "0.0.76",
+    label: "Previous release",
     summary: "Finished the AWS role connection and its setup experience.",
     details: [
       "AWS Health role assumption, account verification, and request-local temporary credentials remain the recommended connection path.",
