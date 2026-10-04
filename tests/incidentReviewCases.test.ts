@@ -79,7 +79,7 @@ const build = (
 });
 
 describe("incident review cases", () => {
-  it("groups nearby Problems for the same provider service and affected service", () => {
+  it("keeps nearby Problems separate when only the provider and affected service match", () => {
     const first = problem({ id: "P-1" });
     const second = problem({
       id: "P-2",
@@ -89,12 +89,9 @@ describe("incident review cases", () => {
 
     const cases = build([first, second]);
 
-    expect(cases).toHaveLength(1);
-    expect(cases[0]).toMatchObject({
-      groupingBasis: "affected-service",
-      providerServiceIds: ["ec2"],
-    });
-    expect(cases[0].problems.map((item) => item.id)).toEqual(["P-1", "P-2"]);
+    expect(cases).toHaveLength(2);
+    expect(cases.flatMap((item) => item.problems.map((problem) => problem.id)).sort())
+      .toEqual(["P-1", "P-2"]);
   });
 
   it("uses a shared Dynatrace root cause to correlate different affected services", () => {
@@ -112,6 +109,36 @@ describe("incident review cases", () => {
     expect(cases).toHaveLength(1);
     expect(cases[0].groupingBasis).toBe("root-cause");
     expect(cases[0].affectedServices).toHaveLength(2);
+  });
+
+  it("does not bridge distinct root causes on one service", () => {
+    const first = problem({ id: "P-1", rootCauseId: "HOST-A" });
+    const second = problem({
+      id: "P-2",
+      rootCauseId: "HOST-A",
+      startedAt: "2026-09-12T10:10:00.000Z",
+    });
+    const third = problem({
+      id: "P-3",
+      rootCauseId: "HOST-B",
+      startedAt: "2026-09-12T10:20:00.000Z",
+    });
+
+    const cases = build([first, second, third]);
+    expect(cases).toHaveLength(2);
+    expect(cases.map((item) => item.problems.map((value) => value.id).join(",")).sort())
+      .toEqual(["P-1,P-2", "P-3"]);
+  });
+
+  it("keeps repeated Problems with one root cause separate beyond the review window", () => {
+    const first = problem({ id: "P-1", rootCauseId: "HOST-A" });
+    const later = problem({
+      id: "P-2",
+      rootCauseId: "HOST-A",
+      startedAt: "2026-09-12T11:00:00.000Z",
+    });
+
+    expect(build([first, later])).toHaveLength(2);
   });
 
   it("does not group merely because Problems belong to the same vendor", () => {
@@ -161,10 +188,11 @@ describe("incident review cases", () => {
     expect(build([first, unrelated, distant])).toHaveLength(3);
   });
 
-  it("groups Problems when they resolve to the same custom terms", () => {
-    const first = problem({ id: "P-1" });
+  it("groups Problems with the same root cause and effective custom terms", () => {
+    const first = problem({ id: "P-1", rootCauseId: "HOST-ROOT" });
     const second = problem({
       id: "P-2",
+      rootCauseId: "HOST-ROOT",
       startedAt: "2026-09-12T10:20:00.000Z",
     });
     const override: ContractOverrideRecord = {

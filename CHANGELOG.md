@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.88
+
+- Adds a reviewed, explicit batch action for recording one **Needs evidence** reason across selected unresolved episodes that share a confirmed provider product, Dynatrace service, and effective terms. A preview lists the exact Problems, and the reviewer must confirm the gap applies to each. The action does not complete evidence reviews, queue routing, or submit claims.
+- Requires a verified shared Davis root cause before nearby Problems are merged into one evidence episode. A shared service alone no longer merges them.
+- Reopens a saved decision when a Problem's start, end, or root cause changes. Previous decisions remain visible for review.
+
 ## 0.0.87
 
 - Renames the FinOps routing settings section to Automation and fixes the Setup link to open those controls.

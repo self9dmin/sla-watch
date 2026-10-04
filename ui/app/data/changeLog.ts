@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.87",
+    version: "0.0.88",
     label: "Current release",
+    summary: "Shared missing-evidence triage for separate incident episodes.",
+    details: [
+      "Evaluate can record one Needs evidence reason for explicitly selected episodes with the same confirmed provider product, service, and effective terms.",
+      "The preview lists every affected Problem and requires confirmation that the gap applies to each. Completed reviews are never copied to other episodes.",
+      "Nearby Problems now need a verified shared Davis root cause to form one evidence episode. A changed Problem window or root cause reopens its prior decision.",
+    ],
+  },
+  {
+    version: "0.0.87",
+    label: "Previous release",
     summary: "Assisted Workflow setup and clearer Automation controls.",
     details: [
       "Automate can open a prefilled route or feedback Workflow proposal with an inactive event trigger in Dynatrace Workflows.",

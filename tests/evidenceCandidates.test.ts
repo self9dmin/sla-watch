@@ -376,7 +376,45 @@ describe("evidence candidates", () => {
     expect(evidenceDecisionMatchesCandidate(
       { ...rootedValue, rootCauseEntityId: null },
       rootedCandidate,
-    )).toBe(true);
+    )).toBe(false);
+    expect(evidenceDecisionMatchesCandidate(value, rootedCandidate)).toBe(false);
+    expect(evidenceDecisionMatchesCandidate(rootedValue, candidate)).toBe(false);
+  });
+
+  it("requires a new review when the observed Problem window changes", () => {
+    const [candidate] = buildEvidenceCandidates({
+      provider,
+      problems: [problem],
+      services: [service],
+      topology: [edge],
+      assignments: [assignment],
+      providerLabelKey: "provider",
+    });
+    const value = evidenceDecisionValue(candidate, "aws", "validated", "");
+    expect(evidenceDecisionMatchesCandidate(value, candidate)).toBe(true);
+    expect(evidenceDecisionMatchesCandidate(value, {
+      ...candidate,
+      problem: { ...candidate.problem, startedAt: "2026-09-09T09:59:00.000Z" },
+    })).toBe(false);
+    expect(evidenceDecisionMatchesCandidate(value, {
+      ...candidate,
+      problem: { ...candidate.problem, endedAt: "2026-09-09T10:08:00.000Z" },
+    })).toBe(false);
+
+    const noWindow = {
+      ...candidate,
+      problem: { ...candidate.problem, startedAt: undefined, endedAt: undefined },
+    };
+    const legacy = normalizeEvidenceDecision({
+      ...evidenceDecisionValue(noWindow, "aws", "not-ready", "Review later."),
+      problemStartedAt: undefined,
+      problemEndedAt: undefined,
+      rootCauseEntityId: undefined,
+    });
+    expect(legacy).not.toBeNull();
+    expect(evidenceDecisionMatchesCandidate(legacy!, noWindow)).toBe(true);
+    expect(evidenceDecisionMatchesCandidate(legacy!, candidate)).toBe(false);
+    expect(evidenceDecisionMatchesCandidate(value, noWindow)).toBe(false);
   });
 
   it("keeps the two decision rules explicit", () => {

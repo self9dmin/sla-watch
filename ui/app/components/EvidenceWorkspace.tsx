@@ -65,6 +65,7 @@ import {
 import { useProviderNoticeSource } from "../hooks/useProviderNoticeSource";
 import { useServiceObjectives } from "../hooks/useServiceObjectives";
 import { ProviderNotices } from "./ProviderNotices";
+import { BatchEvidenceReview } from "./BatchEvidenceReview";
 
 type Tone = "neutral" | "warning" | "positive";
 type EvidenceView = "candidates" | "provider-reports";
@@ -1214,6 +1215,8 @@ const CandidateWorkspace = ({
   const [queueQuery, setQueueQuery] = useState("");
   const [queueFilter, setQueueFilter] = useState<EvidenceQueueFilter>("all");
   const [expandedGroupKey, setExpandedGroupKey] = useState<string | null>();
+  const [batchAnchorKey, setBatchAnchorKey] = useState<string>();
+  const batchLauncherRef = useRef<HTMLButtonElement | null>(null);
   const caseStateByKey = useMemo(() => new Map(
     reviewCases.map((reviewCase) => [
       reviewCase.key,
@@ -1248,6 +1251,7 @@ const CandidateWorkspace = ({
     });
   }, [caseStateByKey, queueFilter, queueQuery, reviewCases]);
   const visibleGroups = useMemo(() => groupReviewCasesByProduct(filteredCases), [filteredCases]);
+  const allGroups = useMemo(() => groupReviewCasesByProduct(reviewCases), [reviewCases]);
   const visibleCases = useMemo(() => visibleGroups.flatMap((group) => group.cases), [visibleGroups]);
   const priorUnresolvedDecisions = coverageTask?.candidates.filter((candidate) => decisionByKey.has(candidate.key)).length ?? 0;
   const hasScopedCustomTerms = contractSettings.overrides.some((override) =>
@@ -1296,6 +1300,12 @@ const CandidateWorkspace = ({
 
   const selected = selectedKey
     ? visibleCases.find((reviewCase) => reviewCase.key === selectedKey)
+    : undefined;
+  const batchAnchor = batchAnchorKey
+    ? reviewCases.find((reviewCase) => reviewCase.key === batchAnchorKey)
+    : undefined;
+  const batchGroup = batchAnchor
+    ? allGroups.find((group) => group.cases.some((reviewCase) => reviewCase.key === batchAnchor.key))
     : undefined;
   const selectedGroupKey = visibleGroups.find((group) => group.cases.some((reviewCase) => reviewCase.key === selected?.key))?.key;
   const openGroupKey = expandedGroupKey ?? null;
@@ -1464,7 +1474,8 @@ const CandidateWorkspace = ({
             <div className="candidate-queue-results">{visibleGroups.length} product investigation{visibleGroups.length === 1 ? "" : "s"} · {filteredCases.length} evidence episode{filteredCases.length === 1 ? "" : "s"} on drilldown</div>
             {visibleGroups.map((group) => {
               const isOpen = openGroupKey === group.key;
-              const reviewLabel = `${group.cases.length} review${group.cases.length === 1 ? "" : "s"}`;
+              const isBatchOpen = Boolean(batchAnchorKey && batchGroup?.key === group.key);
+              const reviewLabel = `${group.cases.length} separate episode${group.cases.length === 1 ? "" : "s"}`;
               return <section key={group.key} className="candidate-day-group" aria-label={`${group.name}, ${group.problemCount} Problem${group.problemCount === 1 ? "" : "s"}, ${reviewLabel}`}>
                 <button
                   type="button"
@@ -1473,6 +1484,7 @@ const CandidateWorkspace = ({
                   onClick={() => {
                     setExpandedGroupKey(isOpen ? null : group.key);
                     setSelectedKey(isOpen ? undefined : group.cases[0].key);
+                    setBatchAnchorKey(undefined);
                   }}
                 >
                   <span className="candidate-day-group-topline">
@@ -1481,11 +1493,27 @@ const CandidateWorkspace = ({
                     <span className="candidate-day-group-count">{group.problemCount} Problem{group.problemCount === 1 ? "" : "s"}</span>
                   </span>
                   <span className="candidate-day-group-service">{group.affectedServiceCount} affected Dynatrace service{group.affectedServiceCount === 1 ? "" : "s"}</span>
-                  <span className="candidate-day-group-action">{isOpen ? "Hide" : "Inspect"} {reviewLabel}</span>
+                  <span className="candidate-day-group-action">{isBatchOpen ? "Reviewing" : isOpen ? "Hide" : "Inspect"} {reviewLabel}</span>
                 </button>
                 {isOpen ? <div className="candidate-day-group-cases">
                   <p className="candidate-day-group-context">This product view organizes signals for triage. Separate episodes keep separate evidence and decisions. Product sharing alone does not establish one provider outage.</p>
-                  {group.cases.map((reviewCase) => {
+                  <div className="candidate-day-group-batch">
+                    <Button size="condensed" onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+                      if (isBatchOpen) {
+                        setBatchAnchorKey(undefined);
+                        return;
+                      }
+                      batchLauncherRef.current = event.currentTarget;
+                      const anchor = selected && selectedGroupKey === group.key
+                        ? selected
+                        : group.cases[0];
+                      setSelectedKey(anchor.key);
+                      setBatchAnchorKey(anchor.key);
+                      setMobileQueueOpen(false);
+                      window.requestAnimationFrame(() => document.getElementById("candidate-selected-detail")?.scrollIntoView({ block: "start" }));
+                    }}>{isBatchOpen ? "Back to episode list" : "Triage matching episodes together"}</Button>
+                  </div>
+                  {isBatchOpen ? <p className="candidate-day-group-context">Select the exact Problem episodes in the review panel. The saved outcome stays separate for each one.</p> : group.cases.map((reviewCase) => {
                     const state = caseStateByKey.get(reviewCase.key) ??
                       resolveEvidenceReviewState(reviewCase, decisionByKey);
                     const candidate = reviewCase.candidates[0];
@@ -1505,6 +1533,7 @@ const CandidateWorkspace = ({
                         onClick={() => {
                           setSelectedKey(reviewCase.key);
                           setExpandedGroupKey(group.key);
+                          setBatchAnchorKey(undefined);
                           setMobileQueueOpen(false);
                           window.requestAnimationFrame(() => document.getElementById("candidate-selected-detail")?.scrollIntoView({ block: "start" }));
                         }}
@@ -1531,7 +1560,20 @@ const CandidateWorkspace = ({
           </div>
           </div>
         </aside>
-        {selected && openGroupKey === selectedGroupKey ? (
+        {batchAnchor && batchGroup && openGroupKey === batchGroup.key ? <BatchEvidenceReview
+          anchor={batchAnchor}
+          cases={batchGroup.cases}
+          states={caseStateByKey}
+          provider={provider}
+          contractOverrides={contractSettings.overrides}
+          contractReady={!contractSettings.loading && !contractSettings.error && contractSettings.canRead}
+          evidenceReadIncomplete={evidenceReadIncomplete}
+          settings={settings}
+          onClose={() => {
+            setBatchAnchorKey(undefined);
+            window.requestAnimationFrame(() => batchLauncherRef.current?.focus());
+          }}
+        /> : selected && openGroupKey === selectedGroupKey ? (
           <CandidateDetail
             reviewCase={selected}
             reviewState={caseStateByKey.get(selected.key) ??

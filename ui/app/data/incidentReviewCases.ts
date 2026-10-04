@@ -43,24 +43,11 @@ const memberStart = (member: CaseMember): number | null =>
 const memberEnd = (member: CaseMember): number | null =>
   timestamp(member.problem.endedAt) ?? memberStart(member);
 
-const intersects = (left: string[], right: string[]): boolean => {
-  const rightValues = new Set(right.map(normalized));
-  return left.some((value) => rightValues.has(normalized(value)));
-};
-
-const affectedServiceIds = (member: CaseMember): string[] =>
-  member.candidate?.affectedServices.length
-    ? member.candidate.affectedServices.map((service) => service.id)
-    : member.problem.affectedEntityIds;
-
 const sameRootCause = (left: CaseMember, right: CaseMember): boolean => {
   const leftId = left.problem.rootCause?.id;
   const rightId = right.problem.rootCause?.id;
   return Boolean(leftId && rightId && normalized(leftId) === normalized(rightId));
 };
-
-const sameAffectedService = (left: CaseMember, right: CaseMember): boolean =>
-  intersects(affectedServiceIds(left), affectedServiceIds(right));
 
 const providerServiceKey = (candidate?: EvidenceCandidate): string | null => {
   if (!candidate?.scopeConfirmed || candidate.providerServiceIds.length !== 1)
@@ -78,7 +65,7 @@ const overrideAppliesOn = (
     (!override.effectiveTo || override.effectiveTo >= date);
 };
 
-const contractScopeKey = (
+export const contractScopeKey = (
   candidate: EvidenceCandidate,
   providerSlug: string,
   overrides: ContractOverrideRecord[],
@@ -132,8 +119,7 @@ const canJoin = (members: CaseMember[], next: CaseMember): boolean => {
   if (firstStart === null || nextStart === null || nextEnd === null) return false;
   if (nextStart > latestEnd + CASE_LINK_GAP_MS) return false;
   if (Math.max(latestEnd, nextEnd) - firstStart > CASE_MAX_SPAN_MS) return false;
-  return members.some((member) =>
-    sameRootCause(member, next) || sameAffectedService(member, next));
+  return members.every((member) => sameRootCause(member, next));
 };
 
 const uniqueBy = <T,>(values: T[], key: (value: T) => string): T[] =>

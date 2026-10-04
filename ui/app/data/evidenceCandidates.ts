@@ -135,12 +135,13 @@ export const evidenceDecisionMatchesCandidate = (
   createEvidenceDecisionKey(decision.providerSlug, decision.problemId) ===
     candidate.key &&
   decision.problemStatus.toUpperCase() === candidate.problem.status.toUpperCase() &&
+  requiredText(decision.problemStartedAt) === requiredText(candidate.problem.startedAt) &&
+  requiredText(decision.problemEndedAt) === requiredText(candidate.problem.endedAt) &&
   decision.mappingBasis === candidate.mappingBasis &&
   sameValues(decision.affectedEntityIds, candidate.problem.affectedEntityIds) &&
   sameValues(decision.providerServiceIds, candidate.providerServiceIds) &&
-  (!decision.rootCauseEntityId ||
-    decision.rootCauseEntityId.trim().toLowerCase() ===
-      candidate.problem.rootCause?.id.trim().toLowerCase());
+  (requiredText(decision.rootCauseEntityId)?.toLowerCase() ?? null) ===
+    (requiredText(candidate.problem.rootCause?.id)?.toLowerCase() ?? null);
 
 export const evidenceDecisionInputError = ({
   status,
