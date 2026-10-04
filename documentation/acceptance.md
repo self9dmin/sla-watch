@@ -1,5 +1,19 @@
 # Release acceptance record
 
+## 0.0.87 production verification, 2026-10-03
+
+Source commit `15453a8` was pushed to public `main` and deployed to the existing `my.sla` app in the designated production tenant. The senior UX review approved the assisted Workflow setup and the later owner-visibility safeguard before release.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Release checks | Public source audit, UI and API type checks, lint, 42 Jest suites with 229 tests, build, and App Toolkit analysis passed under Node 24.19.0 | Local release gate; the production dependency audit passed separately with network access. Its existing `GHSA-vfj7-8cjw-p6xm` exception expires 2026-11-01, and affected packages were absent from generated bundles |
+| Connected synthetic proposal | Route and feedback intents each opened a Workflows editor draft with the expected task script and inactive business-event matcher | Connected Chrome development AppShell; synthetic origin and Vault ID only; neither draft was saved or deployed |
+| Installed version | The installed change log showed `0.0.87 Current release` | Connected Chrome production smoke after successful deployment |
+| Settings navigation | Automate > Setup linked to Settings > Automation, headed Automation controls | Installed app, with both automatic controls off |
+| Workflow visibility | The reviewed pair showed as not visible; earlier FinOps Agent Workflows were still shown as active | Installed Automate > Setup; ordinary read access cannot prove absence of another owner's private Workflow |
+
+The production smoke made no tenant data change. It did not create an SLO or Workflow, send a routing event, run the local model, or submit a provider claim. A designated Workflow owner or admin must verify the full private inventory before saving replacements. Post-save privacy and discovery, synthetic Grail and Phoenix correlation, human feedback annotation, and safe changeover of the earlier triggers remain unverified.
+
 ## 0.0.86 production verification, 2026-10-03
 
 Source commit `ca4494e` was pushed to public `main` and deployed to the existing `my.sla` app in the designated production tenant. The senior UX review approved the Automate layout and case-to-Service-health return path before release.
