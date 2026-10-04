@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.86",
+    version: "0.0.87",
     label: "Current release",
+    summary: "Assisted Workflow setup and clearer Automation controls.",
+    details: [
+      "Automate can open a prefilled route or feedback Workflow proposal with an inactive event trigger in Dynatrace Workflows.",
+      "A designated Workflow owner or admin checks private inventory, then inspects and saves each draft. Visible definitions are checked before another proposal.",
+      "The Setup link now opens Settings > Automation, where automatic queueing and lane assignment remain off by default.",
+    ],
+  },
+  {
+    version: "0.0.86",
+    label: "Previous release",
     summary: "Focused Evidence work items and the Automate overview.",
     details: [
       "Automate now opens on existing SLOs, actual Workflow state, the decision path, and recent recommendations. Service health and Setup are separate tabs.",

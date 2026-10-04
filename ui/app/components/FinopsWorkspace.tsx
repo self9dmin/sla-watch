@@ -270,7 +270,7 @@ const AutomateOverview = ({ providerSlug, provider, services, coverageModel, cov
   const feedbackNeedsInspection = feedback ? workflowNeedsInspection(feedback, "feedback") : false;
   const workflowState = (item: typeof route, inspect: boolean) =>
     workflows.loading ? "Checking" : workflows.error || workflows.collision ? "Unavailable" :
-      !item ? "Missing" : inspect ? "Inspect" : item.isDeployed ? "Deployed" : "Draft";
+      !item ? "Not visible" : inspect ? "Inspect" : item.isDeployed ? "Deployed" : "Draft";
   const routeState = workflowState(route, routeNeedsInspection);
   const feedbackState = workflowState(feedback, feedbackNeedsInspection);
 
@@ -327,7 +327,7 @@ const AutomateOverview = ({ providerSlug, provider, services, coverageModel, cov
         <div className="finops-overview-workflow-status">
           <strong>{routeState === "Deployed" && !legacyDeployed ? "Local routing is deployed" :
             legacyDeployed ? "Earlier Workflow deployed; inspect changeover" :
-              routeState === "Draft" || routeState === "Missing" ? "Routing is not active" : "Routing status needs review"}</strong>
+              routeState === "Draft" ? "Routing is not active" : "Routing status needs review"}</strong>
           <span>Reviewed route Workflow: {routeState}{route && routeState === "Deployed" ? ` · ${workflowLocalRouter(route) === "laya" ? "Laya" : workflowLocalRouter(route) === "jev" ? "Jev-compatible" : "Local router unverified"}` : ""}</span>
           <span>Reviewed feedback Workflow: {feedbackState}</span>
           {legacyDeployed ? <span>Earlier route: {workflows.legacy.route?.isDeployed ? "Deployed" : "Not deployed"} · Earlier feedback: {workflows.legacy.feedback?.isDeployed ? "Deployed" : "Not deployed"}</span> : null}

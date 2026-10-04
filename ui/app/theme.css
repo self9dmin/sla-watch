@@ -1549,6 +1549,10 @@ a { color: var(--sla-accent); }
 .finops-workflow-row .finops-workflow-meta { grid-column: 1 / -1; }
 .finops-workflow-form { display: flex; align-items: flex-start; flex-direction: column; gap: 10px; border-top: 1px solid var(--sla-border-soft); padding-top: 14px; }
 .finops-workflow-form .field-label { width: 100%; }
+.finops-workflow-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; }
+.finops-workflow-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.finops-workflow-ownership { display: flex; align-items: flex-start; gap: 8px; font-size: 11px; line-height: 1.5; }
+.finops-workflow-ownership input { flex: none; margin-top: 2px; }
 .finops-workflow-form > p, .finops-setup-section .finops-setup-boundary { margin: 0; color: var(--sla-muted); font-size: 11px; line-height: 1.5; }
 .finops-workflow-confirm { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .finops-workflow-confirm span { flex: 1 1 200px; color: var(--sla-text); font-size: 11px; }
@@ -1566,4 +1570,5 @@ a { color: var(--sla-accent); }
   .finops-decision-item summary small { margin-left: 0; }
   .finops-setup-heading { flex-direction: column; }
   .finops-controls-status a { margin-left: 0; }
+  .finops-workflow-fields { grid-template-columns: 1fr; }
 }

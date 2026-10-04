@@ -4,6 +4,7 @@ import {
   FINOPS_WORKFLOWS,
   LEGACY_FINOPS_WORKFLOW_TITLES,
   matchingWorkflow,
+  workflowNeedsInspection,
   type FinopsWorkflowKind,
 } from "../data/finopsAutomation";
 
@@ -28,8 +29,8 @@ const inspectWorkflowList = async (): Promise<{ workflows: WorkflowState; legacy
   for (const item of detailed) {
     const kind = KINDS.find((candidate) => item.title === FINOPS_WORKFLOWS[candidate].title);
     if (kind) {
-      if (!matchingWorkflow(item, kind)) collision = true;
-      else workflows[kind] = item;
+      if (!matchingWorkflow(item, kind) || workflowNeedsInspection(item, kind)) collision = true;
+      workflows[kind] = item;
       continue;
     }
     const legacyKind = KINDS.find((candidate) => item.title === LEGACY_FINOPS_WORKFLOW_TITLES[candidate]);

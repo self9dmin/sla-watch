@@ -25,6 +25,11 @@ export const LEGACY_FINOPS_WORKFLOW_TITLES: Record<FinopsWorkflowKind, string> =
   feedback: "SLA FinOps Agent | Record human outcome",
 };
 
+export const FINOPS_WORKFLOW_TASK_IDS: Record<FinopsWorkflowKind, string> = {
+  route: "route_case",
+  feedback: "feedback_case",
+};
+
 export type PrivateGatewaySettings = {
   origin: string;
   credentialId: string;
@@ -64,6 +69,7 @@ export const createFinopsWorkflowDraft = (
 ): WorkflowCreate => {
   const settings = validatePrivateGatewaySettings(input);
   const spec = FINOPS_WORKFLOWS[kind];
+  const taskId = FINOPS_WORKFLOW_TASK_IDS[kind];
   const script = (kind === "route" ? ROUTE_WORKFLOW_SCRIPT : FEEDBACK_WORKFLOW_SCRIPT)
     .replace("REPLACE_WITH_PRIVATE_EDGE_CONNECT_URL", settings.origin)
     .replace("CREDENTIALS_VAULT-REPLACE_ME", settings.credentialId)
@@ -81,7 +87,7 @@ export const createFinopsWorkflowDraft = (
     isDeployed: false,
     trigger: {
       eventTrigger: {
-        isActive: true,
+        isActive: false,
         triggerConfiguration: {
           type: "event",
           value: { eventType: "bizevents", query: workflowTriggerQuery(kind) },
@@ -89,8 +95,9 @@ export const createFinopsWorkflowDraft = (
       },
     },
     tasks: {
-      run_javascript: {
-        name: kind === "route" ? "Route reviewed case" : "Record human outcome",
+      [taskId]: {
+        name: taskId,
+        description: kind === "route" ? "Recheck the review, call the local gateway, and record the route" : "Record the later human outcome for local evaluation",
         action: "dynatrace.automations:run-javascript",
         input: { script },
         position: { x: 0, y: 1 },
@@ -100,19 +107,33 @@ export const createFinopsWorkflowDraft = (
   };
 };
 
+/** An intent prepares one private draft in Workflows. The receiving app owns the save. */
+export const createFinopsWorkflowIntent = (
+  kind: FinopsWorkflowKind,
+  input: PrivateGatewaySettings,
+): WorkflowCreate => {
+  const draft = createFinopsWorkflowDraft(kind, input);
+  return {
+    title: draft.title,
+    type: draft.type,
+    isPrivate: true,
+    tasks: draft.tasks,
+    trigger: draft.trigger,
+  };
+};
+
 export const matchingWorkflow = (workflow: Pick<Workflow, "title" | "description">, kind: FinopsWorkflowKind): boolean =>
-  workflow.title === FINOPS_WORKFLOWS[kind].title &&
-  workflow.description?.includes(FINOPS_WORKFLOWS[kind].marker) === true;
+  workflow.title === FINOPS_WORKFLOWS[kind].title;
 
 export const workflowLocalRouter = (workflow: Workflow): LocalRouter | null => {
-  const script: unknown = workflow.tasks?.run_javascript?.input?.script;
+  const script: unknown = workflow.tasks?.[FINOPS_WORKFLOW_TASK_IDS.route]?.input?.script;
   if (typeof script !== "string") return null;
   const source = /const EXPECTED_SOURCE = "(laya|jev)";/.exec(script)?.[1];
   return source === "laya" || source === "jev" ? source : null;
 };
 
 export const workflowNeedsInspection = (workflow: Workflow, kind: FinopsWorkflowKind): boolean => {
-  const task = workflow.tasks?.run_javascript;
+  const task = workflow.tasks?.[FINOPS_WORKFLOW_TASK_IDS[kind]];
   const trigger = workflow.trigger?.eventTrigger?.triggerConfiguration;
   const script: unknown = task?.input?.script;
   const endpoint = typeof script === "string"
@@ -130,13 +151,26 @@ export const workflowNeedsInspection = (workflow: Workflow, kind: FinopsWorkflow
         credentialId,
         router: source,
       });
-      scriptMatches = draft.tasks?.run_javascript?.input?.script === script;
+      scriptMatches = draft.tasks?.[FINOPS_WORKFLOW_TASK_IDS[kind]]?.input?.script === script;
     } catch {
       scriptMatches = false;
     }
   }
   return !matchingWorkflow(workflow, kind) ||
+    workflow.type !== "STANDARD" ||
+    Object.keys(workflow.tasks ?? {}).length !== 1 ||
+    workflow.trigger?.schedule != null ||
+    (workflow.isDeployed
+      ? workflow.trigger?.eventTrigger?.isActive !== true
+      : workflow.trigger?.eventTrigger?.isActive !== false) ||
     task?.action !== "dynatrace.automations:run-javascript" ||
+    (task?.active !== undefined && task.active !== true) ||
+    Boolean(task?.predecessors?.length) ||
+    task?.withItems != null ||
+    task?.conditions != null ||
+    task?.concurrency != null ||
+    task?.retry != null ||
+    task?.customSampleResult != null ||
     !scriptMatches ||
     trigger?.type !== "event" ||
     trigger.value.eventType !== "bizevents" ||

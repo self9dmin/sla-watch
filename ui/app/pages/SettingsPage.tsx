@@ -27,7 +27,7 @@ const SETUP_LINKS = [
   ["watch", "Review defaults"],
   ["provider-connections", "Provider connections"],
   ["sla-overrides", "Add custom terms"],
-  ["finops", "FinOps routing"],
+  ["finops", "Automation"],
   ["appearance", "Appearance"],
 ] as const;
 
@@ -679,9 +679,9 @@ const FinopsRoutingSettings = () => {
   };
   return (
     <section className="settings-page">
-      <div className="page-intro"><Text className="eyebrow">Settings · FinOps</Text><Heading level={1}>Routing controls.</Heading>
+      <div className="page-intro"><Text className="eyebrow">Settings · Automation</Text><Heading level={1}>Automation controls.</Heading>
         <Paragraph>Both controls start off. A candidate must pass human evidence review before any routing event is queued.</Paragraph></div>
-      {!routing.reliable ? <div className="error-box">Shared FinOps settings are unavailable. Automatic behavior is off.</div> : null}
+      {!routing.reliable ? <div className="error-box">Shared automation controls are unavailable. Automatic behavior is off.</div> : null}
       {error ? <div className="error-box" role="alert">{error}</div> : null}
       <div className="settings-form-grid">
         <label className="field-label"><input type="checkbox" checked={routing.config.autoQueueAfterReady}

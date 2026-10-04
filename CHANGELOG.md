@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.87
+
+- Renames the FinOps routing settings section to Automation and fixes the Setup link to open those controls.
+- Sends a reviewed route or feedback Workflow proposal directly into the Dynatrace Workflows editor. The proposal includes the local gateway script and an inactive event trigger. A separately authorized operator must review and save the draft.
+- Checks visible Workflow scripts, triggers, privacy, and unexpected tasks. A designated owner or admin must verify private Workflow inventory before proposing either draft. A synthetic browser pilot verified the proposed route script and trigger, but did not save a Workflow, so post-save privacy and discovery still require verification.
+
 ## 0.0.86
 
 - Opens Automate on existing SLOs, actual route and feedback Workflow state, the decision path, and recent recommendations. Service health now shows the bounded native SLO inventory; guarded creation and Workflow instructions live in Setup.

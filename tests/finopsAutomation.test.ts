@@ -1,6 +1,8 @@
 import type { Workflow } from "@dynatrace-sdk/client-automation";
 import {
   createFinopsWorkflowDraft,
+  createFinopsWorkflowIntent,
+  FINOPS_WORKFLOW_TASK_IDS,
   validatePrivateGatewaySettings,
   workflowNeedsInspection,
   workflowLocalRouter,
@@ -36,28 +38,42 @@ describe("FinOps automation setup", () => {
   it("creates private, undeployed business-event drafts with a checked local source", () => {
     const route = createFinopsWorkflowDraft("route", settings);
     const feedback = createFinopsWorkflowDraft("feedback", settings);
-    for (const draft of [route, feedback]) {
+    for (const [kind, draft] of [["route", route], ["feedback", feedback]] as const) {
       const trigger = draft.trigger?.eventTrigger?.triggerConfiguration;
+      const task = draft.tasks?.[FINOPS_WORKFLOW_TASK_IDS[kind]];
       if (trigger?.type !== "event") throw new Error("Expected a business event trigger.");
       expect(draft.isPrivate).toBe(true);
       expect(draft.isDeployed).toBe(false);
+      expect(draft.trigger?.eventTrigger?.isActive).toBe(false);
       expect(draft.type).toBe("STANDARD");
       expect(trigger.value.eventType).toBe("bizevents");
-      expect(draft.tasks?.run_javascript?.action).toBe("dynatrace.automations:run-javascript");
-      expect(draft.tasks?.run_javascript?.input?.script).not.toContain("REPLACE_WITH_PRIVATE_EDGE_CONNECT_URL");
-      expect(draft.tasks?.run_javascript?.input?.script).not.toContain("CREDENTIALS_VAULT-REPLACE_ME");
-      expect(draft.tasks?.run_javascript?.input?.script).not.toContain("REPLACE_WITH_LOCAL_MODEL_SOURCE");
-      expect(draft.tasks?.run_javascript?.input?.script).not.toContain("actual-bearer-token");
+      expect(task?.name).toBe(FINOPS_WORKFLOW_TASK_IDS[kind]);
+      expect(task?.action).toBe("dynatrace.automations:run-javascript");
+      expect(task?.input?.script).not.toContain("REPLACE_WITH_PRIVATE_EDGE_CONNECT_URL");
+      expect(task?.input?.script).not.toContain("CREDENTIALS_VAULT-REPLACE_ME");
+      expect(task?.input?.script).not.toContain("REPLACE_WITH_LOCAL_MODEL_SOURCE");
+      expect(task?.input?.script).not.toContain("actual-bearer-token");
     }
     const routeTrigger = route.trigger?.eventTrigger?.triggerConfiguration;
     const feedbackTrigger = feedback.trigger?.eventTrigger?.triggerConfiguration;
     if (routeTrigger?.type !== "event" || feedbackTrigger?.type !== "event")
       throw new Error("Expected business event triggers.");
     expect(routeTrigger.value.query).toContain("sla.finops.review.ready");
-    expect(route.tasks?.run_javascript?.input?.script).toContain('const EXPECTED_SOURCE = "laya"');
-    expect(route.tasks?.run_javascript?.input?.script).toContain("finopsReviewGate");
+    expect(route.tasks?.route_case?.input?.script).toContain('const EXPECTED_SOURCE = "laya"');
+    expect(route.tasks?.route_case?.input?.script).toContain("finopsReviewGate");
     expect(feedbackTrigger.value.query).toContain("sla.finops.feedback");
-    expect(feedback.tasks?.run_javascript?.input?.script).toContain("Phoenix did not confirm the annotation");
+    expect(feedback.tasks?.feedback_case?.input?.script).toContain("Phoenix did not confirm the annotation");
+  });
+
+  it("passes a verified, inactive proposal to the Workflows create intent without promising a save", () => {
+    const intent = createFinopsWorkflowIntent("route", settings);
+    expect(intent.id).toBeUndefined();
+    expect(intent.description).toBeUndefined();
+    expect(intent.isDeployed).toBeUndefined();
+    expect(intent.isPrivate).toBe(true);
+    expect(intent.trigger?.eventTrigger?.isActive).toBe(false);
+    expect(intent.tasks?.route_case?.input?.script).toContain(`${privateOrigin}/route`);
+    expect(workflowNeedsInspection(intent as Workflow, "route")).toBe(false);
   });
 
   it("flags edited or public Workflows for inspection", () => {
@@ -66,8 +82,17 @@ describe("FinOps automation setup", () => {
     expect(workflowNeedsInspection(draft, "route")).toBe(false);
     expect(workflowNeedsInspection({ ...draft, isPrivate: false }, "route")).toBe(true);
     expect(workflowNeedsInspection({ ...draft, tasks: {
-      run_javascript: { ...draft.tasks?.run_javascript!, input: { script: "return true" } },
+      route_case: { ...draft.tasks?.route_case!, input: { script: "return true" } },
     } }, "route")).toBe(true);
+    expect(workflowNeedsInspection({ ...draft, tasks: {
+      ...draft.tasks,
+      unexpected: { name: "unexpected", action: "dynatrace.automations:run-javascript" },
+    } }, "route")).toBe(true);
+    expect(workflowNeedsInspection({ ...draft, trigger: {
+      ...draft.trigger,
+      schedule: {} as NonNullable<Workflow["trigger"]>["schedule"],
+    } }, "route")).toBe(true);
+    expect(workflowNeedsInspection({ ...draft, isDeployed: true }, "route")).toBe(true);
   });
 
   it("groups unambiguous product resources once per account and region, with services as evidence", () => {
