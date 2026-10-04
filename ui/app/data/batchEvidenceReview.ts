@@ -1,10 +1,6 @@
-import type { ContractOverrideRecord } from "../types";
 import { createEvidenceDecisionKey } from "./evidenceCandidates";
 import type { EvidenceReviewStateResult } from "./evidenceReviewState";
-import {
-  contractScopeKey,
-  type IncidentReviewCase,
-} from "./incidentReviewCases";
+import type { IncidentReviewCase } from "./incidentReviewCases";
 
 export type BatchReviewTarget = {
   reviewCase: IncidentReviewCase;
@@ -15,7 +11,6 @@ export type BatchReviewTarget = {
 type ReviewScope = {
   providerProductId: string;
   affectedServiceId: string;
-  contractSignature: string;
 };
 
 type ScopeResult = { scope: ReviewScope; reason?: never } |
@@ -23,7 +18,7 @@ type ScopeResult = { scope: ReviewScope; reason?: never } |
 
 /** These matches only permit a shared Needs evidence note, not a shared outage finding. */
 export const BATCH_REVIEW_CONFIRMATION =
-  "The same provider product, Dynatrace service, and terms do not establish one provider outage or confirm the same account or region. Review each episode's timestamps, affected resources, customer impact, and missing evidence before applying a shared Needs evidence note.";
+  "The same provider product and Dynatrace service do not establish one provider outage, account, region, or agreement. Custom terms may differ. Review each episode's timestamps, affected resources, customer impact, and missing evidence before applying a shared Needs evidence note.";
 
 const normalize = (value: string): string => value.trim().toLowerCase();
 
@@ -46,7 +41,6 @@ const savedAndCurrent = (
 const scopeForCase = (
   reviewCase: IncidentReviewCase,
   providerSlug: string,
-  contractOverrides: ContractOverrideRecord[],
 ): ScopeResult => {
   if (reviewCase.problems.length === 0 ||
       reviewCase.candidates.length !== reviewCase.problems.length ||
@@ -80,16 +74,9 @@ const scopeForCase = (
       normalize(reviewCase.affectedServices[0].id) !== [...serviceIds][0])
     return { reason: "Resolve one affected Dynatrace service for every Problem in this episode." };
 
-  const signatures = reviewCase.candidates.map((candidate) =>
-    contractScopeKey(candidate, providerSlug, contractOverrides));
-  if (signatures.some((signature) => !signature) ||
-      new Set(signatures).size !== 1)
-    return { reason: "Effective terms are ambiguous or may depend on host or location scope." };
-
   return { scope: {
     providerProductId: [...productIds][0],
     affectedServiceId: [...serviceIds][0],
-    contractSignature: signatures[0]!,
   } };
 };
 
@@ -98,19 +85,17 @@ export const buildBatchReviewTargets = ({
   cases,
   states,
   providerSlug,
-  contractOverrides,
 }: {
   anchor: IncidentReviewCase;
   cases: IncidentReviewCase[];
   states: ReadonlyMap<string, EvidenceReviewStateResult>;
   providerSlug: string;
-  contractOverrides: ContractOverrideRecord[];
 }): BatchReviewTarget[] => {
   const anchorState = states.get(anchor.key);
   const anchorUnresolved = unresolved(anchorState);
   const anchorCurrent = savedAndCurrent(anchorState, anchor);
   const anchorScope = anchorUnresolved || anchorCurrent
-    ? scopeForCase(anchor, providerSlug, contractOverrides)
+    ? scopeForCase(anchor, providerSlug)
     : { reason: "The selected episode has a stale or mixed decision, or its review state is unavailable." };
   const distinctCases = Array.from(new Map(
     [anchor, ...cases].map((reviewCase) => [reviewCase.key, reviewCase]),
@@ -134,7 +119,7 @@ export const buildBatchReviewTargets = ({
         : "The saved review state for this episode is unavailable.",
     }];
 
-    const result = scopeForCase(reviewCase, providerSlug, contractOverrides);
+    const result = scopeForCase(reviewCase, providerSlug);
     if (!result.scope) return [{ reviewCase, eligible: false, reason: result.reason }];
     if (!anchorScope.scope) return [{
       reviewCase,
@@ -145,8 +130,6 @@ export const buildBatchReviewTargets = ({
       return [{ reviewCase, eligible: false, reason: "This episode belongs to a different provider product." }];
     if (result.scope.affectedServiceId !== anchorScope.scope.affectedServiceId)
       return [{ reviewCase, eligible: false, reason: "This episode affects a different Dynatrace service." }];
-    if (result.scope.contractSignature !== anchorScope.scope.contractSignature)
-      return [{ reviewCase, eligible: false, reason: "Different effective provider terms apply to this episode." }];
     return [{ reviewCase, eligible: true }];
   });
 };

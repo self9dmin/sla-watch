@@ -6,7 +6,7 @@ The app does not decide fault, label a case as an SLA violation, file a claim, o
 
 ## Project status
 
-SLA Review is a working custom Dynatrace AppEngine app under active development. Version 0.0.88 is the current source version. The release record in [acceptance](documentation/acceptance.md) identifies what has been checked in the target environment; a local build does not verify another tenant. It is not yet a generally available Dynatrace Hub app.
+SLA Review is a working custom Dynatrace AppEngine app under active development. Version 0.0.89 is the current source version. The release record in [acceptance](documentation/acceptance.md) identifies what has been checked in the target environment; a local build does not verify another tenant. It is not yet a generally available Dynatrace Hub app.
 
 The core Coverage, Service health, Evidence, and Provider terms views have automated tests and earlier target-tenant smoke evidence. The four cloud-provider adapters are implemented, tested with controlled responses, and have been deployed in an earlier release. Live least-privilege credential acceptance for every provider is still open, along with denied-permission and large-environment testing.
 
@@ -77,7 +77,7 @@ Evidence reads remain bounded at 500 Problems, 200 inventory services, and 500 p
 For an installed copy:
 
 1. **Identify:** Open SLA Review in **Coverage** and review an ambiguous SLA match only when needed.
-2. **Evaluate:** Open **Evidence** to select a case, consult **Provider terms** as needed, and record the human review outcome. A product investigation can apply one shared **Needs evidence** reason to explicitly selected episodes with the same confirmed product, service, and effective terms. It does not complete their separate reviews. The header and **Settings > Getting started** offer an optional three-step tour.
+2. **Evaluate:** Open **Evidence** to select a case, consult **Provider terms** as needed, and record the human review outcome. A product investigation can apply one shared **Needs evidence** reason to explicitly selected unresolved episodes with the same confirmed provider product and Dynatrace service, even when their terms differ. The reviewer must confirm the reason applies to each selected Problem. This does not complete their separate reviews or establish one outage, account, region, or credit. The header and **Settings > Getting started** offer an optional three-step tour.
 3. **Automate:** Start on **Overview** to inspect SLOs and Workflow state. Use **Service health** for detailed SLO results and **Setup** to confirm one product scope objective only when its mapping, terms, and telemetry pass the gates. From Setup, prepare each route and feedback Workflow in the Workflows editor. An authorized operator reviews and saves the drafts, then returns to refresh their status. After the separate local integration has been verified, an operator can manually queue a complete reviewed case. Automatic queueing and lane assignment remain off by default.
 
 Published terms do not require a provider credential. A tenant administrator must allow `sla.directory` under Dynatrace **Settings > General > External requests**. Dynatrace-ingested AWS Health events also require no app credential. Direct provider connections are optional and are only for customer-scoped reports that are not already available in Grail.

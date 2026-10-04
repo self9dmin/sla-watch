@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.89
+
+- Allows the guarded **Needs evidence** batch action for explicitly selected unresolved episodes with the same confirmed provider product and Dynatrace service, even when custom terms differ. The reviewer must confirm that one missing-evidence reason applies to each selected Problem. Terms, account, region, observed time, and impact remain per-episode checks before completion. The action never copies a completed review, queues routing, or submits a claim.
+
 ## 0.0.88
 
 - Adds a reviewed, explicit batch action for recording one **Needs evidence** reason across selected unresolved episodes that share a confirmed provider product, Dynatrace service, and effective terms. A preview lists the exact Problems, and the reviewer must confirm the gap applies to each. The action does not complete evidence reviews, queue routing, or submit claims.

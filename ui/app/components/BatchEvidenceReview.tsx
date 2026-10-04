@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@dynatrace/strato-components/buttons";
-import type { ContractOverrideRecord, SlaProviderResponse } from "../types";
+import type { SlaProviderResponse } from "../types";
 import { evidenceDecisionInputError, evidenceDecisionValue, MAX_EVIDENCE_DECISION_NOTE_LENGTH, normalizeEvidenceDecision } from "../data/evidenceCandidates";
 import { BATCH_REVIEW_CONFIRMATION, buildBatchReviewTargets } from "../data/batchEvidenceReview";
 import type { IncidentReviewCase } from "../data/incidentReviewCases";
@@ -13,7 +13,6 @@ type BatchEvidenceReviewProps = {
   cases: IncidentReviewCase[];
   states: ReadonlyMap<string, EvidenceReviewStateResult>;
   provider: SlaProviderResponse;
-  contractOverrides: ContractOverrideRecord[];
   contractReady: boolean;
   evidenceReadIncomplete: boolean;
   settings: ReturnType<typeof useEvidenceDecisions>;
@@ -33,7 +32,6 @@ export const BatchEvidenceReview = ({
   cases,
   states,
   provider,
-  contractOverrides,
   contractReady,
   evidenceReadIncomplete,
   settings,
@@ -65,8 +63,7 @@ export const BatchEvidenceReview = ({
     cases,
     states,
     providerSlug: provider.provider.slug,
-    contractOverrides,
-  }), [anchor, cases, states, provider.provider.slug, contractOverrides]);
+  }), [anchor, cases, states, provider.provider.slug]);
   const eligible = targets.filter((target) => target.eligible);
   const excluded = targets.filter((target) => !target.eligible);
   const selected = eligible.filter((target) => selectedKeys.includes(target.reviewCase.key));
@@ -95,7 +92,6 @@ export const BatchEvidenceReview = ({
       cases,
       states,
       providerSlug: provider.provider.slug,
-      contractOverrides,
     });
     const currentEligible = new Map(currentTargets.filter((target) => target.eligible)
       .map((target) => [target.reviewCase.key, target.reviewCase]));
@@ -147,9 +143,9 @@ export const BatchEvidenceReview = ({
       </div>
       <Button size="condensed" onClick={onClose}>Back to one episode</Button>
     </div>
-    <p className="candidate-batch-intro">These are separate incident episodes for the same confirmed provider product, Dynatrace service, and effective terms. A completed review stays with its own episode. This action shares a missing-evidence reason only after you check that it applies to each selected episode.</p>
+    <p className="candidate-batch-intro">These are separate incident episodes for the same confirmed provider product and Dynatrace service. Their provider terms, account, and region may differ. A completed review stays with its own episode. This action shares a missing-evidence reason only after you check that it applies to each selected episode.</p>
     <div className="candidate-batch-summary">
-      <strong>{eligible.length} match this product, service, and terms</strong>
+      <strong>{eligible.length} match this product and service</strong>
       <span>{excluded.length} other episode{excluded.length === 1 ? "" : "s"} cannot be changed here.</span>
     </div>
     {!contractReady || evidenceReadIncomplete ? <p className="candidate-batch-warning" role="status">Complete the Dynatrace evidence and contract reads before recording a shared decision.</p> : null}
@@ -160,6 +156,7 @@ export const BatchEvidenceReview = ({
       <Button size="condensed" disabled={blocked || saving || eligible.length === 0} onClick={() => {
         setSelectedKeys(eligible.map((target) => target.reviewCase.key));
         setPreview(false);
+        setConfirmed(false);
         setResult(undefined);
       }}>Select all {eligible.length} matching episodes</Button>
     </div>
@@ -172,7 +169,7 @@ export const BatchEvidenceReview = ({
           <small>{reviewCase.problems[0]?.rootCause?.name ? `Davis root cause: ${reviewCase.problems[0].rootCause.name}` : "Davis root cause unverified"}</small>
         </span>
       </label>)}
-      {eligible.length === 0 ? <p>No unresolved episodes share this exact product, service, and contract scope.</p> : null}
+      {eligible.length === 0 ? <p>No unresolved episodes share this exact provider product and Dynatrace service.</p> : null}
     </div>
     {excluded.length > 0 ? <details className="candidate-batch-excluded">
       <summary>Why {excluded.length} other episode{excluded.length === 1 ? " is" : "s are"} unavailable</summary>
@@ -189,7 +186,7 @@ export const BatchEvidenceReview = ({
         setResult(undefined);
       }} placeholder="Name the missing evidence that applies to every selected episode. Do not paste agreement text or customer data." />
     </label>
-    <p className="candidate-batch-boundary">Confirm the provider account, region, affected resources, timestamps, and customer impact for each episode before later marking its evidence review complete. This action does not confirm a credit or send a provider claim. No local routing is queued.</p>
+    <p className="candidate-batch-boundary">Confirm the provider terms, account, region, affected resources, timestamps, and customer impact for each episode before later marking its evidence review complete. This action does not confirm a credit or send a provider claim. No local routing is queued.</p>
     {preview ? <div className="candidate-batch-preview">
       <strong role="status">Record Needs evidence for {selected.length} episode{selected.length === 1 ? "" : "s"} and {selectedProblems.length} Problem{selectedProblems.length === 1 ? "" : "s"}?</strong>
       <p>Each Problem keeps its own decision record. The shared note is: “{note.trim()}”</p>

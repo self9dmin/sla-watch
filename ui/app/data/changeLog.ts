@@ -7,8 +7,18 @@ export type ChangeLogEntry = {
 
 export const CHANGE_LOG_ENTRIES: readonly ChangeLogEntry[] = [
   {
-    version: "0.0.88",
+    version: "0.0.89",
     label: "Current release",
+    summary: "Kept shared missing-evidence triage available when custom terms differ.",
+    details: [
+      "A reviewer may select unresolved episodes with the same confirmed provider product and Dynatrace service, even when their custom terms differ.",
+      "The shared reason records Needs evidence for each selected Problem. Terms, account, region, time, and impact still need separate checks before any review is completed.",
+      "The action does not copy completed reviews, infer a shared outage, queue local routing, or submit a claim.",
+    ],
+  },
+  {
+    version: "0.0.88",
+    label: "Previous release",
     summary: "Shared missing-evidence triage for separate incident episodes.",
     details: [
       "Evaluate can record one Needs evidence reason for explicitly selected episodes with the same confirmed provider product, service, and effective terms.",

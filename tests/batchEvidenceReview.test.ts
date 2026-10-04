@@ -6,7 +6,6 @@ import { evidenceDecisionValue, type EvidenceCandidate } from "../ui/app/data/ev
 import { resolveEvidenceReviewState } from "../ui/app/data/evidenceReviewState";
 import type { IncidentReviewCase } from "../ui/app/data/incidentReviewCases";
 import type {
-  ContractOverrideRecord,
   EvidenceDecisionRecord,
   ProblemRecord,
   ServiceRecord,
@@ -79,45 +78,19 @@ const savedDecision = (item: IncidentReviewCase): EvidenceDecisionRecord => ({
   version: "1",
 });
 
-const override = (service: ServiceRecord): ContractOverrideRecord => ({
-  objectId: `override-${service.id}`,
-  version: "1",
-  overrideKey: `aws|rds|service|${service.id.toLowerCase()}`,
-  providerSlug: "aws",
-  providerServiceId: "rds",
-  providerServiceName: "Amazon RDS",
-  scopeKind: "service",
-  scopeEntityId: service.id,
-  scopeEntityName: service.name,
-  scopeEntityIds: [service.id],
-  scopeEntityNames: [service.name],
-  availabilityTarget: 99.95,
-  filingDeadlineDays: null,
-  deadlineBasis: null,
-  businessDays: false,
-  maxCreditPercent: null,
-  claimMethod: null,
-  effectiveFrom: "2026-01-01",
-  effectiveTo: null,
-  sourceReference: "Test agreement",
-  enabled: true,
-});
-
 const targets = (
   anchor: IncidentReviewCase,
   cases: IncidentReviewCase[],
   decisions: EvidenceDecisionRecord[] = [],
-  contractOverrides: ContractOverrideRecord[] = [],
 ) => buildBatchReviewTargets({
   anchor,
   cases,
   states: stateMap([anchor, ...cases], decisions),
   providerSlug: "aws",
-  contractOverrides,
 });
 
 describe("batch evidence review eligibility", () => {
-  it("offers separate unresolved episodes with identical product, service, and effective terms", () => {
+  it("offers separate unresolved episodes with identical product and service while keeping terms per episode", () => {
     const anchor = reviewCase("P-1");
     const later = reviewCase("P-2", { startedAt: "2026-10-03T12:00:00.000Z" });
     const rows = targets(anchor, [anchor, later]);
@@ -126,7 +99,8 @@ describe("batch evidence review eligibility", () => {
     expect(rows.map((row) => row.reviewCase.key)).toEqual([anchor.key, later.key]);
     expect(rows.every((row) => row.eligible)).toBe(true);
     expect(BATCH_REVIEW_CONFIRMATION).toMatch(/do not establish one provider outage/);
-    expect(BATCH_REVIEW_CONFIRMATION).toMatch(/account or region/);
+    expect(BATCH_REVIEW_CONFIRMATION).toMatch(/account, region, or agreement/);
+    expect(BATCH_REVIEW_CONFIRMATION).toMatch(/Custom terms may differ/);
   });
 
   it("excludes saved and stale decisions rather than overwriting them", () => {
@@ -201,27 +175,6 @@ describe("batch evidence review eligibility", () => {
     expect(rows[4].reason).toMatch(/Problem or provider evidence/);
   });
 
-  it("rejects host/location ambiguity and different effective contract signatures", () => {
-    const anchor = reviewCase("P-1");
-    const later = reviewCase("P-2");
-    const serviceOverride = override(checkout);
-    const datedOverride = { ...serviceOverride, objectId: "override-later", overrideKey: "later-terms", effectiveFrom: "2026-10-03" };
-    const laterOnNewTerms = reviewCase("P-3", { startedAt: "2026-10-04T12:00:00.000Z" });
-    const hostOverride: ContractOverrideRecord = {
-      ...serviceOverride,
-      objectId: "override-host",
-      overrideKey: "host-specific",
-      scopeKind: "host",
-      scopeEntityId: "HOST-1",
-      scopeEntityIds: ["HOST-1"],
-    };
-
-    expect(targets(anchor, [later], [], [hostOverride]).every((row) => !row.eligible)).toBe(true);
-    const rows = targets(anchor, [laterOnNewTerms], [], [serviceOverride, datedOverride]);
-    expect(rows.map((row) => row.eligible)).toEqual([true, false]);
-    expect(rows[1].reason).toMatch(/Different effective provider terms/);
-  });
-
   it("fails closed when the saved review state is unavailable", () => {
     const anchor = reviewCase("P-1");
     const later = reviewCase("P-2");
@@ -230,7 +183,6 @@ describe("batch evidence review eligibility", () => {
       cases: [later],
       states: stateMap([anchor]),
       providerSlug: "aws",
-      contractOverrides: [],
     });
     expect(rows.map((row) => row.eligible)).toEqual([true, false]);
     expect(rows[1].reason).toMatch(/unavailable/);

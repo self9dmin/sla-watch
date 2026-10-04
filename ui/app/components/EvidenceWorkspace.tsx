@@ -1565,7 +1565,6 @@ const CandidateWorkspace = ({
           cases={batchGroup.cases}
           states={caseStateByKey}
           provider={provider}
-          contractOverrides={contractSettings.overrides}
           contractReady={!contractSettings.loading && !contractSettings.error && contractSettings.canRead}
           evidenceReadIncomplete={evidenceReadIncomplete}
           settings={settings}

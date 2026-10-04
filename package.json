@@ -1,6 +1,6 @@
 {
   "name": "sla-review",
-  "version": "0.0.88",
+  "version": "0.0.89",
   "description": "Evidence-first provider review for Dynatrace",
   "scripts": {
     "build": "dt-app build",
