@@ -1,5 +1,19 @@
 # Release acceptance record
 
+## 0.0.89 production verification, 2026-10-03
+
+Source commit `3602374` was pushed to public `main` and deployed to the existing `my.sla` app in the designated production tenant. Senior UX review approved the bounded batch action and its hotfix wording. The preceding `0.0.88` deployment exposed a production custom-terms edge case: its matching rule left no eligible episodes. No review decision was saved during that smoke.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Release checks | Public source audit, Workflow script check, UI and API type checks, lint, 43 Jest suites with 239 tests, build, and App Toolkit analysis passed | Local release gate; the production dependency audit passed separately with network access and the existing time-limited `GHSA-vfj7-8cjw-p6xm` exception for packages absent from generated bundles |
+| Installed version | The installed change log showed `0.0.89 Current release` | Connected Chrome production smoke after deployment |
+| Batch availability | The installed Evidence view offered eligible unresolved episodes for the same confirmed provider product and Dynatrace service despite differing custom terms | Read-only product investigation and batch-panel smoke |
+| Guarded exclusions | An existing completed review remained unavailable, as did saved, stale, or mixed reviews and episodes from other Dynatrace services | Installed batch-panel exclusion reasons |
+| Write boundary | The batch action offers only a shared **Needs evidence** reason after explicit selection, preview, and acknowledgement; it does not complete other reviews, queue routing, or file a claim | Code review, automated eligibility tests, and installed copy; the production save path was not exercised |
+
+The production smoke changed no case data, SLO, Workflow, control setting, or provider connection. A disposable tenant or synthetic case is still needed to verify the batch save and partial-failure paths end to end.
+
 ## 0.0.87 production verification, 2026-10-03
 
 Source commit `15453a8` was pushed to public `main` and deployed to the existing `my.sla` app in the designated production tenant. The senior UX review approved the assisted Workflow setup and the later owner-visibility safeguard before release.
